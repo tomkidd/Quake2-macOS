@@ -277,7 +277,14 @@ endif
 CFLAGS += -fvisibility=hidden
 LDFLAGS += -fvisibility=hidden
 
-ifneq ($(YQ2_OSTYPE), $(filter $(YQ2_OSTYPE), Darwin, OpenBSD))
+# DG: the following didn't work on OSX (with xcode commandline tools),
+#     so I added the ugly construct  you can see below instead..
+#ifneq ($(YQ2_OSTYPE), $(filter $(YQ2_OSTYPE), Darwin, OpenBSD))
+ifeq ($(YQ2_OSTYPE), Darwin)
+# nothing
+else ifeq ($(YQ2_OSTYPE),OpenBSD)
+# nothing
+else
 # for some reason the OSX & OpenBSD linker doesn't support this
 LDFLAGS += -Wl,--no-undefined
 endif
