@@ -30,6 +30,13 @@
 
 #ifdef ZIP
  #include "unzip/unzip.h"
+
+ #ifdef _WIN32
+  #include "unzip/ioapi.h"
+  #include "unzip/iowin32.h"
+
+  zlib_filefunc_def zlib_file_api;
+ #endif
 #endif
 
 #define MAX_HANDLES 512
@@ -403,7 +410,12 @@ FS_FOpenFile(const char *name, fileHandle_t *f, qboolean gamedir_only)
 					{
 						/* PK3 */
 						file_from_pak = true;
+
+ #ifdef _WIN32
+						handle->zip = unzOpen2(pack->name, &zlib_file_api);
+ #else
 						handle->zip = unzOpen(pack->name);
+ #endif
 
 						if (handle->zip)
 						{
@@ -743,7 +755,11 @@ FS_LoadPK3(const char *packPath)
 	unz_file_info info; /* Zip file info. */
 	unz_global_info global; /* Zip file global info. */
 
+ #ifdef _WIN32
+	handle = unzOpen2(packPath, &zlib_file_api);
+ #else
 	handle = unzOpen(packPath);
+ #endif
 
 	if (handle == NULL)
 	{
@@ -1580,6 +1596,11 @@ FS_InitFilesystem(void)
 	{
 		strcpy(datadir, ".");
 	}
+
+#ifdef _WIN32
+	// Need to fill with minizips unicode aware functions.
+	fill_win32_filefunc(&zlib_file_api);
+#endif
 
 	// Build search path
 	FS_BuildRawPath();
