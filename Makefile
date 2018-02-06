@@ -866,7 +866,8 @@ CLIENT_OBJS_ += \
 	src/backends/windows/main.o \
 	src/backends/windows/network.o \
 	src/backends/windows/system.o \
-	src/backends/windows/shared/hunk.o
+	src/backends/windows/shared/hunk.o \
+	src/common/unzip/iowin32.o
 else
 CLIENT_OBJS_ += \
 	src/backends/unix/main.o \
@@ -1014,7 +1015,8 @@ SERVER_OBJS_ += \
 	src/backends/windows/main.o \
 	src/backends/windows/network.o \
 	src/backends/windows/system.o \
-	src/backends/windows/shared/hunk.o
+	src/backends/windows/shared/hunk.o \
+	src/common/unzip/iowin32.o
 else # not Windows
 SERVER_OBJS_ += \
 	src/backends/unix/main.o \
