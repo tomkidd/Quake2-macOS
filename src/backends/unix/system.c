@@ -435,7 +435,6 @@ Sys_Mkdir(char *path)
 	mkdir(path, 0755);
 }
 
-
 char *
 Sys_GetHomeDir(void)
 {
@@ -452,6 +451,22 @@ Sys_GetHomeDir(void)
 	snprintf(gdir, sizeof(gdir), "%s/%s/", home, CFGDIR);
 
 	return gdir;
+}
+
+qboolean
+Sys_IsDir(const char *path)
+{
+	struct stat sb;
+
+	if (stat(path, &sb) != -1)
+	{
+		if (S_ISDIR(sb.st_mode))
+		{
+			true;
+		}
+	}
+
+	return false;
 }
 
 /* ================================================================ */

@@ -1307,6 +1307,28 @@ FS_Dir_f(void)
 
 // --------
 
+int
+FS_FindDirInSearchPatch(char *dst, size_t len, char *dir)
+{
+	char searchdir[MAX_OSPATH];
+
+	fsRawPath_t *search = fs_rawPath;
+
+	while (search)
+	{
+		snprintf(searchdir, sizeof(searchdir), "%s/%s",search->path, dir);
+
+		if (Sys_IsDir(searchdir))
+		{
+			return Q_strlcpy(dst, searchdir, len);
+		}
+
+		search = search->next;
+	}
+
+	return -1;
+}
+
 void
 FS_AddDirToSearchPath(char *dir, qboolean create) {
 	char **list;
