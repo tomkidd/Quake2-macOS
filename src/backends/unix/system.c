@@ -462,7 +462,7 @@ Sys_IsDir(const char *path)
 	{
 		if (S_ISDIR(sb.st_mode))
 		{
-			true;
+			return true;
 		}
 	}
 

@@ -62,6 +62,8 @@ void OGG_Stream(void);
 void S_RawSamplesVol(int samples, int rate, int width,
 		int channels, byte *data, float volume);
 
+void OGG_PlayTrack(int track);
+
 /* Console commands. */
 void OGG_ListCmd(void);
 void OGG_ParseCmd(char *arg);

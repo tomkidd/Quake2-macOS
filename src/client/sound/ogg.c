@@ -445,7 +445,6 @@ OGG_Open(ogg_seek_t type, int offset)
 		{
 			return true;
 		}
-
 		else
 		{
 			OGG_Stop();
@@ -519,7 +518,6 @@ OGG_OpenName(char *filename)
 	{
 		return OGG_Open(ABS, i);
 	}
-
 	else
 	{
 		Com_Printf("OGG_OpenName: '%s' not in the list.\n", filename);
@@ -666,6 +664,24 @@ OGG_Stream(void)
 			}
 		} /* using SDL */
 	} /* ogg_status == PLAY */
+}
+
+void
+OGG_PlayTrack(int track)
+{
+	if(track == 0)
+	{
+		if(ogg_ignoretrack0->value == 0)
+		{
+			OGG_PauseCmd();
+		}
+	}
+	else
+	{
+		// TODO: support other naming schemes etc
+		char name[3] = { '0' + track / 10, '0' + track % 10, '\0' };
+		OGG_OpenName(name);
+	}
 }
 
 /*

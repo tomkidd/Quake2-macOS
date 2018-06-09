@@ -1214,18 +1214,10 @@ CDShuffleFunc(void *unused)
     else
     {
         Cvar_Set("ogg_sequence", "loop");
-
         if (ogg->value)
         {
-            if ((int)strtol(cl.configstrings[CS_CDTRACK], (char **)NULL, 10) < 10)
-            {
-                char tmp[3] = {'0', cl.configstrings[CS_CDTRACK][0], '\0'};
-                OGG_ParseCmd(tmp);
-            }
-            else
-            {
-                OGG_ParseCmd(cl.configstrings[CS_CDTRACK]);
-            }
+            int track = (int)strtol(cl.configstrings[CS_CDTRACK], (char **)NULL, 10);
+            OGG_PlayTrack(track);
         }
     }
 
@@ -1258,15 +1250,8 @@ EnableOGGMusic(void *unused)
         OGG_Init();
         OGG_Stop();
 
-        if ((int)strtol(cl.configstrings[CS_CDTRACK], (char **)NULL, 10) < 10)
-        {
-            char tmp[3] = "0";
-            OGG_ParseCmd(strcat(tmp, cl.configstrings[CS_CDTRACK]));
-        }
-        else
-        {
-            OGG_ParseCmd(cl.configstrings[CS_CDTRACK]);
-        }
+        int track = (int)strtol(cl.configstrings[CS_CDTRACK], (char **)NULL, 10);
+        OGG_PlayTrack(track);
     }
     else
     {
