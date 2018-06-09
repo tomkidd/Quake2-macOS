@@ -60,6 +60,7 @@ cvar_t *ogg_ignoretrack0;		/* Toggle track 0 playing */
 OggVorbis_File ovFile;			/* Ogg Vorbis file. */
 vorbis_info *ogg_info;			/* Ogg Vorbis file information */
 int ogg_numbufs;				/* Number of buffers for OpenAL */
+char *oggdir;
 
 /*
  * Initialize the Ogg Vorbis subsystem.
@@ -300,10 +301,50 @@ OGG_LoadFileList(void)
 	int i;		 /* Loop counter. */
 	int j;		 /* Real position in list. */
 
-	/* Get file list. */
-	list = FS_ListFiles2(va("%s/*.ogg", OGG_DIR),
-		   	&ogg_numfiles, 0, 0);
+	// ----
+
+	/* For some sick reasons GOG.com decided to put the music
+	 * next to the executable (in the top level of the game data
+	 * dir) and use a non standard mapping for the file names.
+	 * So we need to handle that special case and maybe some
+	 * other broken cases from other vendors. */
+
+	// Let's see if we can find the music in the search path.
+	// This is the normal case, music in baseq2/music, etc.
+	list = FS_ListFiles2(va("%s/*.ogg", OGG_DIR), &ogg_numfiles, 0, 0);
 	ogg_numfiles--;
+
+	// Mkay, we didn't find the files.
+	if (ogg_numfiles <= 0)
+	{
+		char musicdir[MAX_OSPATH];
+
+		list = calloc(OGG_MAXFILES, sizeof(char *));
+		ogg_numfiles = 0;
+
+		// And *tada* there's another music dir.
+		if (FS_FindDirInRawSearchPatch(musicdir, sizeof(musicdir), "music") != -1)
+		{
+			char *curfile = Sys_FindFirst(va("%s/*.ogg", musicdir), 0, 0);
+
+			while (curfile != NULL)
+			{
+				list[ogg_numfiles] = strdup(curfile);
+				ogg_numfiles++;
+
+				curfile = Sys_FindNext(0, 0);
+			}
+
+			Sys_FindClose();
+			oggdir = strdup(musicdir);
+		}
+	}
+	else
+	{
+		oggdir = OGG_DIR;
+	}
+
+	// ----
 
 	/* Check if there are posible Ogg files. */
 	if (list == NULL)
@@ -451,21 +492,36 @@ OGG_Open(ogg_seek_t type, int offset)
 		}
 	}
 
-	/* Find file. */
-	if ((size = FS_LoadFile(ogg_filelist[pos], (void **)&ogg_buffer)) == -1)
-	{
-		Com_Printf("OGG_Open: could not open %d (%s): %s.\n",
-				pos, ogg_filelist[pos], strerror(errno));
-		return false;
-	}
+	// TODO: We need to refactor this pile of crap. This is just bandaid to get things going.
 
-	/* Open ogg vorbis file. */
-	if ((res = ov_open(NULL, &ovFile, (char *)ogg_buffer, size)) < 0)
+	if (ogg_filelist[pos][0] != '/')
 	{
-		Com_Printf("OGG_Open: '%s' is not a valid Ogg Vorbis file (error %i).\n",
-				ogg_filelist[pos], res); FS_FreeFile(ogg_buffer);
-		ogg_buffer = NULL;
-		return false;
+		/* Find file. */
+		if ((size = FS_LoadFile(ogg_filelist[pos], (void **) &ogg_buffer)) == -1)
+		{
+			Com_Printf("OGG_Open: could not open %d (%s): %s.\n",
+			           pos, ogg_filelist[pos], strerror(errno));
+			return false;
+		}
+
+		/* Open ogg vorbis file. */
+		if ((res = ov_open(NULL, &ovFile, (char *) ogg_buffer, size)) < 0)
+		{
+			Com_Printf("OGG_Open: '%s' is not a valid Ogg Vorbis file (error %i).\n",
+			           ogg_filelist[pos], res);
+			FS_FreeFile(ogg_buffer);
+			ogg_buffer = NULL;
+			return false;
+		}
+	}
+	else
+	{
+		FILE *oggfile = Q_fopen(ogg_filelist[pos], "r");
+
+		if (oggfile)
+		{
+			ov_open(oggfile, &ovFile, NULL, 0);
+		}
 	}
 
 	ogg_info = ov_info(&ovFile, 0);
@@ -504,7 +560,7 @@ OGG_OpenName(char *filename)
 		return false;
 	}
 
-	name = va("%s/%s.ogg", OGG_DIR, filename);
+	name = va("%s/%s.ogg", oggdir, filename);
 
 	for (i = 0; i < ogg_numfiles; i++)
 	{

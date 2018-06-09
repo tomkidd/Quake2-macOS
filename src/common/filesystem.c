@@ -1308,7 +1308,7 @@ FS_Dir_f(void)
 // --------
 
 int
-FS_FindDirInSearchPatch(char *dst, size_t len, char *dir)
+FS_FindDirInRawSearchPatch(char *dst, size_t len, char *dir)
 {
 	char searchdir[MAX_OSPATH];
 

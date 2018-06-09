@@ -33,6 +33,10 @@
  #define OGG_SAMPLEWIDTH 2
  #define OGG_DIR "music"
 
+// Maximum numbers of OGG files. The GOG version of
+// has 24, so 32 should be enough for most cases.
+#define OGG_MAXFILES 32
+
 typedef enum
 {
 	PLAY,
