@@ -26,7 +26,7 @@
  */
 
 
-#include "../../header/ref.h"
+#include "../ref_shared.h"
 #include "header/local.h"
 
 #define HANDMADE_MATH_IMPLEMENTATION
@@ -363,8 +363,7 @@ GL3_SetMode(void)
 	vid.width = r_customwidth->value;
 	vid.height = r_customheight->value;
 
-	if ((err = SetMode_impl(&vid.width, &vid.height, r_mode->value,
-					 fullscreen)) == rserr_ok)
+	if ((err = SetMode_impl(&vid.width, &vid.height, r_mode->value, fullscreen)) == rserr_ok)
 	{
 		if (r_mode->value == -1)
 		{
@@ -436,11 +435,6 @@ GL3_Init(void)
 	R_Printf(PRINT_ALL, "Refresh: " REF_VERSION "\n");
 	R_Printf(PRINT_ALL, "Client: " YQ2VERSION "\n\n");
 
-	/* Options */
-	R_Printf(PRINT_ALL, "Refresher build options:\n");
-	R_Printf(PRINT_ALL, " + Retexturing support\n\n");
-
-
 	if(sizeof(float) != sizeof(GLfloat))
 	{
 		// if this ever happens, things would explode because we feed vertex arrays and UBO data
@@ -453,13 +447,6 @@ GL3_Init(void)
 	GL3_Draw_GetPalette();
 
 	GL3_Register();
-
-	/* initialize OS-specific parts of OpenGL */
-	if (!ri.GLimp_Init())
-	{
-		//QGL_Shutdown();
-		return false;
-	}
 
 	/* set our "safe" mode */
 	gl3state.prev_mode = 4;
@@ -515,7 +502,6 @@ GL3_Init(void)
 		R_Printf(PRINT_ALL, "Not supported\n");
 	}
 
-#ifdef SDL2
 	if(gl3config.debug_output)
 	{
 		R_Printf(PRINT_ALL, " - OpenGL Debug Output: Supported ");
@@ -531,18 +517,6 @@ GL3_Init(void)
 	else
 	{
 		R_Printf(PRINT_ALL, " - OpenGL Debug Output: Not Supported\n");
-	}
-#else // SDL1.2 - no debug output
-	R_Printf(PRINT_ALL, " - OpenGL Debug Output: Not Supported when using SDL1.2\n");
-#endif
-
-	if(gl3config.compat_profile)
-	{
-		// for some fucking reason particles (GL_POINT) don't work in compatibility profiles
-		// without setting this.. SDL1.2 only gives compat profiles and we might wanna support
-		// them for SDL2 as well, so broken screengrab software etc that uses GL1 functions still works
-		// (GL_POINT_SPRITE is not even part of 3.2core, it was only in GL2 and was deprecated afterwards)
-		glEnable(QGL_POINT_SPRITE);
 	}
 
 	// generate texture handles for all possible lightmaps
@@ -595,7 +569,7 @@ GL3_Shutdown(void)
 	}
 
 	/* shutdown OS specific OpenGL stuff like contexts, etc.  */
-	GL3_ShutdownWindow(false);
+	GL3_ShutdownContext();
 }
 
 static void
@@ -1587,7 +1561,7 @@ GL3_Clear(void)
 	}
 
 	/* stencilbuffer shadows */
-	if (gl_shadows->value && have_stencil)
+	if (gl_shadows->value && gl3config.stencil)
 	{
 		glClearStencil(1);
 		glClear(GL_STENCIL_BUFFER_BIT);
@@ -1690,10 +1664,10 @@ GL3_BeginFrame(float camera_separation)
 		gl_anisotropic->modified = false;
 	}
 
-	if(r_vsync->modified)
+	if (r_vsync->modified)
 	{
 		r_vsync->modified = false;
-		GL3_SetSwapInterval();
+		GL3_SetVsync();
 	}
 
 	/* clear screen if desired */
@@ -1745,7 +1719,7 @@ GetRefAPI(refimport_t imp)
 	re.Shutdown = GL3_Shutdown;
 	re.PrepareForWindow = GL3_PrepareForWindow;
 	re.InitContext = GL3_InitContext;
-	re.ShutdownWindow = GL3_ShutdownWindow;
+	re.ShutdownContext = GL3_ShutdownContext;
 	re.IsVSyncActive = GL3_IsVsyncActive;
 
 	re.BeginRegistration = GL3_BeginRegistration;

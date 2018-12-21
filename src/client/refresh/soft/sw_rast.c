@@ -67,15 +67,15 @@ static medge_t		*r_skyedges;
 static int		*r_skysurfedges;
 
 // I just copied this data from a box map...
-static int skybox_planes[12] = {2,-128, 0,-128, 2,128, 1,128, 0,128, 1,-128};
+static const int	skybox_planes[12] = {2,-128, 0,-128, 2,128, 1,128, 0,128, 1,-128};
 
-static int box_surfedges[24] = { 1,2,3,4,  -1,5,6,7,  8,9,-6,10,  -2,-7,-9,11,
+static const int	box_surfedges[24] = { 1,2,3,4,  -1,5,6,7,  8,9,-6,10,  -2,-7,-9,11,
   12,-3,-11,-8,  -12,-10,-5,-4};
-static int box_edges[24] = { 1,2, 2,3, 3,4, 4,1, 1,5, 5,6, 6,2, 7,8, 8,6, 5,7, 8,3, 7,4};
+static const int	box_edges[24] = { 1,2, 2,3, 3,4, 4,1, 1,5, 5,6, 6,2, 7,8, 8,6, 5,7, 8,3, 7,4};
 
-static int	box_faces[6] = {0,0,2,2,2,0};
+static const int	box_faces[6] = {0,0,2,2,2,0};
 
-static vec3_t	box_vecs[6][2] = {
+static const vec3_t	box_vecs[6][2] = {
 	{	{0,-1,0}, {-1,0,0} },
 	{ {0,1,0}, {0,0,-1} },
 	{	{0,-1,0}, {1,0,0} },
@@ -84,7 +84,7 @@ static vec3_t	box_vecs[6][2] = {
 	{ {-1,0,0}, {0,0,-1} }
 };
 
-static float	box_verts[8][3] = {
+static const float	box_verts[8][3] = {
 	{-1,-1,-1},
 	{-1,1,-1},
 	{1,1,-1},
@@ -163,7 +163,7 @@ R_EmitSkyBox
 ================
 */
 static void
-R_EmitSkyBox (void)
+R_EmitSkyBox(entity_t *currententity, const model_t *currentmodel)
 {
 	int		i, j;
 	int		oldkey;
@@ -199,7 +199,7 @@ R_EmitSkyBox (void)
 	r_currentkey = 0x7ffffff0;
  	for (i=0 ; i<6 ; i++)
 	{
-		R_RenderFace (r_skyfaces + i, ALIAS_XY_CLIP_MASK);
+		R_RenderFace(currententity, currentmodel, r_skyfaces + i, ALIAS_XY_CLIP_MASK);
 	}
 	r_currentkey = oldkey;	// bsp sorting order
 }
@@ -354,9 +354,13 @@ R_EmitEdge (mvertex_t *pv0, mvertex_t *pv1)
 	// the edge of the screen
 	// FIXME: is this actually needed?
 	if (edge->u < r_refdef.vrect_x_adj_shift20)
+	{
 		edge->u = r_refdef.vrect_x_adj_shift20;
-	if (edge->u > r_refdef.vrectright_adj_shift20)
+	}
+	else if (edge->u > r_refdef.vrectright_adj_shift20)
+	{
 		edge->u = r_refdef.vrectright_adj_shift20;
+	}
 
 	//
 	// sort the edge in normally
@@ -515,7 +519,7 @@ R_RenderFace
 ================
 */
 void
-R_RenderFace (msurface_t *fa, int clipflags)
+R_RenderFace (entity_t *currententity, const model_t *currentmodel, msurface_t *fa, int clipflags)
 {
 	int		i;
 	unsigned	mask;
@@ -537,7 +541,7 @@ R_RenderFace (msurface_t *fa, int clipflags)
 	// environment box surfaces to be emited
 	if ( fa->texinfo->flags & SURF_SKY )
 	{
-		R_EmitSkyBox ();
+		R_EmitSkyBox (currententity, currentmodel);
 		return;
 	}
 
@@ -731,7 +735,7 @@ R_RenderBmodelFace
 ================
 */
 void
-R_RenderBmodelFace (bedge_t *pedges, msurface_t *psurf)
+R_RenderBmodelFace(entity_t *currententity, bedge_t *pedges, msurface_t *psurf)
 {
 	int			i;
 	unsigned	mask;

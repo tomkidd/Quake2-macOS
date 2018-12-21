@@ -35,7 +35,6 @@
 #include <windows.h>
 
 #include "../../common/header/common.h"
-#include "../generic/header/input.h"
 #include "header/resource.h"
 
 // stdin and stdout handles
@@ -534,6 +533,14 @@ Sys_GetHomeDir(void)
 	snprintf(gdir, sizeof(gdir), "%s/%s/", profile, CFGDIR);
 
 	return gdir;
+}
+
+Sys_Remove(const char *path)
+{
+	WCHAR wpath[MAX_OSPATH] = {0};
+	MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, MAX_OSPATH);
+
+	_wremove(wpath);
 }
 
 /* ======================================================================= */

@@ -26,7 +26,7 @@
  */
 
 #include "header/client.h"
-#include "../backends/generic/header/input.h"
+#include "input/header/input.h"
 
 void CL_ForwardToServer_f(void);
 void CL_Changing_f(void);
@@ -814,10 +814,6 @@ CL_Frame(int packetdelta, int renderdelta, int timedelta, qboolean packetframe, 
 		/* update audio */
 		S_Update(cl.refdef.vieworg, cl.v_forward, cl.v_right, cl.v_up);
 
-#ifdef CDA
-		CDAudio_Update();
-#endif
-
 		/* advance local effects for next frame */
 		CL_RunDLights();
 		CL_RunLightStyles();
@@ -886,10 +882,6 @@ CL_Init(void)
 
 	cls.disable_screen = true; /* don't draw yet */
 
-#ifdef CDA
-	CDAudio_Init();
-#endif
-
 	CL_InitLocal();
 
 	Cbuf_Execute();
@@ -914,12 +906,8 @@ CL_Shutdown(void)
 
 	Key_WriteConsoleHistory();
 
-#ifdef CDA
-	CDAudio_Shutdown();
-#endif
-#ifdef OGG
 	OGG_Stop();
-#endif
+
 	S_Shutdown();
 	IN_Shutdown();
 	VID_Shutdown();

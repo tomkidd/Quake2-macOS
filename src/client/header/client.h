@@ -47,15 +47,16 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-#include "ref.h"
-#include "vid.h"
+#include "../../common/header/common.h"
+
+#include "../sound/header/sound.h"
+#include "../sound/header/vorbis.h"
+#include "../vid/header/ref.h"
+#include "../vid/header/vid.h"
+
 #include "screen.h"
 #include "keyboard.h"
 #include "console.h"
-
-#include "../sound/header/cdaudio.h"
-#include "../sound/header/sound.h"
-#include "../sound/header/vorbis.h"
 
 typedef struct
 {

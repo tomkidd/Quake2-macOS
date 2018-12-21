@@ -138,7 +138,7 @@ extern oldrefdef_t	r_refdef;
 #define VID_GRADES	(1 << VID_CBITS)
 
 
-// r_shared.h: general refresh-related stuff shared between the refresh and the
+// sw_local.h: general refresh-related stuff shared between the refresh and the
 // driver
 
 
@@ -208,11 +208,11 @@ typedef struct
 ** listed after it!
 */
 typedef struct finalvert_s {
-	int             u, v, s, t;
-	int             l;
-	int             zi;
-	int             flags;
-	float   xyz[3];         // eye space
+	int		u, v, s, t;
+	int		l;
+	zvalue_t	zi;
+	int		flags;
+	float		xyz[3];         // eye space
 } finalvert_t;
 
 
@@ -279,7 +279,7 @@ typedef struct espan_s
 } espan_t;
 extern espan_t	*vid_polygon_spans; // space for spans in r_poly
 
-// used by the polygon drawer (R_POLY.C) and sprite setup code (R_SPRITE.C)
+// used by the polygon drawer (sw_poly.c) and sprite setup code (sw_sprite.c)
 typedef struct
 {
 	int	nump;
@@ -291,7 +291,7 @@ typedef struct
 	float	dist;
 	float	s_offset, t_offset;
 	float	viewer_position[3];
-	void	(*drawspanlet)(void);
+	void	(*drawspanlet)(const int *r_turb_turb);
 	int	stipple_parity;
 } polydesc_t;
 
@@ -362,12 +362,12 @@ extern float	d_sdivzstepu, d_tdivzstepu, d_zistepu;
 extern float	d_sdivzstepv, d_tdivzstepv, d_zistepv;
 extern float	d_sdivzorigin, d_tdivzorigin, d_ziorigin;
 
-void D_DrawSpans16(espan_t *pspans);
+void D_DrawSpansPow2(espan_t *pspans);
 void D_DrawZSpans(espan_t *pspans);
-void Turbulent8(espan_t *pspan);
-void NonTurbulent8(espan_t *pspan); //PGM
+void TurbulentPow2(espan_t *pspan);
+void NonTurbulentPow2(espan_t *pspan); //PGM
 
-surfcache_t *D_CacheSurface (msurface_t *surface, int miplevel);
+surfcache_t *D_CacheSurface(const entity_t *currententity, msurface_t *surface, int miplevel);
 
 extern int	d_vrectx, d_vrecty, d_vrectright_particle, d_vrectbottom_particle;
 
@@ -375,7 +375,6 @@ extern int	d_pix_min, d_pix_max, d_pix_mul;
 
 extern pixel_t	*d_viewbuffer;
 extern zvalue_t	*d_pzbuffer;
-extern unsigned int d_zwidth;
 
 extern int	d_minmip;
 extern float	d_scalemip[NUM_MIPS-1];
@@ -384,7 +383,6 @@ extern float	d_scalemip[NUM_MIPS-1];
 
 extern int	cachewidth;
 extern pixel_t	*cacheblock;
-extern int	r_screenwidth;
 
 extern int	r_drawnpolycount;
 
@@ -402,7 +400,7 @@ extern surf_t	*surfaces, *surface_p, *surf_max;
 // pointer is greater than another one, it should be drawn in front
 // surfaces[1] is the background, and is used as the active surface stack.
 // surfaces[0] is a dummy, because index 0 is used to indicate no surface
-//  attached to an edge_t
+// attached to an edge_t
 
 //===================================================================
 
@@ -448,8 +446,6 @@ extern mplane_t        screenedge[4];
 extern vec3_t  r_origin;
 
 extern entity_t	r_worldentity;
-extern model_t	*currentmodel;
-extern entity_t	 *currententity;
 extern vec3_t	modelorg;
 extern vec3_t	r_entorigin;
 
@@ -464,23 +460,22 @@ extern msurface_t	*r_alpha_surfaces;
 //
 extern  qboolean	insubmodel;
 
-void R_DrawAlphaSurfaces(void);
+void R_DrawAlphaSurfaces(const entity_t *currententity);
 
-void R_DrawSprite(void);
+void R_DrawSprite(entity_t *currententity, const model_t *currentmodel);
 
-void R_RenderFace(msurface_t *fa, int clipflags);
-void R_RenderBmodelFace(bedge_t *pedges, msurface_t *psurf);
+void R_RenderFace(entity_t *currententity, const model_t *currentmodel, msurface_t *fa, int clipflags);
+void R_RenderBmodelFace(entity_t *currententity, bedge_t *pedges, msurface_t *psurf);
 void R_TransformFrustum(void);
 
-void R_DrawSubmodelPolygons(model_t *pmodel, int clipflags, mnode_t *topnode);
-void R_DrawSolidClippedSubmodelPolygons(model_t *pmodel, mnode_t *topnode);
+void R_DrawSubmodelPolygons(entity_t *currententity, const model_t *currentmodel, int clipflags, mnode_t *topnode);
+void R_DrawSolidClippedSubmodelPolygons(entity_t *currententity, const model_t *currentmodel, mnode_t *topnode);
 
-void R_AliasDrawModel(void);
+void R_AliasDrawModel(entity_t *currententity, const model_t *currentmodel);
 void R_BeginEdgeFrame(void);
 void R_ScanEdges(surf_t *surface);
-void R_PushDlights(model_t *model);
-
-extern void R_RotateBmodel (void);
+void R_PushDlights(const model_t *model);
+void R_RotateBmodel(const entity_t *currententity);
 
 extern int	c_faceclip;
 extern int	r_polycount;
@@ -501,13 +496,16 @@ extern edge_t	**newedges;
 extern edge_t	**removeedges;
 
 typedef struct {
-	pixel_t		*pdest;
-	zvalue_t	*pz;
-	int		count;
+	int		u, v, count;
 	pixel_t		*ptex;
-	int		sfrac, tfrac, light, zi;
+	int		sfrac, tfrac, light;
+	zvalue_t	zi;
 } spanpackage_t;
-extern spanpackage_t	*triangle_spans;
+extern spanpackage_t	*triangle_spans, *triangles_max;
+
+void R_PolysetDrawSpans8_33(const entity_t *currententity, spanpackage_t *pspanpackage);
+void R_PolysetDrawSpans8_66(const entity_t *currententity, spanpackage_t *pspanpackage);
+void R_PolysetDrawSpans8_Opaque(const entity_t *currententity, spanpackage_t *pspanpackage);
 
 extern byte	**warp_rowptr;
 extern int	*warp_column;
@@ -522,18 +520,12 @@ extern float	aliasxscale, aliasyscale, aliasxcenter, aliasycenter;
 extern int	r_outofsurfaces;
 extern int	r_outofedges;
 extern int	r_outofverts;
+extern int	r_outoftriangles;
 
 extern mvertex_t	*r_pcurrentvertbase;
 
-typedef struct
-{
-	finalvert_t *a, *b, *c;
-} aliastriangleparms_t;
-
-extern aliastriangleparms_t aliastriangleparms;
-
-void R_DrawTriangle( void );
-void R_AliasClipTriangle (finalvert_t *index0, finalvert_t *index1, finalvert_t *index2);
+void R_DrawTriangle(const entity_t *currententity, const finalvert_t *a, const finalvert_t *b, const finalvert_t *c);
+void R_AliasClipTriangle(const entity_t *currententity, const finalvert_t *index0, const finalvert_t *index1, finalvert_t *index2);
 
 
 extern float	r_time1;
@@ -550,7 +542,7 @@ extern model_t		 *r_worldmodel;
 void R_PrintAliasStats (void);
 void R_PrintTimes (void);
 void R_PrintDSpeeds (void);
-void R_LightPoint (vec3_t p, vec3_t color);
+void R_LightPoint (const entity_t *currententity, vec3_t p, vec3_t color);
 void R_SetupFrame (void);
 
 extern  refdef_t		r_newrefdef;

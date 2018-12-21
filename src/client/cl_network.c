@@ -320,12 +320,8 @@ CL_Disconnect(void)
 	cls.connect_time = 0;
 
 	SCR_StopCinematic();
-#ifdef OGG
+
 	OGG_Stop();
-#endif
-#ifdef CDA
-	CDAudio_Stop();
-#endif
 
 	if (cls.demorecording)
 	{

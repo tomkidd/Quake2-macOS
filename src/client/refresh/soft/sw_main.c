@@ -21,13 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sw_main.c
 #include <stdint.h>
 
-#ifdef SDL2
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_video.h>
-
-#else // SDL1.2
-#include <SDL/SDL.h>
-#endif //SDL2
 
 #include "header/local.h"
 
@@ -51,7 +46,6 @@ char		skyname[MAX_QPATH];
 vec3_t		skyaxis;
 
 refdef_t	r_newrefdef;
-model_t		*currentmodel;
 
 model_t		*r_worldmodel;
 
@@ -64,10 +58,6 @@ typedef struct swstate_s
 
 	unsigned char	gammatable[256];
 	unsigned char	currentpalette[1024];
-
-	// SDL colors
-	Uint32 	palette_colors[256];
-
 } swstate_t;
 
 static swstate_t sw_state;
@@ -76,10 +66,12 @@ void	*colormap;
 float	r_time1;
 int	r_numallocatededges;
 int	r_numallocatedverts;
+int	r_numallocatedtriangles;
 float	r_aliasuvscale = 1.0;
 int	r_outofsurfaces;
 int	r_outofedges;
 int	r_outofverts;
+int	r_outoftriangles;
 
 qboolean	r_dowarp;
 
@@ -106,8 +98,6 @@ float		xscaleinv, yscaleinv;
 float		xscaleshrink, yscaleshrink;
 float		aliasxscale, aliasyscale, aliasxcenter, aliasycenter;
 
-int		r_screenwidth;
-
 mplane_t	screenedge[4];
 
 //
@@ -132,17 +122,14 @@ static cvar_t	*sw_aliasstats;
 cvar_t	*sw_clearcolor;
 cvar_t	*sw_drawflat;
 cvar_t	*sw_draworder;
-static cvar_t	*sw_maxedges;
-static cvar_t	*sw_maxsurfs;
 static cvar_t  *r_mode;
-static cvar_t	*sw_reportedgeout;
-static cvar_t	*sw_reportsurfout;
 cvar_t  *sw_stipplealpha;
 cvar_t	*sw_surfcacheoverride;
 cvar_t	*sw_waterwarp;
 static cvar_t	*sw_overbrightbits;
 cvar_t	*sw_custom_particles;
 cvar_t	*sw_texture_filtering;
+cvar_t	*sw_retexturing;
 
 cvar_t	*r_drawworld;
 static cvar_t	*r_drawentities;
@@ -164,8 +151,6 @@ static cvar_t	*vid_gamma;
 //PGM
 static cvar_t	*r_lockpvs;
 //PGM
-
-#define	STRINGER(x) "x"
 
 // sw_vars.c
 
@@ -202,11 +187,8 @@ pixel_t		*cacheblock;
 int		cachewidth;
 pixel_t		*d_viewbuffer;
 zvalue_t	*d_pzbuffer;
-unsigned int	d_zwidth;
 
 qboolean	insubmodel;
-
-static qboolean	sdl_palette_outdated;
 
 static struct texture_buffer {
 	image_t	image;
@@ -215,9 +197,9 @@ static struct texture_buffer {
 
 static void Draw_GetPalette (void);
 static void RE_BeginFrame( float camera_separation );
-static void Draw_BuildGammaTable( void );
+static void Draw_BuildGammaTable(void);
 static void RE_EndFrame(void);
-static void R_DrawBeam(entity_t *e);
+static void R_DrawBeam(const entity_t *e);
 
 /*
 ==================
@@ -274,28 +256,25 @@ R_InitTurb (void)
 	}
 }
 
-void R_ImageList_f( void );
-static void R_ScreenShot_f( void );
+void R_ImageList_f(void);
+static void R_ScreenShot_f(void);
 
 static void
-R_Register (void)
+R_RegisterVariables (void)
 {
 	sw_aliasstats = ri.Cvar_Get ("sw_polymodelstats", "0", 0);
 	sw_clearcolor = ri.Cvar_Get ("sw_clearcolor", "2", 0);
 	sw_drawflat = ri.Cvar_Get ("sw_drawflat", "0", 0);
 	sw_draworder = ri.Cvar_Get ("sw_draworder", "0", 0);
-	sw_maxedges = ri.Cvar_Get ("sw_maxedges", STRINGER(MAXSTACKSURFACES), 0);
-	sw_maxsurfs = ri.Cvar_Get ("sw_maxsurfs", "0", 0);
 	sw_mipcap = ri.Cvar_Get ("sw_mipcap", "0", 0);
 	sw_mipscale = ri.Cvar_Get ("sw_mipscale", "1", 0);
-	sw_reportedgeout = ri.Cvar_Get ("sw_reportedgeout", "0", 0);
-	sw_reportsurfout = ri.Cvar_Get ("sw_reportsurfout", "0", 0);
 	sw_stipplealpha = ri.Cvar_Get( "sw_stipplealpha", "0", CVAR_ARCHIVE );
 	sw_surfcacheoverride = ri.Cvar_Get ("sw_surfcacheoverride", "0", 0);
 	sw_waterwarp = ri.Cvar_Get ("sw_waterwarp", "1", 0);
 	sw_overbrightbits = ri.Cvar_Get("sw_overbrightbits", "1.0", CVAR_ARCHIVE);
 	sw_custom_particles = ri.Cvar_Get("sw_custom_particles", "0", CVAR_ARCHIVE);
 	sw_texture_filtering = ri.Cvar_Get("sw_texture_filtering", "0", CVAR_ARCHIVE);
+	sw_retexturing = ri.Cvar_Get("sw_retexturing", "0", CVAR_ARCHIVE);
 	r_mode = ri.Cvar_Get( "r_mode", "0", CVAR_ARCHIVE );
 
 	r_lefthand = ri.Cvar_Get( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
@@ -337,7 +316,9 @@ R_UnRegister (void)
 	ri.Cmd_RemoveCommand( "imagelist" );
 }
 
-static void SWimp_Shutdown(void );
+static void RE_ShutdownContext(void);
+static void SWimp_CreateRender(void);
+static int RE_InitContext(void *win);
 
 /*
 ===============
@@ -347,6 +328,7 @@ R_Init
 static qboolean
 RE_Init(void)
 {
+	R_RegisterVariables ();
 	R_InitImages ();
 	Mod_Init ();
 	Draw_InitLocal ();
@@ -364,10 +346,7 @@ RE_Init(void)
 
 	r_aliasuvscale = 1.0;
 
-	R_Register ();
 	Draw_GetPalette ();
-	if (!ri.GLimp_Init())
-		return false;
 
 	// create the window
 	RE_BeginFrame( 0 );
@@ -409,7 +388,7 @@ RE_Shutdown (void)
 	Mod_FreeAll ();
 	R_ShutdownImages ();
 
-	SWimp_Shutdown();
+	RE_ShutdownContext();
 }
 
 /*
@@ -450,9 +429,6 @@ R_ReallocateMapBuffers (void)
 		if (r_cnumsurfs < NUMSTACKSURFACES)
 			r_cnumsurfs = NUMSTACKSURFACES;
 
-		if (r_cnumsurfs < sw_maxsurfs->value)
-			r_cnumsurfs = sw_maxsurfs->value;
-
 		lsurfs = malloc (r_cnumsurfs * sizeof(surf_t));
 		if (!lsurfs)
 		{
@@ -488,9 +464,6 @@ R_ReallocateMapBuffers (void)
 
 		if (r_numallocatededges < NUMSTACKEDGES)
 			r_numallocatededges = NUMSTACKEDGES;
-
-		if (r_numallocatededges < sw_maxedges->value)
-		    r_numallocatededges = sw_maxedges->value;
 
 		r_edges = malloc (r_numallocatededges * sizeof(edge_t));
 		if (!r_edges)
@@ -534,6 +507,35 @@ R_ReallocateMapBuffers (void)
 		finalverts_max = &finalverts[r_numallocatedverts];
 
 		R_Printf(PRINT_ALL, "Allocated %d verts\n", r_numallocatedverts);
+	}
+
+	if (!r_numallocatedtriangles || r_outoftriangles)
+	{
+		if (triangle_spans)
+		{
+			free(triangle_spans);
+		}
+
+		if (r_outoftriangles)
+		{
+			//R_Printf(PRINT_ALL, "%s: not enough %d(+%d) triangles\n",
+			//		    __func__, r_numallocatedtriangles, r_outoftriangles);
+			r_numallocatedtriangles *= 2;
+		}
+
+		if (r_numallocatedtriangles < vid.height)
+			r_numallocatedtriangles = vid.height;
+
+		triangle_spans  = malloc(r_numallocatedtriangles * sizeof(spanpackage_t));
+		if (!triangle_spans)
+		{
+			R_Printf(PRINT_ALL, "%s: Couldn't malloc %d bytes\n",
+				 __func__, (int)(r_numallocatedtriangles * sizeof(spanpackage_t)));
+			return;
+		}
+		triangles_max = &triangle_spans[r_numallocatedtriangles];
+
+		R_Printf(PRINT_ALL, "Allocated %d triangles\n", r_numallocatedtriangles);
 	}
 }
 
@@ -604,7 +606,7 @@ R_MarkLeaves (void)
 ** IMPLEMENT THIS!
 */
 static void
-R_DrawNullModel( void )
+R_DrawNullModel(void)
 {
 }
 
@@ -625,7 +627,7 @@ R_DrawEntitiesOnList (void)
 	// all bmodels have already been drawn by the edge list
 	for (i=0 ; i<r_newrefdef.num_entities ; i++)
 	{
-		currententity = &r_newrefdef.entities[i];
+		entity_t *currententity = &r_newrefdef.entities[i];
 
 		if ( currententity->flags & RF_TRANSLUCENT )
 		{
@@ -638,12 +640,12 @@ R_DrawEntitiesOnList (void)
 			modelorg[0] = -r_origin[0];
 			modelorg[1] = -r_origin[1];
 			modelorg[2] = -r_origin[2];
-			VectorCopy( vec3_origin, r_entorigin );
-			R_DrawBeam( currententity );
+			VectorCopy(vec3_origin, r_entorigin);
+			R_DrawBeam(currententity);
 		}
 		else
 		{
-			currentmodel = currententity->model;
+			const model_t *currentmodel = currententity->model;
 			if (!currentmodel)
 			{
 				R_DrawNullModel();
@@ -655,11 +657,11 @@ R_DrawEntitiesOnList (void)
 			switch (currentmodel->type)
 			{
 			case mod_sprite:
-				R_DrawSprite ();
+				R_DrawSprite(currententity, currentmodel);
 				break;
 
 			case mod_alias:
-				R_AliasDrawModel ();
+				R_AliasDrawModel(currententity, currentmodel);
 				break;
 
 			default:
@@ -673,7 +675,7 @@ R_DrawEntitiesOnList (void)
 
 	for (i=0 ; i<r_newrefdef.num_entities ; i++)
 	{
-		currententity = &r_newrefdef.entities[i];
+		entity_t *currententity = &r_newrefdef.entities[i];
 
 		if ( !( currententity->flags & RF_TRANSLUCENT ) )
 			continue;
@@ -688,7 +690,7 @@ R_DrawEntitiesOnList (void)
 		}
 		else
 		{
-			currentmodel = currententity->model;
+			const model_t *currentmodel = currententity->model;
 			if (!currentmodel)
 			{
 				R_DrawNullModel();
@@ -700,11 +702,11 @@ R_DrawEntitiesOnList (void)
 			switch (currentmodel->type)
 			{
 			case mod_sprite:
-				R_DrawSprite ();
+				R_DrawSprite(currententity, currentmodel);
 				break;
 
 			case mod_alias:
-				R_AliasDrawModel ();
+				R_AliasDrawModel(currententity, currentmodel);
 				break;
 
 			default:
@@ -721,7 +723,7 @@ R_BmodelCheckBBox
 =============
 */
 static int
-R_BmodelCheckBBox (float *minmaxs)
+R_BmodelCheckBBox (const float *minmaxs)
 {
 	int i, clipflags;
 
@@ -816,7 +818,7 @@ Returns an axially aligned box that contains the input box at the given rotation
 =============
 */
 static void
-RotatedBBox (vec3_t mins, vec3_t maxs, vec3_t angles, vec3_t tmins, vec3_t tmaxs)
+RotatedBBox (const vec3_t mins, const vec3_t maxs, vec3_t angles, vec3_t tmins, vec3_t tmaxs)
 {
 	vec3_t	tmp, v;
 	int		i, j;
@@ -891,8 +893,8 @@ R_DrawBEntitiesOnList (void)
 
 	for (i=0 ; i<r_newrefdef.num_entities ; i++)
 	{
-		currententity = &r_newrefdef.entities[i];
-		currentmodel = currententity->model;
+		entity_t *currententity = &r_newrefdef.entities[i];
+		const model_t *currentmodel = currententity->model;
 		if (!currentmodel)
 			continue;
 		if (currentmodel->nummodelsurfaces == 0)
@@ -922,7 +924,7 @@ R_DrawBEntitiesOnList (void)
 		r_pcurrentvertbase = currentmodel->vertexes;
 
 		// FIXME: stop transforming twice
-		R_RotateBmodel ();
+		R_RotateBmodel(currententity);
 
 		// calculate dynamic lighting for bmodel
 		R_PushDlights (currentmodel);
@@ -931,14 +933,14 @@ R_DrawBEntitiesOnList (void)
 		{
 			// not a leaf; has to be clipped to the world BSP
 			r_clipflags = clipflags;
-			R_DrawSolidClippedSubmodelPolygons (currentmodel, topnode);
+			R_DrawSolidClippedSubmodelPolygons(currententity, currentmodel, topnode);
 		}
 		else
 		{
 			// falls entirely in one leaf, so we just put all the
 			// edges in the edge list and let 1/z sorting handle
 			// drawing order
-			R_DrawSubmodelPolygons (currentmodel, clipflags, topnode);
+			R_DrawSubmodelPolygons(currententity, currentmodel, clipflags, topnode);
 		}
 
 		// put back world rotation and frustum clipping
@@ -1062,7 +1064,7 @@ R_CalcPalette (void)
 //=======================================================================
 
 static void
-R_SetLightLevel (void)
+R_SetLightLevel (const entity_t *currententity)
 {
 	vec3_t		light;
 
@@ -1073,7 +1075,7 @@ R_SetLightLevel (void)
 	}
 
 	// save off light value for server to look at (BIG HACK!)
-	R_LightPoint (r_newrefdef.vieworg, light);
+	R_LightPoint (currententity, r_newrefdef.vieworg, light);
 	r_lightlevel->value = 150.0 * light[0];
 }
 
@@ -1134,10 +1136,10 @@ RE_RenderFrame (refdef_t *fd)
 		dp_time2 = SDL_GetTicks();
 
 	// Perform pixel palette blending ia the pics/colormap.pcx lower part lookup table.
-	R_DrawAlphaSurfaces();
+	R_DrawAlphaSurfaces(&r_worldentity);
 
 	// Save off light value for server to look at (BIG HACK!)
-	R_SetLightLevel ();
+	R_SetLightLevel (&r_worldentity);
 
 	if (r_dowarp)
 		D_WarpScreen ();
@@ -1159,12 +1161,6 @@ RE_RenderFrame (refdef_t *fd)
 
 	if (r_dspeeds->value)
 		R_PrintDSpeeds ();
-
-	if (sw_reportsurfout->value && r_outofsurfaces)
-		R_Printf(PRINT_ALL,"Short %d surfaces\n", r_outofsurfaces);
-
-	if (sw_reportedgeout->value && r_outofedges)
-		R_Printf(PRINT_ALL,"Short roughly %d edges\n", r_outofedges * 2 / 3);
 
 	R_ReallocateMapBuffers();
 }
@@ -1276,12 +1272,11 @@ R_GammaCorrectAndSetPalette( const unsigned char *palette )
 
 	for ( i = 0; i < 256; i++ )
 	{
-		sw_state.currentpalette[i*4+0] = sw_state.gammatable[palette[i*4+0]];
-		sw_state.currentpalette[i*4+1] = sw_state.gammatable[palette[i*4+1]];
-		sw_state.currentpalette[i*4+2] = sw_state.gammatable[palette[i*4+2]];
+		sw_state.currentpalette[i*4+0] = sw_state.gammatable[palette[i*4+2]]; // blue
+		sw_state.currentpalette[i*4+1] = sw_state.gammatable[palette[i*4+1]]; // green
+		sw_state.currentpalette[i*4+2] = sw_state.gammatable[palette[i*4+0]]; // red
+		sw_state.currentpalette[i*4+3] = 0xFF; // alpha
 	}
-
-	sdl_palette_outdated = true;
 }
 
 /*
@@ -1373,7 +1368,7 @@ Draw_BuildGammaTable (void)
 ** R_DrawBeam
 */
 static void
-R_DrawBeam( entity_t *e )
+R_DrawBeam(const entity_t *e)
 {
 #define NUM_BEAM_SEGS 6
 
@@ -1429,8 +1424,8 @@ RE_SetSky
 ============
 */
 // 3dstudio environment map names
-char	*suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
-static int	r_skysideimage[6] = {5, 2, 4, 1, 0, 3};
+static const char	*suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
+static const int	r_skysideimage[6] = {5, 2, 4, 1, 0, 3};
 extern	mtexinfo_t		r_skytexinfo[6];
 
 static void
@@ -1515,6 +1510,12 @@ RE_IsVsyncActive(void)
 	}
 }
 
+static int RE_PrepareForWindow(void)
+{
+	int flags = SDL_SWSURFACE;
+	return flags;
+}
+
 /*
 ===============
 GetRefAPI
@@ -1553,6 +1554,9 @@ GetRefAPI(refimport_t imp)
 	re.Init = RE_Init;
 	re.IsVSyncActive = RE_IsVsyncActive;
 	re.Shutdown = RE_Shutdown;
+	re.InitContext = RE_InitContext;
+	re.ShutdownContext = RE_ShutdownContext;
+	re.PrepareForWindow = RE_PrepareForWindow;
 
 	re.SetPalette = RE_SetPalette;
 	re.BeginFrame = RE_BeginFrame;
@@ -1563,184 +1567,40 @@ GetRefAPI(refimport_t imp)
 	return re;
 }
 
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-static SDL_Window* window = NULL;
-static SDL_Surface *surface = NULL;
-static SDL_Texture *texture = NULL;
-static SDL_Renderer *renderer = NULL;
-#else
-static SDL_Surface* window = NULL;
-#endif
-static qboolean X11_active = false;
-
 /*
- * Sets the window icon
+ * FIXME: The following functions implement the render backend
+ * through SDL renderer. Only small parts belong here, refresh.c
+ * (at client side) needs to grow support funtions for software
+ * renderers and the renderer must use them. What's left here
+ * should be moved to a new file sw_sdl.c.
+ *
+ * Very, very problematic is at least the SDL initalization and
+ * window creation in this code. That is guaranteed to clash with
+ * the GL renderers (when switching GL -> Soft or the other way
+ * round) and works only by pure luck. And only as long as there
+ * is only one software renderer.
  */
-#if SDL_VERSION_ATLEAST(2, 0, 0)
 
-/* The 64x64 32bit window icon */
-#include "../../../backends/sdl/icon/q2icon64.h"
-
-static void
-SetSDLIcon()
-{
-	/* these masks are needed to tell SDL_CreateRGBSurface(From)
-	   to assume the data it gets is byte-wise RGB(A) data */
-	Uint32 rmask, gmask, bmask, amask;
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-	int shift = (q2icon64.bytes_per_pixel == 3) ? 8 : 0;
-	rmask = 0xff000000 >> shift;
-	gmask = 0x00ff0000 >> shift;
-	bmask = 0x0000ff00 >> shift;
-	amask = 0x000000ff >> shift;
-#else /* little endian, like x86 */
-	rmask = 0x000000ff;
-	gmask = 0x0000ff00;
-	bmask = 0x00ff0000;
-	amask = (q2icon64.bytes_per_pixel == 3) ? 0 : 0xff000000;
-#endif
-
-	SDL_Surface* icon = SDL_CreateRGBSurfaceFrom((void*)q2icon64.pixel_data, q2icon64.width,
-		q2icon64.height, q2icon64.bytes_per_pixel*8, q2icon64.bytes_per_pixel*q2icon64.width,
-		rmask, gmask, bmask, amask);
-
-	SDL_SetWindowIcon(window, icon);
-
-	SDL_FreeSurface(icon);
-}
-
-#else /* SDL 1.2 */
-
-/* The window icon */
-#include "../../../backends/sdl/icon/q2icon.xbm"
-
-static void
-SetSDLIcon()
-{
-	SDL_Surface *icon;
-	SDL_Color transColor, solidColor;
-	Uint8 *ptr;
-	int i;
-	int mask;
-
-	icon = SDL_CreateRGBSurface(SDL_SWSURFACE,
-			q2icon_width, q2icon_height, 8,
-			0, 0, 0, 0);
-
-	if (icon == NULL)
-	{
-		return;
-	}
-
-	SDL_SetColorKey(icon, SDL_SRCCOLORKEY, 0);
-
-	transColor.r = 255;
-	transColor.g = 255;
-	transColor.b = 255;
-
-	solidColor.r = 0;
-	solidColor.g = 0;
-	solidColor.b = 0;
-
-	SDL_SetColors(icon, &transColor, 0, 1);
-	SDL_SetColors(icon, &solidColor, 1, 1);
-
-	ptr = (Uint8 *)icon->pixels;
-
-	for (i = 0; i < sizeof(q2icon_bits); i++)
-	{
-		for (mask = 1; mask != 0x100; mask <<= 1)
-		{
-			*ptr = (q2icon_bits[i] & mask) ? 1 : 0;
-			ptr++;
-		}
-	}
-
-	SDL_WM_SetIcon(icon, NULL);
-
-	SDL_FreeSurface(icon);
-}
-#endif /* SDL 1.2 */
+static SDL_Window	*window = NULL;
+static SDL_Texture	*texture = NULL;
+static SDL_Renderer	*renderer = NULL;
 
 static int
-IsFullscreen()
-{
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-	if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP) {
-		return 1;
-	} else if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) {
-		return 2;
-	} else {
-		return 0;
-	}
-#else
-	return !!(window->flags & SDL_FULLSCREEN);
-#endif
-}
-
-static qboolean
-GetWindowSize(int* w, int* h)
-{
-	if(window == NULL || w == NULL || h == NULL)
-		return false;
-
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-	SDL_DisplayMode m;
-	if(SDL_GetWindowDisplayMode(window, &m) != 0)
-	{
-		Com_Printf("Can't get Displaymode: %s\n", SDL_GetError());
-		return false;
-	}
-	*w = m.w;
-	*h = m.h;
-#else
-	*w = window->w;
-	*h = window->h;
-#endif
-
-	return true;
-}
-
-static int
-R_InitContext(void* win)
+RE_InitContext(void *win)
 {
 	char title[40] = {0};
 
 	if(win == NULL)
 	{
-		ri.Sys_Error(ERR_FATAL, "R_InitContext() must not be called with NULL argument!");
+		ri.Sys_Error(ERR_FATAL, "RE_InitContext() must not be called with NULL argument!");
 		return false;
 	}
 
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-	window = (SDL_Window*)win;
-#else // SDL 1.2
-	window = (SDL_Surface*)win;
-#endif
+	window = (SDL_Window *)win;
 
 	/* Window title - set here so we can display renderer name in it */
 	snprintf(title, sizeof(title), "Yamagi Quake II %s - Soft Render", YQ2VERSION);
-#if SDL_VERSION_ATLEAST(2, 0, 0)
 	SDL_SetWindowTitle(window, title);
-#else
-	SDL_WM_SetCaption(title, title);
-#endif
-
-	return true;
-}
-
-static qboolean
-CreateSDLWindow(int flags, int w, int h)
-{
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-	Uint32 Rmask, Gmask, Bmask, Amask;
-	int bpp;
-	int windowPos = SDL_WINDOWPOS_UNDEFINED;
-	if (!SDL_PixelFormatEnumToMasks(SDL_PIXELFORMAT_ARGB8888, &bpp, &Rmask, &Gmask, &Bmask, &Amask))
-		return 0;
-
-	// TODO: support fullscreen on different displays with SDL_WINDOWPOS_UNDEFINED_DISPLAY(displaynum)
-	window = SDL_CreateWindow("Yamagi Quake II", windowPos, windowPos, w, h, flags);
 
 	if (r_vsync->value)
 	{
@@ -1751,22 +1611,30 @@ CreateSDLWindow(int flags, int w, int h)
 		renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	}
 
-	surface = SDL_CreateRGBSurface(0, w, h, bpp, Rmask, Gmask, Bmask, Amask);
+	/* Select the color for drawing. It is set to black here. */
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+
+	/* Clear the entire screen to our selected color. */
+	SDL_RenderClear(renderer);
+
+	/* Up until now everything was drawn behind the scenes.
+	   This will show the new, black contents of the window. */
+	SDL_RenderPresent(renderer);
 
 	texture = SDL_CreateTexture(renderer,
-				    SDL_PIXELFORMAT_ARGB8888,
-				    SDL_TEXTUREACCESS_STREAMING,
-				    w, h);
-	return window != NULL;
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+				    SDL_PIXELFORMAT_BGRA8888,
 #else
-	window = SDL_SetVideoMode(w, h, 0, flags);
-	SDL_EnableUNICODE(SDL_TRUE);
-	return window != NULL;
+				    SDL_PIXELFORMAT_ARGB8888,
 #endif
+				    SDL_TEXTUREACCESS_STREAMING,
+				    vid.width, vid.height);
+
+	return true;
 }
 
 static void
-SWimp_DestroyRender(void)
+RE_ShutdownContext(void)
 {
 	if (vid_buffer)
 	{
@@ -1858,34 +1726,17 @@ SWimp_DestroyRender(void)
 	}
 	r_warpbuffer = NULL;
 
-#if SDL_VERSION_ATLEAST(2, 0, 0)
 	if (texture)
 	{
 		SDL_DestroyTexture(texture);
 	}
 	texture = NULL;
 
-	if (surface)
-	{
-		SDL_FreeSurface(surface);
-	}
-	surface = NULL;
-
 	if (renderer)
 	{
 		SDL_DestroyRenderer(renderer);
 	}
 	renderer = NULL;
-
-	/* Is the surface used? */
-	if (window)
-		SDL_DestroyWindow(window);
-#else
-	/* Is the surface used? */
-	if (window)
-		SDL_FreeSurface(window);
-#endif
-	window = NULL;
 }
 
 /*
@@ -1894,209 +1745,13 @@ point math used in R_ScanEdges() overflows at width 2048 !!
 */
 char shift_size;
 
-/*
-** SWimp_InitGraphics
-**
-** This initializes the software refresh's implementation specific
-** graphics subsystem.  In the case of Windows it creates DIB or
-** DDRAW surfaces.
-**
-** The necessary width and height parameters are grabbed from
-** vid.width and vid.height.
-*/
-static qboolean
-SWimp_InitGraphics(int fullscreen, int *pwidth, int *pheight)
-{
-	int flags;
-	int curWidth, curHeight;
-	int width = *pwidth;
-	int height = *pheight;
-	unsigned int fs_flag = 0;
-
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-	if (fullscreen == 1) {
-		fs_flag = SDL_WINDOW_FULLSCREEN_DESKTOP;
-	} else if (fullscreen == 2) {
-		fs_flag = SDL_WINDOW_FULLSCREEN;
-	}
-#else
-	if (fullscreen) {
-		fs_flag = SDL_FULLSCREEN;
-	}
-#endif
-
-	if (GetWindowSize(&curWidth, &curHeight) && (curWidth == width) && (curHeight == height))
-	{
-		/* If we want fullscreen, but aren't */
-		if (fullscreen != IsFullscreen())
-		{
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-			SDL_SetWindowFullscreen(window, fs_flag);
-#else
-			SDL_WM_ToggleFullScreen(window);
-#endif
-
-			ri.Cvar_SetValue("vid_fullscreen", fullscreen);
-		}
-
-		/* Are we now? */
-		if (fullscreen == IsFullscreen())
-		{
-			return true;
-		}
-	}
-
-	SWimp_DestroyRender();
-
-	// let the sound and input subsystems know about the new window
-	ri.Vid_NewWindow (vid.width, vid.height);
-
-#if !SDL_VERSION_ATLEAST(2, 0, 0)
-	/* Set window icon - For SDL1.2, this must be done before creating the window */
-	SetSDLIcon();
-#endif
-
-	flags = SDL_SWSURFACE;
-	if (fs_flag)
-	{
-		flags |= fs_flag;
-	}
-
-	while (1)
-	{
-		if (!CreateSDLWindow(flags, width, height))
-		{
-			Sys_Error("(SOFTSDL) SDL SetVideoMode failed: %s\n", SDL_GetError());
-			return false;
-		}
-		else
-		{
-			break;
-		}
-	}
-
-	if(!R_InitContext(window))
-	{
-		// InitContext() should have logged an error
-		return false;
-	}
-
-	/* Note: window title is now set in re.InitContext() to include renderer name */
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-	/* Set the window icon - For SDL2, this must be done after creating the window */
-	SetSDLIcon();
-#endif
-
-	/* No cursor */
-	SDL_ShowCursor(0);
-
-	vid_buffer = malloc(vid.height * vid.width * sizeof(pixel_t));
-
-	sintable = malloc((vid.width+CYCLE) * sizeof(int));
-	intsintable = malloc((vid.width+CYCLE) * sizeof(int));
-	blanktable = malloc((vid.width+CYCLE) * sizeof(int));
-
-	newedges = malloc(vid.width * sizeof(edge_t *));
-	removeedges = malloc(vid.width * sizeof(edge_t *));
-
-	// 1 extra for spanpackage that marks end
-	triangle_spans = malloc((vid.width + 1) * sizeof(spanpackage_t));
-
-	warp_rowptr = malloc((vid.width+AMP2*2) * sizeof(byte*));
-	warp_column = malloc((vid.width+AMP2*2) * sizeof(int));
-
-	edge_basespans = malloc((vid.width*2) * sizeof(espan_t));
-
-	// count of "out of items"
-	r_outofsurfaces = r_outofedges = r_outofverts = 0;
-	// pointers to allocated buffers
-	finalverts = NULL;
-	r_edges = NULL;
-	lsurfs = NULL;
-	// curently allocated items
-	r_cnumsurfs = r_numallocatededges = r_numallocatedverts = 0;
-
-	R_ReallocateMapBuffers();
-
-	r_warpbuffer = malloc(vid.height * vid.width * sizeof(pixel_t));
-
-	if ((vid.width >= 2048) && (sizeof(shift20_t) == 4)) // 2k+ resolution and 32 == shift20_t
-	{
-		shift_size = 18;
-	}
-	else
-	{
-		shift_size = 20;
-	}
-
-	R_InitTurb ();
-
-	vid_polygon_spans = malloc(sizeof(espan_t) * (vid.height + 1));
-
-	memset(sw_state.currentpalette, 0, sizeof(sw_state.currentpalette));
-	memset(sw_state.palette_colors, 0, sizeof(sw_state.palette_colors));
-
-	sdl_palette_outdated = true;
-	X11_active = true;
-
-	return true;
-}
-
-
-static void
-RE_SDLPaletteConvert (void)
-{
-	int i;
-	const unsigned char *palette = sw_state.currentpalette;
-	Uint32 *sdl_palette = sw_state.palette_colors;
-
-	if (!sdl_palette_outdated)
-		return;
-
-	sdl_palette_outdated = false;
-	for ( i = 0; i < 256; i++ )
-	{
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-		if (surface)
-			sdl_palette[i] = SDL_MapRGB(surface->format,
-						    palette[i * 4 + 0], // red
-						    palette[i * 4 + 1], // green
-						    palette[i * 4 + 2]  //blue
-					);
-#else
-		if (window)
-			sdl_palette[i] = SDL_MapRGB(window->format,
-						    palette[i * 4 + 0], // red
-						    palette[i * 4 + 1], // green
-						    palette[i * 4 + 2]  //blue
-					);
-#endif
-	}
-}
-
-
 static void
 RE_CopyFrame (Uint32 * pixels, int pitch)
 {
-	RE_SDLPaletteConvert();
+	Uint32 *sdl_palette = (Uint32 *)sw_state.currentpalette;
 
 	// no gaps between images rows
 	if (pitch == vid.width)
-	{
-		int y,x, buffer_pos;
-
-		buffer_pos = 0;
-		for (y=0; y < vid.height;  y++)
-		{
-			for (x=0; x < vid.width; x ++)
-			{
-				pixels[x] = sw_state.palette_colors[vid_buffer[buffer_pos + x]];
-			}
-			pixels += pitch;
-			buffer_pos += vid.width;
-		}
-	}
-	else
 	{
 		const Uint32	*max_pixels;
 		Uint32	*pixels_pos;
@@ -2107,8 +1762,23 @@ RE_CopyFrame (Uint32 * pixels, int pitch)
 
 		for (pixels_pos = pixels; pixels_pos < max_pixels; pixels_pos++)
 		{
-			*pixels_pos = sw_state.palette_colors[*buffer_pos];
+			*pixels_pos = sdl_palette[*buffer_pos];
 			buffer_pos++;
+		}
+	}
+	else
+	{
+		int y,x, buffer_pos;
+
+		buffer_pos = 0;
+		for (y=0; y < vid.height;  y++)
+		{
+			for (x=0; x < vid.width; x ++)
+			{
+				pixels[x] = sdl_palette[vid_buffer[buffer_pos + x]];
+			}
+			pixels += pitch;
+			buffer_pos += vid.width;
 		}
 	}
 }
@@ -2125,26 +1795,18 @@ static void
 RE_EndFrame (void)
 {
 	int pitch;
+	Uint32 * pixels;
 
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-	Uint32 * pixels = (Uint32 *)surface->pixels;
-	pitch = surface->pitch / sizeof(Uint32);
-#else
-	Uint32 * pixels = (Uint32 *)window->pixels;
-	pitch = window->pitch / sizeof(Uint32);
-#endif
+	if (SDL_LockTexture(texture, NULL, (void**)&pixels, &pitch))
+	{
+		Com_Printf("Can't lock texture: %s\n", SDL_GetError());
+		return;
+	}
+	RE_CopyFrame (pixels, pitch / sizeof(Uint32));
+	SDL_UnlockTexture(texture);
 
-	RE_CopyFrame (pixels, pitch);
-
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-	SDL_UpdateTexture(texture, NULL, surface->pixels, surface->pitch);
-	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
-#else
-	/* SDL_Flip(window); */
-	SDL_UpdateRect(window, 0, 0, 0, 0);
-#endif
 }
 
 /*
@@ -2165,34 +1827,64 @@ SWimp_SetMode(int *pwidth, int *pheight, int mode, int fullscreen )
 
 	R_Printf( PRINT_ALL, " %d %d\n", *pwidth, *pheight);
 
-	if ( !SWimp_InitGraphics(fullscreen, pwidth, pheight) ) {
+	if (!ri.GLimp_InitGraphics(fullscreen, pwidth, pheight))
+	{
 		// failed to set a valid mode in windowed mode
 		return rserr_invalid_mode;
 	}
 
-	R_GammaCorrectAndSetPalette( ( const unsigned char * ) d_8to24table );
+	SWimp_CreateRender();
 
 	return retval;
 }
 
-/*
-** SWimp_Shutdown
-**
-** System specific graphics subsystem shutdown routine.  Destroys
-** DIBs or DDRAW surfaces as appropriate.
-*/
-
 static void
-SWimp_Shutdown( void )
+SWimp_CreateRender(void)
 {
-	SWimp_DestroyRender();
+	vid_buffer = malloc(vid.height * vid.width * sizeof(pixel_t));
 
-	if (SDL_WasInit(SDL_INIT_EVERYTHING) == SDL_INIT_VIDEO)
-		SDL_Quit();
+	sintable = malloc((vid.width+CYCLE) * sizeof(int));
+	intsintable = malloc((vid.width+CYCLE) * sizeof(int));
+	blanktable = malloc((vid.width+CYCLE) * sizeof(int));
+
+	newedges = malloc(vid.width * sizeof(edge_t *));
+	removeedges = malloc(vid.width * sizeof(edge_t *));
+
+	warp_rowptr = malloc((vid.width+AMP2*2) * sizeof(byte*));
+	warp_column = malloc((vid.width+AMP2*2) * sizeof(int));
+
+	edge_basespans = malloc((vid.width*2) * sizeof(espan_t));
+
+	// count of "out of items"
+	r_outofsurfaces = r_outofedges = r_outofverts = r_outoftriangles = 0;
+	// pointers to allocated buffers
+	finalverts = NULL;
+	r_edges = NULL;
+	lsurfs = NULL;
+	triangle_spans = NULL;
+	// curently allocated items
+	r_cnumsurfs = r_numallocatededges = r_numallocatedverts = r_numallocatedtriangles = 0;
+
+	R_ReallocateMapBuffers();
+
+	r_warpbuffer = malloc(vid.height * vid.width * sizeof(pixel_t));
+
+	if ((vid.width >= 2048) && (sizeof(shift20_t) == 4)) // 2k+ resolution and 32 == shift20_t
+	{
+		shift_size = 18;
+	}
 	else
-		SDL_QuitSubSystem(SDL_INIT_VIDEO);
+	{
+		shift_size = 20;
+	}
 
-	X11_active = false;
+	R_InitTurb ();
+
+	vid_polygon_spans = malloc(sizeof(espan_t) * (vid.height + 1));
+
+	memset(sw_state.currentpalette, 0, sizeof(sw_state.currentpalette));
+
+	R_GammaCorrectAndSetPalette( ( const unsigned char * ) d_8to24table );
 }
 
 // this is only here so the functions in q_shared.c and q_shwin.c can link
@@ -2252,9 +1944,9 @@ R_ScreenShot_f(void)
 	{
 		for (y=0; y < vid.height; y ++) {
 			int buffer_pos = y * vid.width + x;
-			buffer[buffer_pos * 3 + 0] = palette[vid_buffer[buffer_pos] * 4 + 0]; // red
+			buffer[buffer_pos * 3 + 0] = palette[vid_buffer[buffer_pos] * 4 + 2]; // red
 			buffer[buffer_pos * 3 + 1] = palette[vid_buffer[buffer_pos] * 4 + 1]; // green
-			buffer[buffer_pos * 3 + 2] = palette[vid_buffer[buffer_pos] * 4 + 2]; // blue
+			buffer[buffer_pos * 3 + 2] = palette[vid_buffer[buffer_pos] * 4 + 0]; // blue
 		}
 	}
 
