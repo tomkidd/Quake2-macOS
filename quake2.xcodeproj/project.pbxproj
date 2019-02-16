@@ -124,7 +124,6 @@
 		A15FA3EE21111CF40048A3AD /* sw_model.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2562110C5BC0048A3AD /* sw_model.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA3EF21111CF40048A3AD /* sw_part.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA24E2110C5BC0048A3AD /* sw_part.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA3F021111CF40048A3AD /* sw_poly.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2542110C5BC0048A3AD /* sw_poly.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3F121111CF40048A3AD /* sw_polyse.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2572110C5BC0048A3AD /* sw_polyse.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA3F221111CF40048A3AD /* sw_rast.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA25C2110C5BC0048A3AD /* sw_rast.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA3F321111CF40048A3AD /* sw_scan.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA24F2110C5BC0048A3AD /* sw_scan.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA3F421111CF40048A3AD /* sw_sprite.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA25D2110C5BC0048A3AD /* sw_sprite.c */; settings = {COMPILER_FLAGS = "-w"; }; };
@@ -206,6 +205,7 @@
 		A1B203C421D428E500D8D86D /* ref_gl1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA39C211118220048A3AD /* ref_gl1.dylib */; };
 		A1B203C521D428E500D8D86D /* ref_gl3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3BD21111B640048A3AD /* ref_gl3.dylib */; };
 		A1B203C621D428E500D8D86D /* ref_soft.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3DC21111CB50048A3AD /* ref_soft.dylib */; };
+		A1CE4EED2218CCB3006A66DE /* sw_polyset.c in Sources */ = {isa = PBXBuildFile; fileRef = A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -397,7 +397,6 @@
 		A15FA2542110C5BC0048A3AD /* sw_poly.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_poly.c; sourceTree = "<group>"; };
 		A15FA2552110C5BC0048A3AD /* sw_misc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_misc.c; sourceTree = "<group>"; };
 		A15FA2562110C5BC0048A3AD /* sw_model.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_model.c; sourceTree = "<group>"; };
-		A15FA2572110C5BC0048A3AD /* sw_polyse.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_polyse.c; sourceTree = "<group>"; };
 		A15FA2582110C5BC0048A3AD /* sw_main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_main.c; sourceTree = "<group>"; };
 		A15FA2592110C5BC0048A3AD /* sw_surf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_surf.c; sourceTree = "<group>"; };
 		A15FA25A2110C5BC0048A3AD /* sw_image.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_image.c; sourceTree = "<group>"; };
@@ -478,6 +477,7 @@
 		A15FA471211153BA0048A3AD /* music */ = {isa = PBXFileReference; lastKnownFileType = folder; name = music; path = ../../../Library/Containers/com.tomkiddconsulting.quake2/Data/.yq2/music; sourceTree = "<group>"; };
 		A15FA474211153E60048A3AD /* baseq2 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = baseq2; path = ../../../Dropbox/Files/quake2/baseq2; sourceTree = "<group>"; };
 		A15FA475211153E70048A3AD /* music */ = {isa = PBXFileReference; lastKnownFileType = folder; name = music; path = ../../../Dropbox/Files/quake2/music; sourceTree = "<group>"; };
+		A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_polyset.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1125,7 +1125,7 @@
 				A15FA2562110C5BC0048A3AD /* sw_model.c */,
 				A15FA24E2110C5BC0048A3AD /* sw_part.c */,
 				A15FA2542110C5BC0048A3AD /* sw_poly.c */,
-				A15FA2572110C5BC0048A3AD /* sw_polyse.c */,
+				A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */,
 				A15FA25C2110C5BC0048A3AD /* sw_rast.c */,
 				A15FA24F2110C5BC0048A3AD /* sw_scan.c */,
 				A15FA25D2110C5BC0048A3AD /* sw_sprite.c */,
@@ -1623,13 +1623,13 @@
 				A15FA3E021111CD20048A3AD /* hunk.c in Sources */,
 				A15FA3EC21111CF40048A3AD /* sw_main.c in Sources */,
 				A15FA3F521111CF40048A3AD /* sw_surf.c in Sources */,
+				A1CE4EED2218CCB3006A66DE /* sw_polyset.c in Sources */,
 				A15FA3ED21111CF40048A3AD /* sw_misc.c in Sources */,
 				A15FA3E921111CF40048A3AD /* sw_edge.c in Sources */,
 				A15FA3EF21111CF40048A3AD /* sw_part.c in Sources */,
 				A15FA3E121111CE80048A3AD /* pcx.c in Sources */,
 				A15FA3E321111CE80048A3AD /* stb.c in Sources */,
 				A15FA3E621111CF40048A3AD /* sw_alias.c in Sources */,
-				A15FA3F121111CF40048A3AD /* sw_polyse.c in Sources */,
 				A15FA3F421111CF40048A3AD /* sw_sprite.c in Sources */,
 				A15FA3E421111CE80048A3AD /* wal.c in Sources */,
 				A15FA3E721111CF40048A3AD /* sw_bsp.c in Sources */,
