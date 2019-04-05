@@ -7,12 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A1323A0F21CC8F4800E20D6D /* sdl.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A0C21CC8F4800E20D6D /* sdl.c */; };
-		A1323A1421CC8F8100E20D6D /* qal.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A1221CC8F8100E20D6D /* qal.c */; };
-		A1323A1521CC8F8100E20D6D /* sdl.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A1321CC8F8100E20D6D /* sdl.c */; };
-		A1323A1F21CC8FB000E20D6D /* glimp_sdl.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A1721CC8FB000E20D6D /* glimp_sdl.c */; };
-		A1323A2021CC8FB000E20D6D /* vid.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A1821CC8FB000E20D6D /* vid.c */; };
-		A1323A2421CC8FF700E20D6D /* miniz.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A2121CC8FF700E20D6D /* miniz.c */; };
+		A1323A0F21CC8F4800E20D6D /* sdl.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A0C21CC8F4800E20D6D /* sdl.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		A1323A1421CC8F8100E20D6D /* qal.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A1221CC8F8100E20D6D /* qal.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		A1323A1521CC8F8100E20D6D /* sdl.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A1321CC8F8100E20D6D /* sdl.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		A1323A1F21CC8FB000E20D6D /* glimp_sdl.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A1721CC8FB000E20D6D /* glimp_sdl.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		A1323A2021CC8FB000E20D6D /* vid.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A1821CC8FB000E20D6D /* vid.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		A1323A2421CC8FF700E20D6D /* miniz.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A2121CC8FF700E20D6D /* miniz.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA367211114990048A3AD /* g_ai.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1AE2110C5BC0048A3AD /* g_ai.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA368211114990048A3AD /* g_chase.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1AA2110C5BC0048A3AD /* g_chase.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA369211114990048A3AD /* g_cmds.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1B42110C5BC0048A3AD /* g_cmds.c */; settings = {COMPILER_FLAGS = "-w"; }; };
@@ -205,7 +205,7 @@
 		A1B203C421D428E500D8D86D /* ref_gl1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA39C211118220048A3AD /* ref_gl1.dylib */; };
 		A1B203C521D428E500D8D86D /* ref_gl3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3BD21111B640048A3AD /* ref_gl3.dylib */; };
 		A1B203C621D428E500D8D86D /* ref_soft.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3DC21111CB50048A3AD /* ref_soft.dylib */; };
-		A1CE4EED2218CCB3006A66DE /* sw_polyset.c in Sources */ = {isa = PBXBuildFile; fileRef = A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */; };
+		A1CE4EED2218CCB3006A66DE /* sw_polyset.c in Sources */ = {isa = PBXBuildFile; fileRef = A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -473,8 +473,6 @@
 		A15FA41B211150EA0048A3AD /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		A15FA41D211150EA0048A3AD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A15FA41E211150EA0048A3AD /* quake2.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = quake2.entitlements; sourceTree = "<group>"; };
-		A15FA470211153B90048A3AD /* baseq2 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = baseq2; path = ../../../Library/Containers/com.tomkiddconsulting.quake2/Data/.yq2/baseq2; sourceTree = "<group>"; };
-		A15FA471211153BA0048A3AD /* music */ = {isa = PBXFileReference; lastKnownFileType = folder; name = music; path = ../../../Library/Containers/com.tomkiddconsulting.quake2/Data/.yq2/music; sourceTree = "<group>"; };
 		A15FA474211153E60048A3AD /* baseq2 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = baseq2; path = ../../../Dropbox/Files/quake2/baseq2; sourceTree = "<group>"; };
 		A15FA475211153E70048A3AD /* music */ = {isa = PBXFileReference; lastKnownFileType = folder; name = music; path = ../../../Dropbox/Files/quake2/music; sourceTree = "<group>"; };
 		A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_polyset.c; sourceTree = "<group>"; };
@@ -575,8 +573,6 @@
 		A13509A92110C1760077F93F = {
 			isa = PBXGroup;
 			children = (
-				A15FA470211153B90048A3AD /* baseq2 */,
-				A15FA471211153BA0048A3AD /* music */,
 				A15FA474211153E60048A3AD /* baseq2 */,
 				A15FA475211153E70048A3AD /* music */,
 				A15FA2AA2110C5BC0048A3AD /* CHANGELOG */,
@@ -1452,7 +1448,7 @@
 					};
 					A15FA413211150E90048A3AD = {
 						CreatedOnToolsVersion = 9.4.1;
-						LastSwiftMigration = 1010;
+						LastSwiftMigration = 1020;
 					};
 				};
 			};
@@ -2027,7 +2023,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
@@ -2053,7 +2049,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
