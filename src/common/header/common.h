@@ -115,6 +115,11 @@ void MSG_ReadDir(sizebuf_t *sb, vec3_t vector);
 
 void MSG_ReadData(sizebuf_t *sb, void *buffer, int size);
 
+#ifdef LARGE_MAP_SIZE // 24-bit pmove origin coordinate transmission code
+void    MSG_WritePMCoordNew (sizebuf_t *sb, int in);
+int        MSG_ReadPMCoordNew (sizebuf_t *msg_read);
+#endif
+
 /* ================================================================== */
 
 extern qboolean bigendien;
@@ -145,7 +150,8 @@ void Info_Print(char *s);
 
 /* PROTOCOL */
 
-#define PROTOCOL_VERSION 34
+#define    PROTOCOL_VERSION        35 // Knightmare changed, was 34
+#define    OLD_PROTOCOL_VERSION    34
 
 /* ========================================= */
 
@@ -220,6 +226,20 @@ enum clc_ops_e
 #define PS_WEAPONFRAME (1 << 13)
 #define PS_RDFLAGS (1 << 14)
 
+
+//Knightmare- bits for sending weapon skin, second weapon model
+#define    PS_WEAPONSKIN        (1<<15)
+#define    PS_WEAPONINDEX2        (1<<16)
+#define    PS_WEAPONFRAME2        (1<<17)
+#define    PS_WEAPONSKIN2        (1<<18)
+// Knightmare- bits for sending player speed
+#define    PS_MAXSPEED            (1<<19)
+#define    PS_DUCKSPEED        (1<<20)
+#define    PS_WATERSPEED        (1<<21)
+#define    PS_ACCEL            (1<<22)
+#define    PS_STOPSPEED        (1<<23)
+//end Knightmare
+
 /*============================================== */
 
 /* user_cmd_t communication */
@@ -284,6 +304,13 @@ enum clc_ops_e
 #define U_SKIN16 (1 << 25)
 #define U_SOUND (1 << 26)
 #define U_SOLID (1 << 27)
+
+//Knightmare- 1/18/2002- bits for extra model indices
+#define    U_MODEL5    (1<<28)
+#define    U_MODEL6    (1<<29)
+#define    U_MODEL7_8    (1<<30)    // Knightmare- not enough bits, so we'll fudge this
+#define    U_ALPHA        (1<<31)    // Knightmare added
+//end Knightmare
 
 /* CMD - Command text buffering and command execution */
 

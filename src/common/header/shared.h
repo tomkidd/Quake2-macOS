@@ -53,6 +53,31 @@ typedef unsigned char byte;
  #define NULL ((void *)0)
 #endif
 
+// Knightmare- whether to include new engine enhancements
+#define    KMQUAKE2_ENGINE_MOD
+
+// enable to build exe that is compatible with Eraser bot
+// Eraser Bot's precompiled p_trail.c not compatible with modified entity state structure
+//#define ERASER_COMPAT_BUILD
+
+// enable to build exe to host net games
+// (to bring MAX_MSG_LENGTH in line with UDP packet size)
+//#define NET_SERVER_BUILD
+
+// enable to build exe with 24-bit coordinate transmission
+// changes pmove origin size in game DLLs
+#ifdef KMQUAKE2_ENGINE_MOD
+#define LARGE_MAP_SIZE
+#endif
+
+#ifdef KMQUAKE2_ENGINE_MOD
+#ifndef ERASER_COMPAT_BUILD
+#define NEW_ENTITY_STATE_MEMBERS
+#endif
+#define NEW_PLAYER_STATE_MEMBERS
+#endif
+// end Knightmare
+
 /* angle indexes */
 #define PITCH 0                     /* up / down */
 #define YAW 1                       /* left / right */
@@ -96,11 +121,31 @@ typedef unsigned char byte;
 
 /* per-level limits */
 #define MAX_CLIENTS 256             /* absolute limit */
-#define MAX_EDICTS 1024             /* must change protocol to increase more */
+
+#ifdef KMQUAKE2_ENGINE_MOD        //Knightmare- increase MAX_EDICTS
+#define MAX_EDICTS 8192    // must change protocol to increase more
+#else
+#define MAX_EDICTS 1024    // must change protocol to increase more
+#endif
+
 #define MAX_LIGHTSTYLES 256
+
+#ifdef KMQUAKE2_ENGINE_MOD        //Knightmare- Ding-Dong, Index: Overflow is dead!
+#define MAX_MODELS 8192    // these are sent over the net as shorts
+#define MAX_SOUNDS 8192    // so they cannot exceed 64K
+#define MAX_IMAGES 2048
+#else
 #define MAX_MODELS 256              /* these are sent over the net as bytes */
 #define MAX_SOUNDS 256              /* so they cannot be blindly increased */
 #define MAX_IMAGES 256
+#endif
+
+//Knightmare- hacked offsets for old demos
+#define    OLD_MAX_MODELS        256
+#define    OLD_MAX_SOUNDS        256
+#define    OLD_MAX_IMAGES        256
+//end Knightmare
+
 #define MAX_ITEMS 256
 #define MAX_GENERAL (MAX_CLIENTS * 2)       /* general config strings */
 
@@ -1011,7 +1056,12 @@ typedef enum
 #define STAT_CHASE 16
 #define STAT_SPECTATOR 17
 
-#define MAX_STATS 32
+#ifdef KMQUAKE2_ENGINE_MOD // Knightmare increased
+#define    MAX_STATS                256
+#else
+#define    MAX_STATS                32
+#endif
+#define    OLD_MAX_STATS            32    // needed for playing old demos
 
 /* dmflags->value flags */
 #define DF_NO_HEALTH 0x00000001         /* 1 */
@@ -1072,6 +1122,16 @@ typedef enum
 #define CS_GENERAL (CS_PLAYERSKINS + MAX_CLIENTS)
 #define MAX_CONFIGSTRINGS (CS_GENERAL + MAX_GENERAL)
 
+//Knightmare- hacked configstring offsets for old demos
+#define OLD_CS_SOUNDS            (CS_MODELS+OLD_MAX_MODELS)
+#define    OLD_CS_IMAGES            (OLD_CS_SOUNDS+OLD_MAX_SOUNDS)
+#define    OLD_CS_LIGHTS            (OLD_CS_IMAGES+OLD_MAX_IMAGES)
+#define    OLD_CS_ITEMS            (OLD_CS_LIGHTS+MAX_LIGHTSTYLES)
+#define    OLD_CS_PLAYERSKINS        (OLD_CS_ITEMS+MAX_ITEMS)
+#define OLD_CS_GENERAL            (OLD_CS_PLAYERSKINS+MAX_CLIENTS)
+#define    OLD_MAX_CONFIGSTRINGS    (OLD_CS_GENERAL+MAX_GENERAL)
+//end Knightmare
+
 /* ============================================== */
 
 /* entity_state_t->event values
@@ -1102,8 +1162,14 @@ typedef struct entity_state_s
 	vec3_t old_origin;      /* for lerping */
 	int modelindex;
 	int modelindex2, modelindex3, modelindex4;      /* weapons, CTF flags, etc */
+#ifdef NEW_ENTITY_STATE_MEMBERS //Knightmare- Privater wanted this
+    int        modelindex5, modelindex6, modelindex7, modelindex8;    //more attached models
+#endif
 	int frame;
 	int skinnum;
+#ifdef NEW_ENTITY_STATE_MEMBERS //Knightmare- allow the server to set this
+    float    alpha;    //entity transparency
+#endif
 	unsigned int effects;
 	int renderfx;
 	int solid;              /* for client side prediction, 8*(bits 0-4) is x/y radius */
@@ -1134,6 +1200,20 @@ typedef struct
 	vec3_t gunoffset;
 	int gunindex;
 	int gunframe;
+    
+#ifdef NEW_PLAYER_STATE_MEMBERS // Knightmare added
+    int            gunskin;        // for animated weapon skins
+    int            gunindex2;        // for a second weapon model (boot)
+    int            gunframe2;
+    int            gunskin2;
+    
+    // server-side speed control!
+    int            maxspeed;
+    int            duckspeed;
+    int            waterspeed;
+    int            accel;
+    int            stopspeed;
+#endif                            //end Knightmare
 
 	float blend[4];             /* rgba full screen effect */
 	float fov;                  /* horizontal field of view */

@@ -287,6 +287,7 @@ void CL_WriteConfiguration(void);
  * the server This is also called on Com_Error, so
  * it shouldn't cause any errors
  */
+extern    char    *currentweaponmodel;
 void
 CL_Disconnect(void)
 {
@@ -362,6 +363,10 @@ CL_Disconnect(void)
 
 	// we disconnected, so revert to default game/mod (might have been different mod on MP server)
 	Cvar_Set("game", userGivenGame);
+    
+    
+    // reset current weapon model
+    currentweaponmodel = NULL;
 }
 
 void

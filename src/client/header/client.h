@@ -36,6 +36,7 @@
 #define	MAX_PARSE_ENTITIES	1024
 
 #define MAX_SUSTAINS		32
+
 #define	PARTICLE_GRAVITY 40
 #define BLASTER_PARTICLE_COLOR 0xe0
 #define INSTANT_PARTICLE -10000.0
@@ -58,6 +59,20 @@
 #include "screen.h"
 #include "keyboard.h"
 #include "console.h"
+
+//Knightmare added
+//#include "game.h"
+//trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *passedict, int contentmask);
+//end Knightmare
+
+//  added for Psychospaz's chasecam
+vec3_t clientOrg; //lerped org of client for server->client side effects
+
+
+int    color8red (int color8);
+int    color8green (int color8);
+int    color8blue (int color8);
+//end Knightmare
 
 typedef struct
 {
@@ -530,5 +545,8 @@ void CL_DrawInventory (void);
 
 void CL_PredictMovement (void);
 trace_t CL_PMTrace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
+
+// utility function for protocol version
+qboolean LegacyProtocol (void);
 
 #endif

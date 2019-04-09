@@ -3899,6 +3899,13 @@ static menuseparator_s s_player_hand_title;
 static menuseparator_s s_player_rate_title;
 static menuaction_s s_player_download_action;
 
+// Knightmare- save skins and models here so as to not have to re-register every frame
+struct model_s *playermodel;
+struct model_s *weaponmodel;
+struct image_s *playerskin;
+char *currentweaponmodel;
+// end Knightmare
+
 #define MAX_DISPLAYNAME 16
 #define MAX_PLAYERMODELS 1024
 

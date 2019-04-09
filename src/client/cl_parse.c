@@ -81,6 +81,23 @@ CL_RegisterSounds(void)
 }
 
 /*
+ ==================
+ LegacyProtocol
+ A utility function that determines
+ if parsing of old protocol should be used.
+ ==================
+ */
+qboolean LegacyProtocol (void)
+{
+    //if (dedicated->value)    // Server always uses new protocol
+    //    return false;
+    if ( (Com_ServerState() && cls.serverProtocol < PROTOCOL_VERSION)
+        || (cls.serverProtocol == OLD_PROTOCOL_VERSION) )
+        return true;
+    return false;
+}
+
+/*
  * Returns the entity number and the header bits
  */
 int
@@ -146,6 +163,10 @@ CL_ParseDelta(entity_state_t *from, entity_state_t *to, int number, int bits)
 	VectorCopy(from->origin, to->old_origin);
 	to->number = number;
 
+    // Knightmare- read deltas the old way if playing old demos or
+    // connected to server using old protocol
+    if ( LegacyProtocol() )
+    {
 	if (bits & U_MODEL)
 	{
 		to->modelindex = MSG_ReadByte(&net_message);
@@ -269,6 +290,107 @@ CL_ParseDelta(entity_state_t *from, entity_state_t *to, int number, int bits)
 	{
 		to->solid = MSG_ReadShort(&net_message);
 	}
+        // end old CL_ParseDelta code
+    }
+    else //new CL_ParseDelta code
+    {
+#ifndef NEW_ENTITY_STATE_MEMBERS
+        int ignore;    // holder for messages to be ignored
+#endif
+        // Knightmare- 12/23/2001- read model indices as shorts
+        if (bits & U_MODEL)
+            to->modelindex = MSG_ReadShort (&net_message);
+        if (bits & U_MODEL2)
+            to->modelindex2 = MSG_ReadShort (&net_message);
+        if (bits & U_MODEL3)
+            to->modelindex3 = MSG_ReadShort (&net_message);
+        if (bits & U_MODEL4)
+            to->modelindex4 = MSG_ReadShort (&net_message);
+        
+        //Knightmare- 1/18/2002- extra model indices
+#ifdef NEW_ENTITY_STATE_MEMBERS
+        if (bits & U_MODEL5)
+            to->modelindex5 = MSG_ReadShort (&net_message);
+        if (bits & U_MODEL6)
+            to->modelindex6 = MSG_ReadShort (&net_message);
+        if (bits & U_MODEL7_8) {
+            to->modelindex7 = MSG_ReadShort (&net_message);
+            to->modelindex8 = MSG_ReadShort (&net_message);
+        }
+#else // we need to read and ignore this for eraser client compatibility
+        if (bits & U_MODEL5)
+            ignore = MSG_ReadShort (&net_message);
+        if (bits & U_MODEL6)
+            ignore = MSG_ReadShort (&net_message);
+        if (bits & U_MODEL7_8) {
+            ignore = MSG_ReadShort (&net_message);
+            ignore = MSG_ReadShort (&net_message);
+        }
+#endif
+        if (bits & U_FRAME8)
+            to->frame = MSG_ReadByte (&net_message);
+        if (bits & U_FRAME16)
+            to->frame = MSG_ReadShort (&net_message);
+        
+        if ((bits & U_SKIN8) && (bits & U_SKIN16))        //used for laser colors
+            to->skinnum = MSG_ReadLong(&net_message);
+        else if (bits & U_SKIN8)
+            to->skinnum = MSG_ReadByte(&net_message);
+        else if (bits & U_SKIN16)
+            to->skinnum = MSG_ReadShort(&net_message);
+        
+        if ( (bits & (U_EFFECTS8|U_EFFECTS16)) == (U_EFFECTS8|U_EFFECTS16) )
+            to->effects = MSG_ReadLong(&net_message);
+        else if (bits & U_EFFECTS8)
+            to->effects = MSG_ReadByte(&net_message);
+        else if (bits & U_EFFECTS16)
+            to->effects = MSG_ReadShort(&net_message);
+        
+        if ( (bits & (U_RENDERFX8|U_RENDERFX16)) == (U_RENDERFX8|U_RENDERFX16) )
+            to->renderfx = MSG_ReadLong(&net_message);
+        else if (bits & U_RENDERFX8)
+            to->renderfx = MSG_ReadByte(&net_message);
+        else if (bits & U_RENDERFX16)
+            to->renderfx = MSG_ReadShort(&net_message);
+        
+        if (bits & U_ORIGIN1)
+            to->origin[0] = MSG_ReadCoord (&net_message);
+        if (bits & U_ORIGIN2)
+            to->origin[1] = MSG_ReadCoord (&net_message);
+        if (bits & U_ORIGIN3)
+            to->origin[2] = MSG_ReadCoord (&net_message);
+        
+        if (bits & U_ANGLE1)
+            to->angles[0] = MSG_ReadAngle(&net_message);
+        if (bits & U_ANGLE2)
+            to->angles[1] = MSG_ReadAngle(&net_message);
+        if (bits & U_ANGLE3)
+            to->angles[2] = MSG_ReadAngle(&net_message);
+        
+        if (bits & U_OLDORIGIN)
+            MSG_ReadPos (&net_message, to->old_origin);
+        
+#ifdef NEW_ENTITY_STATE_MEMBERS
+        //Knightmare- 5/11/2002- added alpha
+        if (bits & U_ALPHA)
+            to->alpha = (float)(MSG_ReadByte (&net_message) / 255.0);
+#else // we need to read and ignore this for eraser client compatibility
+        if (bits & U_ALPHA)
+            ignore = (float)(MSG_ReadByte (&net_message) / 255.0);
+#endif
+        //Knightmare 12/23/2001- read sound indices as shorts
+        if (bits & U_SOUND)
+            to->sound = MSG_ReadShort (&net_message);
+        
+        if (bits & U_EVENT)
+            to->event = MSG_ReadByte (&net_message);
+        else
+            to->event = 0;
+        
+        if (bits & U_SOLID)
+            to->solid = MSG_ReadShort (&net_message);
+        
+    }    //end new CL_ParseDelta code
 }
 
 /*
@@ -294,6 +416,14 @@ CL_DeltaEntity(frame_t *frame, int newnum, entity_state_t *old, int bits)
 		(state->modelindex2 != ent->current.modelindex2) ||
 		(state->modelindex3 != ent->current.modelindex3) ||
 		(state->modelindex4 != ent->current.modelindex4) ||
+#ifdef NEW_ENTITY_STATE_MEMBERS
+        //Knightmare- 1/18/2002- extra model indices
+        (state->modelindex5 != ent->current.modelindex5) ||
+        (state->modelindex6 != ent->current.modelindex6) ||
+        (state->modelindex7 != ent->current.modelindex7) ||
+        (state->modelindex8 != ent->current.modelindex8) ||
+        //end Knightmare
+#endif
 		(state->event == EV_PLAYER_TELEPORT) ||
 		(state->event == EV_OTHER_TELEPORT) ||
 		(abs((int)(state->origin[0] - ent->current.origin[0])) > 512) ||
@@ -520,139 +650,299 @@ CL_ParsePacketEntities(frame_t *oldframe, frame_t *newframe)
 void
 CL_ParsePlayerstate(frame_t *oldframe, frame_t *newframe)
 {
-	int flags;
-	player_state_t *state;
-	int i;
-	int statbits;
-
-	state = &newframe->playerstate;
-
-	/* clear to old value before delta parsing */
-	if (oldframe)
-	{
-		*state = oldframe->playerstate;
-	}
-
-	else
-	{
-		memset(state, 0, sizeof(*state));
-	}
-
-	flags = MSG_ReadShort(&net_message);
-
-	/* parse the pmove_state_t */
-	if (flags & PS_M_TYPE)
-	{
-		state->pmove.pm_type = MSG_ReadByte(&net_message);
-	}
-
-	if (flags & PS_M_ORIGIN)
-	{
-		state->pmove.origin[0] = MSG_ReadShort(&net_message);
-		state->pmove.origin[1] = MSG_ReadShort(&net_message);
-		state->pmove.origin[2] = MSG_ReadShort(&net_message);
-	}
-
-	if (flags & PS_M_VELOCITY)
-	{
-		state->pmove.velocity[0] = MSG_ReadShort(&net_message);
-		state->pmove.velocity[1] = MSG_ReadShort(&net_message);
-		state->pmove.velocity[2] = MSG_ReadShort(&net_message);
-	}
-
-	if (flags & PS_M_TIME)
-	{
-		state->pmove.pm_time = MSG_ReadByte(&net_message);
-	}
-
-	if (flags & PS_M_FLAGS)
-	{
-		state->pmove.pm_flags = MSG_ReadByte(&net_message);
-	}
-
-	if (flags & PS_M_GRAVITY)
-	{
-		state->pmove.gravity = MSG_ReadShort(&net_message);
-	}
-
-	if (flags & PS_M_DELTA_ANGLES)
-	{
-		state->pmove.delta_angles[0] = MSG_ReadShort(&net_message);
-		state->pmove.delta_angles[1] = MSG_ReadShort(&net_message);
-		state->pmove.delta_angles[2] = MSG_ReadShort(&net_message);
-	}
-
-	if (cl.attractloop)
-	{
-		state->pmove.pm_type = PM_FREEZE; /* demo playback */
-	}
-
-	/* parse the rest of the player_state_t */
-	if (flags & PS_VIEWOFFSET)
-	{
-		state->viewoffset[0] = MSG_ReadChar(&net_message) * 0.25f;
-		state->viewoffset[1] = MSG_ReadChar(&net_message) * 0.25f;
-		state->viewoffset[2] = MSG_ReadChar(&net_message) * 0.25f;
-	}
-
-	if (flags & PS_VIEWANGLES)
-	{
-		state->viewangles[0] = MSG_ReadAngle16(&net_message);
-		state->viewangles[1] = MSG_ReadAngle16(&net_message);
-		state->viewangles[2] = MSG_ReadAngle16(&net_message);
-	}
-
-	if (flags & PS_KICKANGLES)
-	{
-		state->kick_angles[0] = MSG_ReadChar(&net_message) * 0.25f;
-		state->kick_angles[1] = MSG_ReadChar(&net_message) * 0.25f;
-		state->kick_angles[2] = MSG_ReadChar(&net_message) * 0.25f;
-	}
-
-	if (flags & PS_WEAPONINDEX)
-	{
-		state->gunindex = MSG_ReadByte(&net_message);
-	}
-
-	if (flags & PS_WEAPONFRAME)
-	{
-		state->gunframe = MSG_ReadByte(&net_message);
-		state->gunoffset[0] = MSG_ReadChar(&net_message) * 0.25f;
-		state->gunoffset[1] = MSG_ReadChar(&net_message) * 0.25f;
-		state->gunoffset[2] = MSG_ReadChar(&net_message) * 0.25f;
-		state->gunangles[0] = MSG_ReadChar(&net_message) * 0.25f;
-		state->gunangles[1] = MSG_ReadChar(&net_message) * 0.25f;
-		state->gunangles[2] = MSG_ReadChar(&net_message) * 0.25f;
-	}
-
-	if (flags & PS_BLEND)
-	{
-		state->blend[0] = MSG_ReadByte(&net_message) / 255.0f;
-		state->blend[1] = MSG_ReadByte(&net_message) / 255.0f;
-		state->blend[2] = MSG_ReadByte(&net_message) / 255.0f;
-		state->blend[3] = MSG_ReadByte(&net_message) / 255.0f;
-	}
-
-	if (flags & PS_FOV)
-	{
-		state->fov = (float)MSG_ReadByte(&net_message);
-	}
-
-	if (flags & PS_RDFLAGS)
-	{
-		state->rdflags = MSG_ReadByte(&net_message);
-	}
-
-	/* parse stats */
-	statbits = MSG_ReadLong(&net_message);
-
-	for (i = 0; i < MAX_STATS; i++)
-	{
-		if (statbits & (1 << i))
-		{
-			state->stats[i] = MSG_ReadShort(&net_message);
-		}
-	}
+    int flags;
+    player_state_t *state;
+    int i;
+    int statbits;
+    
+    state = &newframe->playerstate;
+    
+    /* clear to old value before delta parsing */
+    if (oldframe)
+    {
+        *state = oldframe->playerstate;
+    }
+    
+    else
+    {
+        memset(state, 0, sizeof(*state));
+    }
+    
+    // Knightmare- read player state info the old way if playing old demos or
+    // connected to server using old protocol
+    if ( LegacyProtocol() )
+    {
+        flags = MSG_ReadShort(&net_message);
+        
+        /* parse the pmove_state_t */
+        if (flags & PS_M_TYPE)
+        {
+            state->pmove.pm_type = MSG_ReadByte(&net_message);
+        }
+        
+        if (flags & PS_M_ORIGIN)
+        {
+            state->pmove.origin[0] = MSG_ReadShort(&net_message);
+            state->pmove.origin[1] = MSG_ReadShort(&net_message);
+            state->pmove.origin[2] = MSG_ReadShort(&net_message);
+        }
+        
+        if (flags & PS_M_VELOCITY)
+        {
+            state->pmove.velocity[0] = MSG_ReadShort(&net_message);
+            state->pmove.velocity[1] = MSG_ReadShort(&net_message);
+            state->pmove.velocity[2] = MSG_ReadShort(&net_message);
+        }
+        
+        if (flags & PS_M_TIME)
+        {
+            state->pmove.pm_time = MSG_ReadByte(&net_message);
+        }
+        
+        if (flags & PS_M_FLAGS)
+        {
+            state->pmove.pm_flags = MSG_ReadByte(&net_message);
+        }
+        
+        if (flags & PS_M_GRAVITY)
+        {
+            state->pmove.gravity = MSG_ReadShort(&net_message);
+        }
+        
+        if (flags & PS_M_DELTA_ANGLES)
+        {
+            state->pmove.delta_angles[0] = MSG_ReadShort(&net_message);
+            state->pmove.delta_angles[1] = MSG_ReadShort(&net_message);
+            state->pmove.delta_angles[2] = MSG_ReadShort(&net_message);
+        }
+        
+        if (cl.attractloop)
+        {
+            state->pmove.pm_type = PM_FREEZE; /* demo playback */
+        }
+        
+        /* parse the rest of the player_state_t */
+        if (flags & PS_VIEWOFFSET)
+        {
+            state->viewoffset[0] = MSG_ReadChar(&net_message) * 0.25f;
+            state->viewoffset[1] = MSG_ReadChar(&net_message) * 0.25f;
+            state->viewoffset[2] = MSG_ReadChar(&net_message) * 0.25f;
+        }
+        
+        if (flags & PS_VIEWANGLES)
+        {
+            state->viewangles[0] = MSG_ReadAngle16(&net_message);
+            state->viewangles[1] = MSG_ReadAngle16(&net_message);
+            state->viewangles[2] = MSG_ReadAngle16(&net_message);
+        }
+        
+        if (flags & PS_KICKANGLES)
+        {
+            state->kick_angles[0] = MSG_ReadChar(&net_message) * 0.25f;
+            state->kick_angles[1] = MSG_ReadChar(&net_message) * 0.25f;
+            state->kick_angles[2] = MSG_ReadChar(&net_message) * 0.25f;
+        }
+        
+        if (flags & PS_WEAPONINDEX)
+        {
+            state->gunindex = MSG_ReadByte(&net_message);
+        }
+        
+        if (flags & PS_WEAPONFRAME)
+        {
+            state->gunframe = MSG_ReadByte(&net_message);
+            state->gunoffset[0] = MSG_ReadChar(&net_message) * 0.25f;
+            state->gunoffset[1] = MSG_ReadChar(&net_message) * 0.25f;
+            state->gunoffset[2] = MSG_ReadChar(&net_message) * 0.25f;
+            state->gunangles[0] = MSG_ReadChar(&net_message) * 0.25f;
+            state->gunangles[1] = MSG_ReadChar(&net_message) * 0.25f;
+            state->gunangles[2] = MSG_ReadChar(&net_message) * 0.25f;
+        }
+        
+        if (flags & PS_BLEND)
+        {
+            state->blend[0] = MSG_ReadByte(&net_message) / 255.0f;
+            state->blend[1] = MSG_ReadByte(&net_message) / 255.0f;
+            state->blend[2] = MSG_ReadByte(&net_message) / 255.0f;
+            state->blend[3] = MSG_ReadByte(&net_message) / 255.0f;
+        }
+        
+        if (flags & PS_FOV)
+        {
+            state->fov = (float)MSG_ReadByte(&net_message);
+        }
+        
+        if (flags & PS_RDFLAGS)
+        {
+            state->rdflags = MSG_ReadByte(&net_message);
+        }
+        
+        /* parse stats */
+        statbits = MSG_ReadLong(&net_message);
+        
+        for (i = 0; i < OLD_MAX_STATS; i++) //Knightmare- use old max_stats
+        {
+            if (statbits & (1 << i))
+            {
+                state->stats[i] = MSG_ReadShort(&net_message);
+            }
+        }
+    }    //end old CL_ParsePlayerstate code
+    else //new CL_ParsePlayerstate code
+    {
+        // Knightmare 4/5/2002- read as long
+        flags = MSG_ReadLong (&net_message);
+        
+        //
+        // parse the pmove_state_t
+        //
+        if (flags & PS_M_TYPE)
+            state->pmove.pm_type = MSG_ReadByte (&net_message);
+        
+        if (flags & PS_M_ORIGIN)
+        {
+#ifdef LARGE_MAP_SIZE
+            state->pmove.origin[0] = MSG_ReadPMCoordNew (&net_message);
+            state->pmove.origin[1] = MSG_ReadPMCoordNew (&net_message);
+            state->pmove.origin[2] = MSG_ReadPMCoordNew (&net_message);
+#else
+            state->pmove.origin[0] = MSG_ReadShort (&net_message);
+            state->pmove.origin[1] = MSG_ReadShort (&net_message);
+            state->pmove.origin[2] = MSG_ReadShort (&net_message);
+#endif
+        }
+        
+        if (flags & PS_M_VELOCITY)
+        {
+            state->pmove.velocity[0] = MSG_ReadShort (&net_message);
+            state->pmove.velocity[1] = MSG_ReadShort (&net_message);
+            state->pmove.velocity[2] = MSG_ReadShort (&net_message);
+        }
+        
+        if (flags & PS_M_TIME)
+            state->pmove.pm_time = MSG_ReadByte (&net_message);
+        
+        if (flags & PS_M_FLAGS)
+            state->pmove.pm_flags = MSG_ReadByte (&net_message);
+        
+        if (flags & PS_M_GRAVITY)
+            state->pmove.gravity = MSG_ReadShort (&net_message);
+        
+        if (flags & PS_M_DELTA_ANGLES)
+        {
+            state->pmove.delta_angles[0] = MSG_ReadShort (&net_message);
+            state->pmove.delta_angles[1] = MSG_ReadShort (&net_message);
+            state->pmove.delta_angles[2] = MSG_ReadShort (&net_message);
+        }
+        
+        if (cl.attractloop)
+            state->pmove.pm_type = PM_FREEZE;        // demo playback
+        
+        //
+        // parse the rest of the player_state_t
+        //
+        if (flags & PS_VIEWOFFSET)
+        {
+            state->viewoffset[0] = MSG_ReadChar (&net_message) * 0.25;
+            state->viewoffset[1] = MSG_ReadChar (&net_message) * 0.25;
+            state->viewoffset[2] = MSG_ReadChar (&net_message) * 0.25;
+        }
+        
+        if (flags & PS_VIEWANGLES)
+        {
+            state->viewangles[0] = MSG_ReadAngle16 (&net_message);
+            state->viewangles[1] = MSG_ReadAngle16 (&net_message);
+            state->viewangles[2] = MSG_ReadAngle16 (&net_message);
+        }
+        
+        if (flags & PS_KICKANGLES)
+        {
+            state->kick_angles[0] = MSG_ReadChar (&net_message) * 0.25;
+            state->kick_angles[1] = MSG_ReadChar (&net_message) * 0.25;
+            state->kick_angles[2] = MSG_ReadChar (&net_message) * 0.25;
+        }
+        
+        //Knightmare 4/5/2002- read as short
+        if (flags & PS_WEAPONINDEX)
+            state->gunindex = MSG_ReadShort (&net_message);
+        
+#ifdef NEW_PLAYER_STATE_MEMBERS    // Knightmare- gunindex2 support
+        if (flags & PS_WEAPONINDEX2)
+            state->gunindex2 = MSG_ReadShort (&net_message);
+#endif
+        
+        // Knightmare- gunframe2 support
+#ifdef NEW_PLAYER_STATE_MEMBERS
+        if ((flags & PS_WEAPONFRAME) || (flags & PS_WEAPONFRAME2))
+        {
+            if (flags & PS_WEAPONFRAME)
+                state->gunframe = MSG_ReadByte (&net_message);
+            if (flags & PS_WEAPONFRAME2)
+                state->gunframe2 = MSG_ReadByte (&net_message);
+            state->gunoffset[0] = MSG_ReadChar (&net_message)*0.25;
+            state->gunoffset[1] = MSG_ReadChar (&net_message)*0.25;
+            state->gunoffset[2] = MSG_ReadChar (&net_message)*0.25;
+            state->gunangles[0] = MSG_ReadChar (&net_message)*0.25;
+            state->gunangles[1] = MSG_ReadChar (&net_message)*0.25;
+            state->gunangles[2] = MSG_ReadChar (&net_message)*0.25;
+        }
+#else
+        if (flags & PS_WEAPONFRAME)
+        {
+            state->gunframe = MSG_ReadByte (&net_message);
+            state->gunoffset[0] = MSG_ReadChar (&net_message)*0.25;
+            state->gunoffset[1] = MSG_ReadChar (&net_message)*0.25;
+            state->gunoffset[2] = MSG_ReadChar (&net_message)*0.25;
+            state->gunangles[0] = MSG_ReadChar (&net_message)*0.25;
+            state->gunangles[1] = MSG_ReadChar (&net_message)*0.25;
+            state->gunangles[2] = MSG_ReadChar (&net_message)*0.25;
+        }
+#endif
+        
+#ifdef NEW_PLAYER_STATE_MEMBERS
+        if (flags & PS_WEAPONSKIN)    // Knightmare- gunskin support
+            state->gunskin = MSG_ReadShort (&net_message);
+        
+        if (flags & PS_WEAPONSKIN2)
+            state->gunskin2 = MSG_ReadShort (&net_message);
+        
+        // server-side speed control!
+        if (flags & PS_MAXSPEED)
+            state->maxspeed = MSG_ReadShort (&net_message);
+        
+        if (flags & PS_DUCKSPEED)
+            state->duckspeed = MSG_ReadShort (&net_message);
+        
+        if (flags & PS_WATERSPEED)
+            state->waterspeed = MSG_ReadShort (&net_message);
+        
+        if (flags & PS_ACCEL)
+            state->accel = MSG_ReadShort (&net_message);
+        
+        if (flags & PS_STOPSPEED)
+            state->stopspeed = MSG_ReadShort (&net_message);
+#endif    // end Knightmare
+        
+        if (flags & PS_BLEND)
+        {
+            state->blend[0] = MSG_ReadByte (&net_message)/255.0;
+            state->blend[1] = MSG_ReadByte (&net_message)/255.0;
+            state->blend[2] = MSG_ReadByte (&net_message)/255.0;
+            state->blend[3] = MSG_ReadByte (&net_message)/255.0;
+        }
+        
+        if (flags & PS_FOV)
+            state->fov = MSG_ReadByte (&net_message);
+        
+        if (flags & PS_RDFLAGS)
+            state->rdflags = MSG_ReadByte (&net_message);
+        
+        // parse stats
+        statbits = MSG_ReadLong (&net_message);
+        for (i = 0; i < MAX_STATS; i++)
+            if (statbits & (1<<i) )
+                state->stats[i] = MSG_ReadShort(&net_message);
+    } //end new CL_ParsePlayerstate code
 }
 
 void
@@ -677,6 +967,10 @@ CL_FireEntityEvents(frame_t *frame)
 		}
 	}
 }
+
+
+// Knightmare- var for saving speed controls
+player_state_t *clientstate;
 
 void
 CL_ParseFrame(void)
@@ -766,6 +1060,9 @@ CL_ParseFrame(void)
 
 	CL_ParsePlayerstate(old, &cl.frame);
 
+    // Knightmare- set pointer to player state for movement code
+    clientstate = &cl.frame.playerstate;
+    
 	/* read packet entities */
 	cmd = MSG_ReadByte(&net_message);
 	SHOWNET(svc_strings[cmd]);

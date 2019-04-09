@@ -40,7 +40,13 @@ S_RegisterSexedModel(entity_state_t *ent, char *base)
 
 	/* determine what model the client is using */
 	model[0] = 0;
-	n = CS_PLAYERSKINS + ent->number - 1;
+
+    // Knightmare- BIG UGLY HACK for old connected to server using old protocol
+    // Changed config strings require different parsing
+    if ( LegacyProtocol() )
+        n = OLD_CS_PLAYERSKINS + ent->number - 1;
+    else
+        n = CS_PLAYERSKINS + ent->number - 1;
 
 	if (cl.configstrings[n][0])
 	{
@@ -93,6 +99,10 @@ S_RegisterSexedModel(entity_state_t *ent, char *base)
 	return md2;
 }
 
+// Knightmare- save off current player weapon model for player config menu
+extern    char    *currentweaponmodel;
+extern    char    cl_weaponmodels[MAX_CLIENTWEAPONMODELS][MAX_QPATH];
+
 void
 CL_AddPacketEntities(frame_t *frame)
 {
@@ -114,9 +124,18 @@ CL_AddPacketEntities(frame_t *frame)
 
 	/* brush models can auto animate their frames */
 	autoanim = 2 * cl.time / 1000;
+    
+    // Knightmare added
+    VectorCopy( vec3_origin, clientOrg);
 
+    // Knightmare- reset current weapon model
+    currentweaponmodel = NULL;
+    
 	for (pnum = 0; pnum < frame->num_entities; pnum++)
 	{
+        qboolean isclientviewer = false;
+        qboolean drawEnt = true; //Knightmare added
+        
 		s1 = &cl_parse_entities[(frame->parse_entities +
 				pnum) & (MAX_PARSE_ENTITIES - 1)];
 
@@ -125,6 +144,11 @@ CL_AddPacketEntities(frame_t *frame)
 		effects = s1->effects;
 		renderfx = s1->renderfx;
 
+        // if i want to multiply alpha, then id better do this...
+        ent.alpha = 1.0F;
+        // reset this
+        ent.renderfx = 0;
+        
 		/* set frame */
 		if (effects & EF_ANIM01)
 		{
@@ -151,7 +175,11 @@ CL_AddPacketEntities(frame_t *frame)
 			ent.frame = s1->frame;
 		}
 
-		/* quad and pent can do different things on client */
+        // Knightmare- ents that cast light don't give off shadows
+        if (effects & (EF_BLASTER|EF_HYPERBLASTER|EF_BLUEHYPERBLASTER|EF_TRACKER|EF_ROCKET|EF_PLASMA|EF_IONRIPPER))
+            renderfx |= RF_NOSHADOW;
+
+        /* quad and pent can do different things on client */
 		if (effects & EF_PENT)
 		{
 			effects &= ~EF_PENT;
@@ -211,7 +239,9 @@ CL_AddPacketEntities(frame_t *frame)
 		else
 		{
 			/* set skin */
-			if (s1->modelindex == 255)
+            if ( s1->modelindex == MAX_MODELS-1 //was 255
+                //Knightmare- GROSS HACK for old demos, use modelindex 255
+                || ( LegacyProtocol() && s1->modelindex == OLD_MAX_MODELS-1 ) )
 			{
 				/* use custom player skin */
 				ent.skinnum = 0;
@@ -254,6 +284,42 @@ CL_AddPacketEntities(frame_t *frame)
 				ent.model = cl.model_draw[s1->modelindex];
 			}
 		}
+        
+        //Knightmare added
+        //**** MODEL / EFFECT SWAPPING ETC *** - per gametype...
+        if (ent.model)
+        {
+            if (!Q_strcasecmp((char *)ent.model, "models/objects/laser/tris.md2")
+                && !(effects & EF_BLASTER))
+            {    // give the bolt an orange particle glow
+                CL_HyperBlasterEffect (cent->lerp_origin, ent.origin, s1->angles,
+                                       255, 150, 50, 0, -90, -30, 10, 2);
+                drawEnt = false;
+            }
+            if ( (!Q_strcasecmp((char *)ent.model, "models/proj/laser2/tris.md2")
+                  || !Q_strcasecmp((char *)ent.model, "models/objects/laser2/tris.md2")
+                  || !Q_strcasecmp((char *)ent.model, "models/objects/glaser/tris.md2") )
+                && !(effects & EF_BLASTER))
+            {    // give the bolt a green particle glow
+                CL_HyperBlasterEffect (cent->lerp_origin, ent.origin, s1->angles,
+                                       50, 235, 50, -10, 0, -10, 10, 2);
+                drawEnt = false;
+            }
+            if (!Q_strcasecmp((char *)ent.model, "models/objects/blaser/tris.md2")
+                && !(effects & EF_BLASTER))
+            {    // give the bolt a blue particle glow
+                CL_HyperBlasterEffect (cent->lerp_origin, ent.origin, s1->angles,
+                                       50, 50, 235, 0, -10, 0, -10, 2);
+                drawEnt = false;
+            }
+            if (!Q_strcasecmp((char *)ent.model, "models/objects/rlaser/tris.md2")
+                && !(effects & EF_BLASTER))
+            {    // give the bolt a red particle glow
+                CL_HyperBlasterEffect (cent->lerp_origin, ent.origin, s1->angles,
+                                       235, 50, 50, 0, -90, -30, -10, 2);
+                drawEnt = false;
+            }
+        }
 
 		/* only used for black hole model right now */
 		if (renderfx & RF_TRANSLUCENT && !(renderfx & RF_BEAM))
@@ -310,9 +376,14 @@ CL_AddPacketEntities(frame_t *frame)
 		{
 			ent.flags |= RF_VIEWERMODEL;
 
+            isclientviewer = true;
+            
 			if (effects & EF_FLAG1)
 			{
-				V_AddLight(ent.origin, 225, 1.0f, 0.1f, 0.1f);
+                if (effects & EF_FLAG2)
+                    V_AddLight (ent.origin, 255, 0.1, 1.0, 0.1);
+                else
+                    V_AddLight(ent.origin, 225, 1.0f, 0.1f, 0.1f);
 			}
 
 			else if (effects & EF_FLAG2)
@@ -330,7 +401,19 @@ CL_AddPacketEntities(frame_t *frame)
 				V_AddLight(ent.origin, 225, -1.0f, -1.0f, -1.0f);
 			}
 
-			continue;
+            // Knightmare- save off current player weapon model for player config menu
+            if (s1->modelindex2 == MAX_MODELS-1
+                || ( LegacyProtocol() && s1->modelindex2 == OLD_MAX_MODELS-1 ) )
+            {
+                ci = &cl.clientinfo[s1->skinnum & 0xff];
+                i = (s1->skinnum >> 8); // 0 is default weapon model
+                if (!cl_vwep->value || i > MAX_CLIENTWEAPONMODELS - 1)
+                    i = 0;
+                currentweaponmodel = cl_weaponmodels[i];
+            }
+            
+            if (!cl_3dcam->value)
+                continue;
 		}
 
 		/* if set to invisible, skip */

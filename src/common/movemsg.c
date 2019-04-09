@@ -260,11 +260,111 @@ MSG_WriteString(sizebuf_t *sb, char *s)
 	}
 }
 
+// 24-bit coordinate transmission code
+#ifdef LARGE_MAP_SIZE
+
+#define BIT_23    0x00800000
+#define UPRBITS    0xFF000000
+qboolean LegacyProtocol (void);
+
+void MSG_WriteCoordNew (sizebuf_t *sb, float f)
+{
+    int tmp;
+    byte trans1;
+    unsigned short trans2;
+    
+    tmp = f*8;            // 1/8 granulation, leaves bounds of +/-1M in signed 24-bit form
+    trans1 = tmp >>16;    // bits 16-23
+    trans2 = tmp;        // bits 0-15
+    
+    // Don't mess with sign bits on this end to allow overflow (map wrap-around).
+    
+    MSG_WriteByte (sb, trans1);
+    MSG_WriteShort (sb, trans2);
+}
+
+float MSG_ReadCoordNew (sizebuf_t *msg_read)
+{
+    int tmp;
+    byte trans1;
+    unsigned short trans2;
+    
+    trans1 = MSG_ReadByte(msg_read);
+    trans2 = MSG_ReadShort(msg_read);
+    
+    tmp = trans1 <<16;    // bits 16-23
+    tmp += trans2;        // bits 0-15
+    
+    // Sign bit 23 means it's negative, so fill upper
+    // 8 bits with 1s for 2's complement negative.
+    if (tmp & BIT_23)
+        tmp |= UPRBITS;
+    
+    return tmp * (1.0/8);    // restore 1/8 granulation
+}
+
+// Player movement coords are already in 1/8 precision integer form
+void MSG_WritePMCoordNew (sizebuf_t *sb, int in)
+{
+    byte trans1;
+    unsigned short trans2;
+    
+    trans1 = in >>16;    // bits 16-23
+    trans2 = in;        // bits 0-15
+    
+    MSG_WriteByte (sb, trans1);
+    MSG_WriteShort (sb, trans2);
+}
+
+int MSG_ReadPMCoordNew (sizebuf_t *msg_read)
+{
+    int tmp;
+    byte trans1;
+    unsigned short trans2;
+    
+    trans1 = MSG_ReadByte(msg_read);
+    trans2 = MSG_ReadShort(msg_read);
+    
+    tmp = trans1 <<16;    // bits 16-23
+    tmp += trans2;        // bits 0-15
+    
+    // Sign bit 23 means it's negative, so fill upper
+    // 8 bits with 1s for 2's complement negative.
+    if (tmp & BIT_23)
+        tmp |= UPRBITS;
+    
+    return tmp;
+}
+
+#endif // LARGE_MAP_SIZE
+
+#ifdef LARGE_MAP_SIZE
+
+void MSG_WriteCoord (sizebuf_t *sb, float f)
+{
+    MSG_WriteCoordNew (sb, f);
+}
+
+#else // LARGE_MAP_SIZE
+
 void
 MSG_WriteCoord(sizebuf_t *sb, float f)
 {
 	MSG_WriteShort(sb, (int)(f * 8));
 }
+
+#endif // LARGE_MAP_SIZE
+
+#ifdef LARGE_MAP_SIZE
+
+void MSG_WritePos (sizebuf_t *sb, vec3_t pos)
+{
+    MSG_WriteCoordNew (sb, pos[0]);
+    MSG_WriteCoordNew (sb, pos[1]);
+    MSG_WriteCoordNew (sb, pos[2]);
+}
+
+#else // LARGE_MAP_SIZE
 
 void
 MSG_WritePos(sizebuf_t *sb, vec3_t pos)
@@ -273,6 +373,8 @@ MSG_WritePos(sizebuf_t *sb, vec3_t pos)
 	MSG_WriteShort(sb, (int)(pos[1] * 8));
 	MSG_WriteShort(sb, (int)(pos[2] * 8));
 }
+
+#endif // LARGE_MAP_SIZE
 
 void
 MSG_WriteAngle(sizebuf_t *sb, float f)
@@ -946,19 +1048,55 @@ MSG_ReadStringLine(sizebuf_t *msg_read)
 	return string;
 }
 
+#ifdef LARGE_MAP_SIZE
+
+float MSG_ReadCoord (sizebuf_t *msg_read)
+{
+    if (LegacyProtocol())
+        return MSG_ReadShort(msg_read) * (1.0/8);
+    else
+        return MSG_ReadCoordNew(msg_read);
+}
+
+#else // LARGE_MAP_SIZE
+
 float
 MSG_ReadCoord(sizebuf_t *msg_read)
 {
-	return MSG_ReadShort(msg_read) * (0.125f);
+    return MSG_ReadShort(msg_read) * (0.125f);
 }
+
+#endif // LARGE_MAP_SIZE
+
+#ifdef LARGE_MAP_SIZE
+
+void MSG_ReadPos (sizebuf_t *msg_read, vec3_t pos)
+{
+    if (LegacyProtocol())
+    {
+        pos[0] = MSG_ReadShort(msg_read) * (1.0/8);
+        pos[1] = MSG_ReadShort(msg_read) * (1.0/8);
+        pos[2] = MSG_ReadShort(msg_read) * (1.0/8);
+    }
+    else
+    {
+        pos[0] = MSG_ReadCoordNew(msg_read);
+        pos[1] = MSG_ReadCoordNew(msg_read);
+        pos[2] = MSG_ReadCoordNew(msg_read);
+    }
+}
+
+#else // LARGE_MAP_SIZE
 
 void
 MSG_ReadPos(sizebuf_t *msg_read, vec3_t pos)
 {
-	pos[0] = MSG_ReadShort(msg_read) * (0.125f);
-	pos[1] = MSG_ReadShort(msg_read) * (0.125f);
-	pos[2] = MSG_ReadShort(msg_read) * (0.125f);
+    pos[0] = MSG_ReadShort(msg_read) * (0.125f);
+    pos[1] = MSG_ReadShort(msg_read) * (0.125f);
+    pos[2] = MSG_ReadShort(msg_read) * (0.125f);
 }
+
+#endif // LARGE_MAP_SIZE
 
 float
 MSG_ReadAngle(sizebuf_t *msg_read)
