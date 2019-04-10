@@ -289,6 +289,7 @@ extern	cvar_t	*gl1_stereo_separation;
 extern	cvar_t	*gl1_stereo_convergence;
 extern	cvar_t	*gl1_stereo;
 extern	cvar_t	*cl_gun;
+extern  cvar_t  *cl_weapon_shells;
 extern	cvar_t	*cl_add_blend;
 
 extern    cvar_t    *cl_blood;

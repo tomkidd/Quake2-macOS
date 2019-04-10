@@ -46,6 +46,7 @@ cvar_t *cl_timeout;
 cvar_t *cl_predict;
 cvar_t *cl_showfps;
 cvar_t *cl_gun;
+cvar_t *cl_weapon_shells;
 cvar_t *cl_add_particles;
 cvar_t *cl_add_lights;
 cvar_t *cl_add_entities;

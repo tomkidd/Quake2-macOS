@@ -73,6 +73,54 @@ V_ClearScene(void)
 	r_numparticles = 0;
 }
 
+// Knightmare- added Psychospaz's chasecam
+/*
+ =====================
+ 
+ 3D Cam Stuff -psychospaz
+ 
+ =====================
+ */
+#define CAM_MAXALPHADIST 0.000111
+void vectoangles2 (vec3_t value1, vec3_t angles);
+float viewermodelalpha;
+
+void ClipCam (vec3_t start, vec3_t end, vec3_t newpos)
+{
+    int i;
+    
+    trace_t tr = CL_Trace (start, end, 5, MASK_SOLID);
+    for (i=0;i<3;i++)
+        newpos[i]=tr.endpos[i];
+}
+
+void AddViewerEntAlpha (entity_t *ent)
+{
+    if (viewermodelalpha == 1 || !cl_3dcam_alpha->value)
+        return;
+    
+    ent->alpha *= viewermodelalpha;
+    if (ent->alpha < 1.0F)
+        ent->flags |= RF_TRANSLUCENT;
+}
+
+#define ANGLEMAX 90.0
+void CalcViewerCamTrans (float distance)
+{
+    float alphacalc = cl_3dcam_dist->value;
+    
+    // no div by 0
+    if (alphacalc < 1)
+        alphacalc = 1;
+    
+    viewermodelalpha = distance/alphacalc;
+    
+    if (viewermodelalpha>1)
+        viewermodelalpha = 1;
+}
+
+
+
 void
 V_AddEntity(entity_t *ent)
 {

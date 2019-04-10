@@ -840,71 +840,239 @@ CL_AddPacketEntities(frame_t *frame)
 void
 CL_AddViewWeapon(player_state_t *ps, player_state_t *ops)
 {
-	entity_t gun = {0}; /* view model */
-	int i;
-
-	/* allow the gun to be completely removed */
-	if (!cl_gun->value)
-	{
-		return;
-	}
-
-	/* don't draw gun if in wide angle view and drawing not forced */
-	if (ps->fov > 90)
-	{
-		if (cl_gun->value < 2)
-		{
-			return;
-		}
-	}
-
-	if (gun_model)
-	{
-		gun.model = gun_model;
-	}
-
-	else
-	{
-		gun.model = cl.model_draw[ps->gunindex];
-	}
-
-	if (!gun.model)
-	{
-		return;
-	}
-
-	/* set up gun position */
-	for (i = 0; i < 3; i++)
-	{
-		gun.origin[i] = cl.refdef.vieworg[i] + ops->gunoffset[i]
-			+ cl.lerpfrac * (ps->gunoffset[i] - ops->gunoffset[i]);
-		gun.angles[i] = cl.refdef.viewangles[i] + LerpAngle(ops->gunangles[i],
-			ps->gunangles[i], cl.lerpfrac);
-	}
-
-	if (gun_frame)
-	{
-		gun.frame = gun_frame;
-		gun.oldframe = gun_frame;
-	}
-	else
-	{
-		gun.frame = ps->gunframe;
-
-		if (gun.frame == 0)
-		{
-			gun.oldframe = 0; /* just changed weapons, don't lerp from old */
-		}
-		else
-		{
-			gun.oldframe = ops->gunframe;
-		}
-	}
-
-	gun.flags = RF_MINLIGHT | RF_DEPTHHACK | RF_WEAPONMODEL;
-	gun.backlerp = 1.0f - cl.lerpfrac;
-	VectorCopy(gun.origin, gun.oldorigin); /* don't lerp at all */
-	V_AddEntity(&gun);
+    entity_t gun = {0}; /* view model */
+    int i;
+    
+#ifdef NEW_PLAYER_STATE_MEMBERS //Knightmare- second gun model
+    entity_t    gun2;        // view model
+#endif
+    
+    //dont draw if outside body...
+    if (cl_3dcam->value
+        && !(cl.attractloop && !(cl.cinematictime > 0 && cls.realtime - cl.cinematictime > 1000)))
+        return;
+    
+    /* allow the gun to be completely removed */
+    if (!cl_gun->value)
+    {
+        return;
+    }
+    
+    /* don't draw gun if in wide angle view and drawing not forced */
+    if (ps->fov > 180) //Knightmare 1/4/2002 - was 90
+    {
+        if (cl_gun->value < 2)
+        {
+            return;
+        }
+    }
+    
+    if (gun_model)
+    {
+        gun.model = gun_model;
+    }
+    else
+    {
+        gun.model = cl.model_draw[ps->gunindex];
+    }
+    
+#ifdef NEW_PLAYER_STATE_MEMBERS //Knightmare- second gun model
+    gun2.model = cl.model_draw[ps->gunindex2];
+    if (!gun.model && !gun2.model)
+        return;
+#else
+    if (!gun.model)
+    {
+        return;
+    }
+#endif
+    
+    if (gun.model)
+    {
+        /* set up gun position */
+        for (i = 0; i < 3; i++)
+        {
+            gun.origin[i] = cl.refdef.vieworg[i] + ops->gunoffset[i]
+            + cl.lerpfrac * (ps->gunoffset[i] - ops->gunoffset[i]);
+            gun.angles[i] = cl.refdef.viewangles[i] + LerpAngle(ops->gunangles[i],
+                                                                ps->gunangles[i], cl.lerpfrac);
+        }
+        
+        if (gun_frame)
+        {
+            gun.frame = gun_frame;
+            gun.oldframe = gun_frame;
+        }
+        else
+        {
+            gun.frame = ps->gunframe;
+            
+            if (gun.frame == 0)
+            {
+                gun.oldframe = 0; /* just changed weapons, don't lerp from old */
+            }
+            else
+            {
+                gun.oldframe = ops->gunframe;
+            }
+        }
+        //Knightmare- added changeable skin
+#ifdef NEW_PLAYER_STATE_MEMBERS
+        if (ps->gunskin)
+            gun.skinnum = ops->gunskin;
+#endif
+        
+        
+        gun.flags = RF_MINLIGHT | RF_DEPTHHACK | RF_WEAPONMODEL;
+        gun.backlerp = 1.0f - cl.lerpfrac;
+        VectorCopy(gun.origin, gun.oldorigin); /* don't lerp at all */
+        V_AddEntity(&gun);
+        
+        //add shells for viewweaps (all of em!)
+        if (cl_weapon_shells->value)
+        {
+            int oldeffects = gun.flags, pnum;
+            entity_state_t    *s1;
+            
+            for (pnum = 0 ; pnum<cl.frame.num_entities ; pnum++)
+                if ((s1=&cl_parse_entities[(cl.frame.parse_entities+pnum)&(MAX_PARSE_ENTITIES-1)])->number == cl.playernum+1)
+                {
+                    int effects = s1->renderfx;
+                    
+                    //if (effects & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_GREEN) || s1->effects&(EF_PENT|EF_QUAD))
+                    if (s1->effects&(EF_PENT|EF_QUAD|EF_DOUBLE|EF_HALF_DAMAGE))
+                    {
+                        gun.flags = 0;
+                        if (s1->effects & EF_QUAD)
+                            gun.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_BLUE;
+                        if (s1->effects & EF_PENT)
+                            gun.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_RED;
+                        if (s1->effects & EF_DOUBLE && !(s1->effects&(EF_PENT|EF_QUAD)) )
+                            gun.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_DOUBLE;
+                        if (s1->effects & EF_HALF_DAMAGE && !(s1->effects&(EF_PENT|EF_QUAD|EF_DOUBLE)) )
+                            gun.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_HALF_DAM;
+                        
+                        gun.flags |= RF_TRANSLUCENT;
+                        gun.alpha = 0.30;
+                        
+                        V_AddEntity (&gun);
+                        /*if (s1->effects & EF_COLOR_SHELL && gun.flags & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_GREEN))
+                         {
+                         gun.skin = R_RegisterSkin ("gfx/shell_generic.pcx");
+                         
+                         V_AddEntity (&gun);
+                         }
+                         if (s1->effects & EF_PENT)
+                         {
+                         gun.skin = R_RegisterSkin ("gfx/shell_generic.pcx");
+                         gun.flags = oldeffects | RF_TRANSLUCENT | RF_SHELL_RED;
+                         V_AddLight (gun.origin, 130, 1, 0.25, 0.25);
+                         V_AddLight (gun.origin, 100, 1, 0, 0);
+                         
+                         V_AddEntity (&gun);
+                         }
+                         if (s1->effects & EF_QUAD)
+                         {
+                         gun.skin = R_RegisterSkin ("gfx/shell_generic.pcx");
+                         gun.flags = oldeffects | RF_TRANSLUCENT | RF_SHELL_BLUE;
+                         V_AddLight (gun.origin, 130, 0.25, 0.5, 1);
+                         V_AddLight (gun.origin, 100, 0, 0.25, 1);
+                         
+                         V_AddEntity (&gun);
+                         }*/
+                    }
+                    break; // early termination
+                }
+            gun.flags = oldeffects;
+        }
+    }
+    //Knightmare- second gun model
+#ifdef NEW_PLAYER_STATE_MEMBERS
+    if (gun2.model)
+    {
+        // set up gun2 position
+        for (i=0 ; i<3 ; i++)
+        {
+            gun2.origin[i] = cl.refdef.vieworg[i] + ops->gunoffset[i]
+            + cl.lerpfrac * (ps->gunoffset[i] - ops->gunoffset[i]);
+            gun2.angles[i] = cl.refdef.viewangles[i] + LerpAngle (ops->gunangles[i],
+                                                                  ps->gunangles[i], cl.lerpfrac);
+        }
+        
+        gun2.frame = ps->gunframe2;
+        if (gun2.frame == 0)
+            gun2.oldframe = 0;    // just changed weapons, don't lerp from old
+        else
+            gun2.oldframe = ops->gunframe2;
+        
+        if (ps->gunskin2)
+            gun2.skinnum = ops->gunskin2;
+        
+        gun2.flags = RF_MINLIGHT | RF_DEPTHHACK | RF_WEAPONMODEL;
+        gun2.backlerp = 1.0 - cl.lerpfrac;
+        VectorCopy (gun2.origin, gun2.oldorigin);    // don't lerp at all
+        V_AddEntity (&gun2);
+        
+        //add shells for viewweaps (all of em!)
+        if (cl_weapon_shells->value)
+        {
+            int oldeffects = gun2.flags, pnum;
+            entity_state_t    *s1;
+            
+            for (pnum = 0 ; pnum<cl.frame.num_entities ; pnum++)
+                if ((s1=&cl_parse_entities[(cl.frame.parse_entities+pnum)&(MAX_PARSE_ENTITIES-1)])->number == cl.playernum+1)
+                {
+                    int effects = s1->renderfx;
+                    
+                    //if (effects & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_GREEN) || s1->effects&(EF_PENT|EF_QUAD))
+                    if (s1->effects&(EF_PENT|EF_QUAD|EF_DOUBLE|EF_HALF_DAMAGE))
+                    {
+                        gun2.flags = 0;
+                        if (s1->effects & EF_QUAD)
+                            gun2.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_BLUE;
+                        if (s1->effects & EF_PENT)
+                            gun2.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_RED;
+                        if (s1->effects & EF_DOUBLE && !(s1->effects&(EF_PENT|EF_QUAD)) )
+                            gun2.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_DOUBLE;
+                        if (s1->effects & EF_HALF_DAMAGE && !(s1->effects&(EF_PENT|EF_QUAD|EF_DOUBLE)) )
+                            gun2.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_HALF_DAM;
+                        
+                        gun2.flags |= RF_TRANSLUCENT;
+                        gun2.alpha = 0.30;
+                        
+                        V_AddEntity (&gun2);
+                        /*if (s1->effects & EF_COLOR_SHELL && gun2.flags & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_GREEN))
+                         {
+                         gun2.skin = R_RegisterSkin ("gfx/shell_generic.pcx");
+                         
+                         V_AddEntity (&gun2);
+                         }
+                         
+                         if (s1->effects & EF_PENT)
+                         {
+                         gun2.skin = R_RegisterSkin ("gfx/shell_generic.pcx");
+                         gun2.flags = oldeffects | RF_TRANSLUCENT | RF_SHELL_RED;
+                         V_AddLight (gun2.origin, 130, 1, 0.25, 0.25);
+                         V_AddLight (gun2.origin, 100, 1, 0, 0);
+                         
+                         V_AddEntity (&gun2);
+                         }
+                         if (s1->effects & EF_QUAD)
+                         {
+                         gun2.skin = R_RegisterSkin ("gfx/shell_generic.pcx");
+                         gun2.flags = oldeffects | RF_TRANSLUCENT | RF_SHELL_BLUE;
+                         V_AddLight (gun2.origin, 130, 0.25, 0.5, 1);
+                         V_AddLight (gun2.origin, 100, 0, 0.25, 1);
+                         
+                         V_AddEntity (&gun2);
+                         }*/
+                    }
+                    break; // early termination
+                }
+            gun2.flags = oldeffects;
+        }
+    }
+#endif
 }
 
 /*
@@ -927,6 +1095,112 @@ AdaptFov(float fov, float w, float h)
 	 * converts between degrees and radians when needed.
 	 */
 	return (atanf(tanf(fov / 360.0f * pi) * (w / h * 0.75f)) / pi * 360.0f);
+}
+
+/*
+ ===============
+ SetUpCamera
+ 
+ ===============
+ */
+
+void CalcViewerCamTrans(float dist);
+void ClipCam (vec3_t start, vec3_t end, vec3_t newpos);
+// Knightmare- backup of client angles
+vec3_t old_viewangles;
+
+void SetUpCamera (void)
+{
+    if (cl_3dcam->value && !(cl.attractloop && !(cl.cinematictime > 0 && cls.realtime - cl.cinematictime > 1000)))
+    {
+        vec3_t end, oldorg, _3dcamposition, _3dcamforward;
+        float dist_up, dist_back, angle;
+        
+        if (cl_3dcam_dist->value < 0)
+            Cvar_SetValue( "cl_3dcam_dist", 0 );
+        
+        // Knightmare- backup old viewangles
+        VectorCopy(cl.refdef.viewangles, old_viewangles);
+        
+        //and who said trig was pointless?
+        angle = M_PI * cl_3dcam_angle->value/180.0f;
+        dist_up = cl_3dcam_dist->value * sin( angle  );
+        dist_back =  cl_3dcam_dist->value * cos ( angle );
+        //finish polar vector
+        
+        VectorCopy(cl.refdef.vieworg, oldorg);
+        if (cl_3dcam_chase->value)
+        {
+            VectorMA(cl.refdef.vieworg, -dist_back, cl.v_forward, end);
+            VectorMA(end, dist_up, cl.v_up, end);
+            
+            //move back so looking straight down want make us look towards ourself
+            {
+                vec3_t temp, temp2;
+                
+                vectoangles2(cl.v_forward, temp);
+                temp[PITCH]=0;
+                temp[ROLL]=0;
+                AngleVectors(temp, temp2, NULL, NULL);
+                VectorMA(end, -(dist_back/1.8f), temp2, end);
+            }
+            
+            ClipCam (cl.refdef.vieworg, end, _3dcamposition);
+        }
+        else
+        {
+            vec3_t temp, viewForward, viewUp;
+            
+            vectoangles2(cl.v_forward, temp);
+            temp[PITCH]=0;
+            temp[ROLL]=0;
+            AngleVectors(temp, viewForward, NULL, viewUp);
+            
+            VectorScale(viewForward, dist_up*0.5f, _3dcamforward);
+            
+            VectorMA(cl.refdef.vieworg, -dist_back, viewForward, end);
+            VectorMA(end, dist_up, viewUp, end);
+            
+            ClipCam (cl.refdef.vieworg, end, _3dcamposition);
+        }
+        
+        
+        VectorSubtract(_3dcamposition, oldorg, end);
+        
+        CalcViewerCamTrans(VectorLength(end));
+        
+        if (!cl_3dcam_chase->value)
+        {
+            vec3_t newDir[2], newPos;
+            
+            VectorSubtract(cl.predicted_origin, _3dcamposition, newDir[0]);
+            VectorNormalize(newDir[0]);
+            vectoangles2(newDir[0],newDir[1]);
+            VectorCopy(newDir[1], cl.refdef.viewangles);
+            
+            VectorAdd(_3dcamforward, cl.refdef.vieworg, newPos);
+            ClipCam (cl.refdef.vieworg, newPos, cl.refdef.vieworg);
+        }
+        else //now aim at where ever client is...
+        {
+            vec3_t newDir, dir;
+            
+            if (cl_3dcam_adjust->value)
+            {
+                VectorMA(cl.refdef.vieworg, 8000, cl.v_forward, dir);
+                ClipCam (cl.refdef.vieworg, dir, newDir);
+                
+                VectorSubtract(newDir, _3dcamposition, dir);
+                VectorNormalize(dir);
+                vectoangles2(dir, newDir);
+                
+                AngleVectors(newDir, cl.v_forward, cl.v_right, cl.v_up);
+                VectorCopy(newDir, cl.refdef.viewangles);
+            }
+            
+            VectorCopy(_3dcamposition, cl.refdef.vieworg);
+        }
+    }
 }
 
 /*
@@ -981,6 +1255,8 @@ CL_CalcViewValues(void)
 			cl.refdef.vieworg[i] = cl.predicted_origin[i] + ops->viewoffset[i]
 				+ cl.lerpfrac * (ps->viewoffset[i] - ops->viewoffset[i])
 				- backlerp * cl.prediction_error[i];
+            // this smooths out platform riding
+            cl.predicted_origin[i] -= backlerp * cl.prediction_error[i];
 		}
 
 		/* smooth out stair climbing */
@@ -989,6 +1265,7 @@ CL_CalcViewValues(void)
 		if (delta < 100)
 		{
 			cl.refdef.vieworg[2] -= cl.predicted_step * (100 - delta) * 0.01;
+            cl.predicted_origin[2] -= cl.predicted_step * (100 - delta) * 0.01;
 		}
 	}
 	else
@@ -1001,6 +1278,10 @@ CL_CalcViewValues(void)
 						ps->viewoffset[i] - (ops->pmove.origin[i] * 0.125 +
 							ops->viewoffset[i]));
 		}
+
+        // Knightmare- set predicted origin anyway, it's needed for the chasecam
+        VectorCopy(cl.refdef.vieworg, cl.predicted_origin);
+        cl.predicted_origin[2] -= ops->viewoffset[2];
 	}
 
 	/* if not running a demo or on a locked frame, add the local angle movement */
@@ -1049,6 +1330,9 @@ CL_CalcViewValues(void)
 
 	/* add the weapon */
 	CL_AddViewWeapon(ps, ops);
+
+    // set up chase cam
+    SetUpCamera();
 }
 
 /*
@@ -1093,6 +1377,12 @@ CL_AddEntities(void)
 	}
 
 	CL_CalcViewValues();
+    
+    
+    // Knightmare- added Psychospaz's chasecam
+    //if (cl_3dcam->value)
+    //    CalcViewerCamTrans ();
+    
 	CL_AddPacketEntities(&cl.frame);
 	CL_AddTEnts();
 	CL_AddParticles();
