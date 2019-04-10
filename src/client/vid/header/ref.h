@@ -30,6 +30,8 @@
 #include "../../../common/header/common.h"
 #include "vid.h"
 
+#define TWOTHIRDS 0.666666666666666666666666666666
+
 #define	MAX_DLIGHTS		32
 #define	MAX_ENTITIES	128
 #define	MAX_PARTICLES	4096
@@ -53,6 +55,35 @@
 
 #define ENTITY_FLAGS	68
 
+//***********************************
+//psychospaz
+//particles
+//***********************************
+
+#define PART_GRAVITY    1
+#define PART_SPARK        2
+#define PART_ANGLED        4
+#define PART_DIRECTION    8
+#define PART_TRANS        16
+#define PART_SATURATE    32
+#define PART_SHADED        64
+#define PART_LIGHTNING    128
+#define PART_BEAM        256
+#define PART_LENSFLARE    512
+#define PART_ADD_LIGHT    1024
+#define PART_DECAL        2048
+#define PART_INSTANT    4096
+#define PART_OVERBRIGHT    8192
+#define PART_ALPHACOLOR    16384
+#define PART_LEAVEMARK    0x40000 //256K
+
+#define PART_DEPTHHACK_SHORT    0x08000 //32768
+#define PART_DEPTHHACK_MID        0x10000 //65536
+#define PART_DEPTHHACK_LONG        0x20000 //128K
+
+//combo flags
+#define PART_DEPTHHACK    (PART_DEPTHHACK_SHORT|PART_DEPTHHACK_MID|PART_DEPTHHACK_LONG)
+
 typedef struct entity_s {
 	struct model_s		*model; /* opaque type outside refresh */
 	float				angles[3];
@@ -72,8 +103,11 @@ typedef struct entity_s {
 	int		lightstyle; /* for flashing entities */
 	float	alpha; /* ignore if RF_TRANSLUCENT isn't set */
 
+    float    scale;
+    
 	struct image_s	*skin; /* NULL for inline skin */
 	int		flags;
+    int     renderfx;
 } entity_t;
 
 typedef struct {

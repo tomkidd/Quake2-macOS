@@ -51,6 +51,11 @@ cvar_t *cl_add_lights;
 cvar_t *cl_add_entities;
 cvar_t *cl_add_blend;
 
+cvar_t    *cl_blood;
+
+// reduction factor for particle effects
+cvar_t    *cl_particle_scale;
+
 cvar_t *cl_shownet;
 cvar_t *cl_showmiss;
 cvar_t *cl_showclamp;
@@ -82,6 +87,27 @@ cvar_t *gender_auto;
 cvar_t	*gl1_stereo;
 cvar_t	*gl1_stereo_separation;
 cvar_t	*gl1_stereo_convergence;
+
+// Psychospaz's rail code
+cvar_t    *cl_railred;
+cvar_t    *cl_railgreen;
+cvar_t    *cl_railblue;
+cvar_t    *cl_railtype;
+cvar_t    *cl_rail_length;
+cvar_t    *cl_rail_space;
+
+cvar_t    *r_decals;        // decal quantity
+cvar_t    *r_decal_life;  // decal duration in seconds
+cvar_t    *con_font_size;
+cvar_t    *alt_text_color;
+
+// Psychospaz's chasecam
+cvar_t    *cl_3dcam;
+cvar_t    *cl_3dcam_angle;
+cvar_t    *cl_3dcam_chase;
+cvar_t    *cl_3dcam_dist;
+cvar_t    *cl_3dcam_alpha;
+cvar_t    *cl_3dcam_adjust;
 
 cvar_t *cl_vwep;
 

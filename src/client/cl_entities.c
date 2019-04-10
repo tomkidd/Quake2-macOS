@@ -448,63 +448,65 @@ CL_AddPacketEntities(frame_t *frame)
 				ent.alpha = 0.3f;
 			}
 		}
+        
+        // Knightmare- read server-assigned alpha, overriding effects flags
+#ifdef NEW_ENTITY_STATE_MEMBERS
+        if (s1->alpha > 0.0F && s1->alpha < 1.0F)
+        {
+            //ent.alpha = s1->alpha;
+            // lerp alpha :p
+            ent.alpha = cent->prev.alpha + cl.lerpfrac * (cent->current.alpha - cent->prev.alpha);
+            ent.flags |= RF_TRANSLUCENT;
+        }
+#endif
+        // Knightmare added for mirroring
+        if (renderfx & RF_MIRRORMODEL)
+            ent.flags |= RF_MIRRORMODEL;
+        
+        // if set to invisible, skip
+        if (!s1->modelindex)
+            continue;
 
 		/* add to refresh list */
-		V_AddEntity(&ent);
+        if (drawEnt) //Knightmare added
+            V_AddEntity(&ent);
 
 		/* color shells generate a seperate entity for the main model */
-		if (effects & EF_COLOR_SHELL)
-		{
-			/* all of the solo colors are fine.  we need to catch any of
-			   the combinations that look bad (double & half) and turn
-			   them into the appropriate color, and make double/quad
-			   something special */
-			if (renderfx & RF_SHELL_HALF_DAM)
-			{
-				if (strcmp(game->string, "rogue") == 0)
-				{
-					/* ditch the half damage shell if any of red, blue, or double are on */
-					if (renderfx & (RF_SHELL_RED | RF_SHELL_BLUE | RF_SHELL_DOUBLE))
-					{
-						renderfx &= ~RF_SHELL_HALF_DAM;
-					}
-				}
-			}
-
-			if (renderfx & RF_SHELL_DOUBLE)
-			{
-				if (strcmp(game->string, "rogue") == 0)
-				{
-					/* lose the yellow shell if we have a red, blue, or green shell */
-					if (renderfx & (RF_SHELL_RED | RF_SHELL_BLUE | RF_SHELL_GREEN))
-					{
-						renderfx &= ~RF_SHELL_DOUBLE;
-					}
-
-					/* if we have a red shell, turn it to purple by adding blue */
-					if (renderfx & RF_SHELL_RED)
-					{
-						renderfx |= RF_SHELL_BLUE;
-					}
-
-					/* if we have a blue shell (and not a red shell),
-					   turn it to cyan by adding green */
-					else if (renderfx & RF_SHELL_BLUE)
-					{
-						/* go to green if it's on already,
-						   otherwise do cyan (flash green) */
-						if (renderfx & RF_SHELL_GREEN)
-						{
-							renderfx &= ~RF_SHELL_BLUE;
-						}
-
-						else
-						{
-							renderfx |= RF_SHELL_GREEN;
-						}
-					}
-				}
-			}
+        if (effects & EF_COLOR_SHELL && (!isclientviewer || (cl_3dcam->value
+                                                             && !(cl.attractloop && !(cl.cinematictime > 0 && cls.realtime - cl.cinematictime > 1000)))))
+        {
+            // PMM - at this point, all of the shells have been handled
+            // if we're in the rogue pack, set up the custom mixing, otherwise just
+            // keep going
+            // Knightmare 6/06/2002
+            if (roguepath())
+            {
+                // all of the solo colors are fine.  we need to catch any of the combinations that look bad
+                // (double & half) and turn them into the appropriate color, and make double/quad something special
+                if (renderfx & RF_SHELL_HALF_DAM)
+                {
+                    // ditch the half damage shell if any of red, blue, or double are on
+                    if (renderfx & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_DOUBLE))
+                        renderfx &= ~RF_SHELL_HALF_DAM;
+                }
+                
+                if (renderfx & RF_SHELL_DOUBLE)
+                {
+                    // lose the yellow shell if we have a red, blue, or green shell
+                    if (renderfx & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_GREEN))
+                        renderfx &= ~RF_SHELL_DOUBLE;
+                    // if we have a red shell, turn it to purple by adding blue
+                    if (renderfx & RF_SHELL_RED)
+                        renderfx |= RF_SHELL_BLUE;
+                    // if we have a blue shell (and not a red shell), turn it to cyan by adding green
+                    else if (renderfx & RF_SHELL_BLUE)
+                        // go to green if it's on already, otherwise do cyan (flash green)
+                        if (renderfx & RF_SHELL_GREEN)
+                            renderfx &= ~RF_SHELL_BLUE;
+                        else
+                            renderfx |= RF_SHELL_GREEN;
+                }
+            }
 
 			ent.flags = renderfx | RF_TRANSLUCENT;
 			ent.alpha = 0.30f;
@@ -514,12 +516,14 @@ CL_AddPacketEntities(frame_t *frame)
 		ent.skin = NULL; /* never use a custom skin on others */
 		ent.skinnum = 0;
 		ent.flags = 0;
-		ent.alpha = 0;
+		ent.alpha = 1.0f;
 
 		/* duplicate for linked models */
 		if (s1->modelindex2)
 		{
-			if (s1->modelindex2 == 255)
+            if (s1->modelindex2 == MAX_MODELS-1
+                //Knightmare- GROSS HACK for old demos, use modelindex 255
+                || ( LegacyProtocol() && s1->modelindex2 == OLD_MAX_MODELS-1 ) )
 			{
 				/* custom weapon */
 				ci = &cl.clientinfo[s1->skinnum & 0xff];
@@ -558,24 +562,105 @@ CL_AddPacketEntities(frame_t *frame)
 				ent.flags = RF_TRANSLUCENT;
 			}
 
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
 			V_AddEntity(&ent);
 
 			ent.flags = 0;
-			ent.alpha = 0;
+            ent.alpha = 1.0F;
 		}
 
 		if (s1->modelindex3)
 		{
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
 			ent.model = cl.model_draw[s1->modelindex3];
 			V_AddEntity(&ent);
 		}
 
 		if (s1->modelindex4)
 		{
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
 			ent.model = cl.model_draw[s1->modelindex4];
 			V_AddEntity(&ent);
 		}
 
+#ifdef NEW_ENTITY_STATE_MEMBERS
+        //Knightmare- 1/18/2002- extra model indices
+        if (s1->modelindex5)
+        {
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
+            ent.model = cl.model_draw[s1->modelindex5];
+            V_AddEntity (&ent);
+        }
+        if (s1->modelindex6)
+        {
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
+            ent.model = cl.model_draw[s1->modelindex6];
+            V_AddEntity (&ent);
+        }
+        if (s1->modelindex7)
+        {
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
+            ent.model = cl.model_draw[s1->modelindex7];
+            V_AddEntity (&ent);
+        }
+        if (s1->modelindex8)
+        {
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
+            ent.model = cl.model_draw[s1->modelindex8];
+            V_AddEntity (&ent);
+        }
+        //end Knightmare
+#endif
+        
 		if (effects & EF_POWERSCREEN)
 		{
 			ent.model = cl_mod_powerscreen;
@@ -602,31 +687,49 @@ CL_AddPacketEntities(frame_t *frame)
 			{
 				if (effects & EF_TRACKER)
 				{
-					CL_BlasterTrail2(cent->lerp_origin, ent.origin);
-					V_AddLight(ent.origin, 200, 0, 1, 0);
+                    CL_BlasterTrail (cent->lerp_origin, ent.origin, 50, 235, 50, -10, 0, -10);
+                    V_AddLight (ent.origin, 200, 0.15, 1, 0.15);
 				}
+                //Knightmare- behold, the power of cheese!!
+                else if (effects & EF_BLUEHYPERBLASTER) // EF_BLUEBLASTER
+                {
+                    CL_BlasterTrail (cent->lerp_origin, ent.origin, 50, 50, 235, -10, 0, -10);
+                    V_AddLight (ent.origin, 200, 0.15, 0.15, 1);
+                }
+                //Knightmare- behold, the power of cheese!!
+                else if (effects & EF_IONRIPPER) // EF_REDBLASTER
+                {
+                    CL_BlasterTrail (cent->lerp_origin, ent.origin, 235, 50, 50, 0, -90, -30);
+                    V_AddLight (ent.origin, 200, 1, 0.15, 0.15);
+                }
 				else
 				{
-					CL_BlasterTrail(cent->lerp_origin, ent.origin);
-					V_AddLight(ent.origin, 200, 1, 1, 0);
+                    if ((effects & EF_GREENGIB) && cl_blood->value >= 1) // EF_BLASTER|EF_GREENGIB effect
+                        CL_DiminishingTrail (cent->lerp_origin, ent.origin, cent, effects);
+                    else
+                        CL_BlasterTrail (cent->lerp_origin, ent.origin, 255, 150, 50, 0, -90, -30);
+                    V_AddLight (ent.origin, 200, 1, 1, 0.15);
 				}
 			}
 			else if (effects & EF_HYPERBLASTER)
 			{
 				if (effects & EF_TRACKER)
-				{
-					V_AddLight(ent.origin, 200, 0, 1, 0);
-				}
-
-				else
-				{
-					V_AddLight(ent.origin, 200, 1, 1, 0);
-				}
+                {
+                    V_AddLight (ent.origin, 200, 0.15, 1, 0.15);// PGM
+                }
+                else if (effects & EF_IONRIPPER) // Knightmare- overloaded for EF_REDHYPERBLASTER
+                {
+                    V_AddLight (ent.origin, 200, 1, 0.15, 0.15);
+                }
+                else                                            // PGM
+                {
+                    V_AddLight (ent.origin, 200, 1, 1, 0.15);
+                }
 			}
 			else if (effects & EF_GIB)
 			{
-				CL_DiminishingTrail(cent->lerp_origin, ent.origin,
-						cent, effects);
+                if (cl_blood->value >= 1)
+                    CL_DiminishingTrail(cent->lerp_origin, ent.origin, cent, effects);
 			}
 			else if (effects & EF_GRENADE)
 			{
@@ -661,13 +764,23 @@ CL_AddPacketEntities(frame_t *frame)
 				V_AddLight(ent.origin, i, 1, 0.8f, 0.1f);
 			}
 			else if (effects & EF_FLAG1)
-			{
-				CL_FlagTrail(cent->lerp_origin, ent.origin, 242);
-				V_AddLight(ent.origin, 225, 1, 0.1f, 0.1f);
+            {    // Knightmare 1/3/2002
+                // EF_FLAG1|EF_FLAG2 is a special case for EF_FLAG3...  More cheese!
+                if (effects & EF_FLAG2)
+                {    //Knightmare- Psychospaz's enhanced particle code
+                    CL_FlagTrail (cent->lerp_origin, ent.origin, false, true);
+                    V_AddLight (ent.origin, 255, 0.1, 1, 0.1);
+                }
+                else
+                {    //Knightmare- Psychospaz's enhanced particle code
+                    CL_FlagTrail (cent->lerp_origin, ent.origin, true, false);
+                    V_AddLight (ent.origin, 225, 1, 0.1, 0.1);
+                }
+                //end Knightmare
 			}
 			else if (effects & EF_FLAG2)
-			{
-				CL_FlagTrail(cent->lerp_origin, ent.origin, 115);
+            {    //Knightmare- Psychospaz's enhanced particle code
+                    CL_FlagTrail (cent->lerp_origin, ent.origin, false, false);
 				V_AddLight(ent.origin, 225, 0.1f, 0.1f, 1);
 			}
 			else if (effects & EF_TAGTRAIL)
@@ -691,11 +804,16 @@ CL_AddPacketEntities(frame_t *frame)
 				}
 			}
 			else if (effects & EF_TRACKER)
-			{
-				CL_TrackerTrail(cent->lerp_origin, ent.origin, 0);
+            {    //Knightmare- this is replaced for Psychospaz's enhanced particle code
+                CL_TrackerTrail (cent->lerp_origin, ent.origin);
 				V_AddLight(ent.origin, 200, -1, -1, -1);
 			}
-			else if (effects & EF_IONRIPPER)
+            else if (effects & EF_GREENGIB)
+            {
+                if (cl_blood->value >= 1) // disable blood option
+                    CL_DiminishingTrail (cent->lerp_origin, ent.origin, cent, effects);
+            }
+            else if (effects & EF_IONRIPPER)
 			{
 				CL_IonripperTrail(cent->lerp_origin, ent.origin);
 				V_AddLight(ent.origin, 100, 1, 0.5, 0.5);
@@ -708,7 +826,7 @@ CL_AddPacketEntities(frame_t *frame)
 			{
 				if (effects & EF_ANIM_ALLFAST)
 				{
-					CL_BlasterTrail(cent->lerp_origin, ent.origin);
+                    CL_BlasterTrail (cent->lerp_origin, ent.origin, 255, 150, 50, 0, -90, -30);
 				}
 
 				V_AddLight(ent.origin, 130, 1, 0.5, 0.5);

@@ -222,6 +222,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A1020A50225C4E4A007DADA9 /* particles.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = particles.h; sourceTree = "<group>"; };
 		A1323A0C21CC8F4800E20D6D /* sdl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sdl.c; sourceTree = "<group>"; };
 		A1323A0E21CC8F4800E20D6D /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = input.h; sourceTree = "<group>"; };
 		A1323A1021CC8F6B00E20D6D /* qal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = qal.h; sourceTree = "<group>"; };
@@ -1279,6 +1280,7 @@
 				A15FA29E2110C5BC0048A3AD /* console.h */,
 				A15FA2A02110C5BC0048A3AD /* keyboard.h */,
 				A15FA2A12110C5BC0048A3AD /* screen.h */,
+				A1020A50225C4E4A007DADA9 /* particles.h */,
 			);
 			path = header;
 			sourceTree = "<group>";

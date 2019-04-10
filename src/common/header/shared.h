@@ -673,10 +673,12 @@ typedef struct
 #define RF_SHELL_GREEN 2048
 #define RF_SHELL_BLUE 4096
 #define RF_NOSHADOW 8192        /* don't draw a shadow */
-#define RF_IR_VISIBLE 0x00008000            /* 32768 */
-#define RF_SHELL_DOUBLE 0x00010000          /* 65536 */
-#define RF_SHELL_HALF_DAM 0x00020000
-#define RF_USE_DISGUISE 0x00040000
+#define RF_TRANS_ADDITIVE    16384
+#define RF_MIRRORMODEL        32768
+#define RF_IR_VISIBLE 0x00010000            /* 65536 */
+#define RF_SHELL_DOUBLE 0x00020000
+#define RF_SHELL_HALF_DAM 0x00040000
+#define RF_USE_DISGUISE 0x00080000
 
 /* player_state_t->refdef flags */
 #define RDF_UNDERWATER 1            /* warp the screen as apropriate */
@@ -1006,7 +1008,9 @@ typedef enum
 	TE_WIDOWSPLASH,
 	TE_EXPLOSION1_BIG,
 	TE_EXPLOSION1_NP,
-	TE_FLECHETTE
+	TE_FLECHETTE,
+    TE_REDBLASTER,
+    TE_SHOCKSPLASH
 } temp_event_t;
 
 #define SPLASH_UNKNOWN 0

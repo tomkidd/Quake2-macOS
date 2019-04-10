@@ -26,6 +26,26 @@
 
 #include "header/client.h"
 #include "sound/header/local.h"
+#include "header/particles.h"
+
+//Knightmare- Psychospaz's enhanced particle code
+cparticle_t *setupParticle (
+                            float angle0,        float angle1,        float angle2,
+                            float org0,            float org1,            float org2,
+                            float vel0,            float vel1,            float vel2,
+                            float accel0,        float accel1,        float accel2,
+                            float color0,        float color1,        float color2,
+                            float colorvel0,    float colorvel1,    float colorvel2,
+                            float alpha,        float alphavel,
+                            int    blendfunc_src,    int blendfunc_dst,
+                            float size,            float sizevel,
+                            int    image,
+                            int flags,
+                            void (*think)(cparticle_t *p, vec3_t org, float *alpha, float *size, int *image), qboolean thinknext);
+
+void CL_LightningBeam(vec3_t start, vec3_t end, int srcEnt, int dstEnt, float size);
+//end Knightmare
+
 
 typedef enum
 {
@@ -73,13 +93,24 @@ laser_t cl_lasers[MAX_LASERS];
 cl_sustain_t cl_sustains[MAX_SUSTAINS];
 
 extern void CL_TeleportParticles(vec3_t org);
-void CL_BlasterParticles(vec3_t org, vec3_t dir);
+void CL_BlasterParticles (vec3_t org, vec3_t dir, int count, int red, int green, int blue,
+                          int reddelta, int greendelta, int bluedelta);
 void CL_BFGExplosionParticles(vec3_t org);
 void CL_BlueBlasterParticles(vec3_t org, vec3_t dir);
 
 void CL_ExplosionParticles(vec3_t org);
-void CL_Explosion_Particle(vec3_t org, float size,
-		qboolean large, qboolean rocket);
+
+//Knightmare- Psychospaz's enhanced particle code
+void CL_Explosion_Particle (vec3_t org, float scale, qboolean rocket);
+void CL_Explosion_FlashParticle (vec3_t org, float size, qboolean large);
+void CL_BloodHit (vec3_t org, vec3_t dir);
+void CL_GreenBloodHit (vec3_t org, vec3_t dir);
+void CL_ParticleEffectSparks (vec3_t org, vec3_t dir, vec3_t color, int count);
+void CL_ParticleBulletDecal(vec3_t org, vec3_t dir, float size);
+void CL_ParticlePlasmaBeamDecal(vec3_t org, vec3_t dir, float size);
+void CL_ParticleBlasterDecal (vec3_t org, vec3_t dir, float size, int red, int green, int blue);
+void CL_Explosion_Decal (vec3_t org, float size);
+//end Knightmare
 
 #define EXPLOSION_PARTICLES(x) CL_ExplosionParticles((x));
 
@@ -95,6 +126,8 @@ struct sfx_s *cl_sfx_rockexp;
 struct sfx_s *cl_sfx_grenexp;
 struct sfx_s *cl_sfx_watrexp;
 struct sfx_s *cl_sfx_plasexp;
+// Knightmare- shockwave impact
+struct sfx_s *cl_sfx_shockhit;
 struct sfx_s *cl_sfx_footsteps[4];
 
 struct model_s *cl_mod_explode;
@@ -114,6 +147,9 @@ struct model_s *cl_mod_lightning;
 struct model_s *cl_mod_heatbeam;
 struct model_s *cl_mod_monster_heatbeam;
 struct model_s *cl_mod_explo4_big;
+
+// Knightmare- new effect models
+struct model_s    *cl_mod_shocksplash;
 
 void
 CL_RegisterTEntSounds(void)
@@ -224,6 +260,32 @@ CL_AllocExplosion(void)
 	return &cl_explosions[index];
 }
 
+void CL_Explosion_Flash (vec3_t origin, int dist, int size, qboolean plasma)
+{
+    int i,j,k;
+    int limit = 2;
+    vec3_t org;
+    
+    if (plasma)    limit = 1; // simpler explosion
+    
+    if (cl_particle_scale->value > 1 || plasma)
+    {
+        for (i=0; i<limit; i++)
+            CL_Explosion_FlashParticle(origin, size+2*dist, true);
+        return;
+    }
+    
+    for (i=-1; i<2; i+=2)
+        for (j=-1; j<2; j+=2)
+            for (k=-1; k<2; k+=2)
+            {
+                org[0]=origin[0]+i*dist;
+                org[1]=origin[1]+j*dist;
+                org[2]=origin[2]+k*dist;
+                CL_Explosion_FlashParticle(org, size, false);
+            }
+}
+
 void
 CL_SmokeAndFlash(vec3_t origin)
 {
@@ -262,219 +324,178 @@ CL_ParseParticles(void)
 	CL_ParticleEffect(pos, dir, color, count);
 }
 
-void
+int
 CL_ParseBeam(struct model_s *model)
 {
-	int ent;
-	vec3_t start, end;
-	beam_t *b;
-	int i;
-
-	ent = MSG_ReadShort(&net_message);
-
-	MSG_ReadPos(&net_message, start);
-	MSG_ReadPos(&net_message, end);
-
-	/* override any beam with the same entity */
-	for (i = 0, b = cl_beams; i < MAX_BEAMS; i++, b++)
-	{
-		if (b->entity == ent)
-		{
-			b->entity = ent;
-			b->model = model;
-			b->endtime = cl.time + 200;
-			VectorCopy(start, b->start);
-			VectorCopy(end, b->end);
-			VectorClear(b->offset);
-			return;
-		}
-	}
-
-	/* find a free beam */
-	for (i = 0, b = cl_beams; i < MAX_BEAMS; i++, b++)
-	{
-		if (!b->model || (b->endtime < cl.time))
-		{
-			b->entity = ent;
-			b->model = model;
-			b->endtime = cl.time + 200;
-			VectorCopy(start, b->start);
-			VectorCopy(end, b->end);
-			VectorClear(b->offset);
-			return;
-		}
-	}
-
-	Com_Printf("beam list overflow!\n");
-	return;
+    int        ent;
+    vec3_t    start, end;
+    beam_t    *b;
+    int        i;
+    
+    ent = MSG_ReadShort (&net_message);
+    
+    MSG_ReadPos (&net_message, start);
+    MSG_ReadPos (&net_message, end);
+    
+    // override any beam with the same entity
+    for (i=0, b=cl_beams ; i< MAX_BEAMS ; i++, b++)
+        if (b->entity == ent)
+        {
+            b->entity = ent;
+            b->model = model;
+            b->endtime = cl.time + 200;
+            VectorCopy (start, b->start);
+            VectorCopy (end, b->end);
+            VectorClear (b->offset);
+            return ent;
+        }
+    
+    // find a free beam
+    for (i=0, b=cl_beams ; i< MAX_BEAMS ; i++, b++)
+    {
+        if (!b->model || b->endtime < cl.time)
+        {
+            b->entity = ent;
+            b->model = model;
+            b->endtime = cl.time + 200;
+            VectorCopy (start, b->start);
+            VectorCopy (end, b->end);
+            VectorClear (b->offset);
+            return ent;
+        }
+    }
+    Com_Printf ("beam list overflow!\n");
+    return ent;
 }
 
-void
+int
 CL_ParseBeam2(struct model_s *model)
 {
-	int ent;
-	vec3_t start, end, offset;
-	beam_t *b;
-	int i;
-
-	ent = MSG_ReadShort(&net_message);
-
-	MSG_ReadPos(&net_message, start);
-	MSG_ReadPos(&net_message, end);
-	MSG_ReadPos(&net_message, offset);
-
-	/* override any beam with the same entity */
-	for (i = 0, b = cl_beams; i < MAX_BEAMS; i++, b++)
-	{
-		if (b->entity == ent)
-		{
-			b->entity = ent;
-			b->model = model;
-			b->endtime = cl.time + 200;
-			VectorCopy(start, b->start);
-			VectorCopy(end, b->end);
-			VectorCopy(offset, b->offset);
-			return;
-		}
-	}
-
-	/* find a free beam */
-	for (i = 0, b = cl_beams; i < MAX_BEAMS; i++, b++)
-	{
-		if (!b->model || (b->endtime < cl.time))
-		{
-			b->entity = ent;
-			b->model = model;
-			b->endtime = cl.time + 200;
-			VectorCopy(start, b->start);
-			VectorCopy(end, b->end);
-			VectorCopy(offset, b->offset);
-			return;
-		}
-	}
-
-	Com_Printf("beam list overflow!\n");
-	return;
+    int        ent;
+    vec3_t    start, end, offset;
+    beam_t    *b;
+    int        i;
+    
+    ent = MSG_ReadShort (&net_message);
+    
+    MSG_ReadPos (&net_message, start);
+    MSG_ReadPos (&net_message, end);
+    MSG_ReadPos (&net_message, offset);
+    
+    //    Com_Printf ("end- %f %f %f\n", end[0], end[1], end[2]);
+    
+    // override any beam with the same entity
+    
+    for (i=0, b=cl_beams ; i< MAX_BEAMS ; i++, b++)
+        if (b->entity == ent)
+        {
+            b->entity = ent;
+            b->model = model;
+            b->endtime = cl.time + 200;
+            VectorCopy (start, b->start);
+            VectorCopy (end, b->end);
+            VectorCopy (offset, b->offset);
+            return ent;
+        }
+    
+    // find a free beam
+    for (i=0, b=cl_beams ; i< MAX_BEAMS ; i++, b++)
+    {
+        if (!b->model || b->endtime < cl.time)
+        {
+            b->entity = ent;
+            b->model = model;
+            b->endtime = cl.time + 200;
+            VectorCopy (start, b->start);
+            VectorCopy (end, b->end);
+            VectorCopy (offset, b->offset);
+            return ent;
+        }
+    }
+    Com_Printf ("beam list overflow!\n");
+    return ent;
 }
 
 /*
  * adds to the cl_playerbeam array instead of the cl_beams array
  */
-void
+int
 CL_ParsePlayerBeam(struct model_s *model)
 {
-	int ent;
-	vec3_t start, end, offset;
-	beam_t *b;
-	int i;
-
-	ent = MSG_ReadShort(&net_message);
-
-	MSG_ReadPos(&net_message, start);
-	MSG_ReadPos(&net_message, end);
-
-	/* network optimization */
-	if (model == cl_mod_heatbeam)
-	{
-		VectorSet(offset, 2, 7, -3);
-	}
-
-	else if (model == cl_mod_monster_heatbeam)
-	{
-		model = cl_mod_heatbeam;
-		VectorSet(offset, 0, 0, 0);
-	}
-	else
-	{
-		MSG_ReadPos(&net_message, offset);
-	}
-
-	/* Override any beam with the same entity
-	   For player beams, we only want one per
-	   player (entity) so... */
-	for (i = 0, b = cl_playerbeams; i < MAX_BEAMS; i++, b++)
-	{
-		if (b->entity == ent)
-		{
-			b->entity = ent;
-			b->model = model;
-			b->endtime = cl.time + 200;
-			VectorCopy(start, b->start);
-			VectorCopy(end, b->end);
-			VectorCopy(offset, b->offset);
-			return;
-		}
-	}
-
-	/* find a free beam */
-	for (i = 0, b = cl_playerbeams; i < MAX_BEAMS; i++, b++)
-	{
-		if (!b->model || (b->endtime < cl.time))
-		{
-			b->entity = ent;
-			b->model = model;
-			b->endtime = cl.time + 100; /* this needs to be 100 to
-										   prevent multiple heatbeams */
-			VectorCopy(start, b->start);
-			VectorCopy(end, b->end);
-			VectorCopy(offset, b->offset);
-			return;
-		}
-	}
-
-	Com_Printf("beam list overflow!\n");
-	return;
+    int        ent;
+    vec3_t    start, end, offset;
+    beam_t    *b;
+    int        i;
+    
+    ent = MSG_ReadShort (&net_message);
+    
+    MSG_ReadPos (&net_message, start);
+    MSG_ReadPos (&net_message, end);
+    // PMM - network optimization
+    if (model == cl_mod_heatbeam)
+        VectorSet(offset, 2, 7, -3);
+    else if (model == cl_mod_monster_heatbeam)
+    {
+        model = cl_mod_heatbeam;
+        VectorSet(offset, 0, 0, 0);
+    }
+    else
+        MSG_ReadPos (&net_message, offset);
+    
+    //    Com_Printf ("end- %f %f %f\n", end[0], end[1], end[2]);
+    
+    // override any beam with the same entity
+    // PMM - For player beams, we only want one per player (entity) so..
+    for (i=0, b=cl_playerbeams; i<MAX_BEAMS; i++, b++)
+    {
+        if (b->entity == ent)
+        {
+            b->entity = ent;
+            b->model = model;
+            
+            b->endtime = cl.time + 200;
+            VectorCopy (start, b->start);
+            VectorCopy (end, b->end);
+            VectorCopy (offset, b->offset);
+            return ent;
+        }
+    }
+    
+    // find a free beam
+    for (i=0, b=cl_playerbeams; i<MAX_BEAMS; i++, b++)
+    {
+        if (!b->model || b->endtime < cl.time)
+        {
+            b->entity = ent;
+            b->model = model;
+            b->endtime = cl.time + 100;        // PMM - this needs to be 100 to prevent multiple heatbeams
+            VectorCopy (start, b->start);
+            VectorCopy (end, b->end);
+            VectorCopy (offset, b->offset);
+            return ent;
+        }
+    }
+    Com_Printf ("beam list overflow!\n");
+    return ent;
 }
 
+//Knightmare- Psychspaz's enhanced particles
 int
-CL_ParseLightning(struct model_s *model)
+CL_ParseLightning()
 {
-	int srcEnt, destEnt;
-	vec3_t start, end;
-	beam_t *b;
-	int i;
-
-	srcEnt = MSG_ReadShort(&net_message);
-	destEnt = MSG_ReadShort(&net_message);
-
-	MSG_ReadPos(&net_message, start);
-	MSG_ReadPos(&net_message, end);
-
-	/* override any beam with the same
-	   source AND destination entities */
-	for (i = 0, b = cl_beams; i < MAX_BEAMS; i++, b++)
-	{
-		if ((b->entity == srcEnt) && (b->dest_entity == destEnt))
-		{
-			b->entity = srcEnt;
-			b->dest_entity = destEnt;
-			b->model = model;
-			b->endtime = cl.time + 200;
-			VectorCopy(start, b->start);
-			VectorCopy(end, b->end);
-			VectorClear(b->offset);
-			return srcEnt;
-		}
-	}
-
-	/* find a free beam */
-	for (i = 0, b = cl_beams; i < MAX_BEAMS; i++, b++)
-	{
-		if (!b->model || (b->endtime < cl.time))
-		{
-			b->entity = srcEnt;
-			b->dest_entity = destEnt;
-			b->model = model;
-			b->endtime = cl.time + 200;
-			VectorCopy(start, b->start);
-			VectorCopy(end, b->end);
-			VectorClear(b->offset);
-			return srcEnt;
-		}
-	}
-
-	Com_Printf("beam list overflow!\n");
-	return srcEnt;
+    
+    vec3_t start,end; // ,move,vec;
+    int        srcEnt, dstEnt; // , len, dec;
+    
+    srcEnt = MSG_ReadShort (&net_message);
+    dstEnt = MSG_ReadShort (&net_message);
+    
+    MSG_ReadPos (&net_message, start);
+    MSG_ReadPos (&net_message, end);
+    
+    CL_LightningBeam(start, end, srcEnt, dstEnt, 5);
+    
+    return srcEnt;
 }
 
 void
@@ -564,7 +585,9 @@ CL_ParseSteam(void)
 		r = MSG_ReadByte(&net_message);
 		magnitude = MSG_ReadShort(&net_message);
 		color = r & 0xff;
-		CL_ParticleSteamEffect(pos, dir, color, cnt, magnitude);
+        CL_ParticleSteamEffect (pos, dir,
+                                color8red(color), color8green(color), color8blue(color),
+                                -20, -20, -20, cnt, magnitude);
 	}
 }
 
@@ -638,622 +661,626 @@ CL_ParseNuke(void)
 	}
 }
 
+//Knightmare- Psychospaz's enhanced particle code
+void CL_GunSmokeEffect (vec3_t org, vec3_t dir)
+{
+    vec3_t        velocity, origin;
+    int            j;
+    
+    for (j=0 ; j<3 ; j++)
+    {
+        origin[j] = org[j] + dir[j]*10;
+        velocity[j] = 10*dir[j];
+    }
+    velocity[2] = 10;
+    
+    CL_ParticleSmokeEffect (origin, velocity, 10);
+}
+
+
 static byte splash_color[] = {0x00, 0xe0, 0xb0, 0x50, 0xd0, 0xe0, 0xe8};
 
 void
 CL_ParseTEnt(void)
 {
-	int type;
-	vec3_t pos, pos2, dir;
-	explosion_t *ex;
-	int cnt;
-	int color;
-	int r;
-	int ent;
-	int magnitude;
-
-	type = MSG_ReadByte(&net_message);
-
-	switch (type)
-	{
-		case TE_BLOOD: /* bullet hitting flesh */
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-			CL_ParticleEffect(pos, dir, 0xe8, 60);
-			break;
-
-		case TE_GUNSHOT: /* bullet hitting wall */
-		case TE_SPARKS:
-		case TE_BULLET_SPARKS:
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-
-			if (type == TE_GUNSHOT)
-			{
-				CL_ParticleEffect(pos, dir, 0, 40);
-			}
-
-			else
-			{
-				CL_ParticleEffect(pos, dir, 0xe0, 6);
-			}
-
-			if (type != TE_SPARKS)
-			{
-				CL_SmokeAndFlash(pos);
-				/* impact sound */
-				cnt = randk() & 15;
-
-				if (cnt == 1)
-				{
-					S_StartSound(pos, 0, 0, cl_sfx_ric1, 1, ATTN_NORM, 0);
-				}
-
-				else if (cnt == 2)
-				{
-					S_StartSound(pos, 0, 0, cl_sfx_ric2, 1, ATTN_NORM, 0);
-				}
-
-				else if (cnt == 3)
-				{
-					S_StartSound(pos, 0, 0, cl_sfx_ric3, 1, ATTN_NORM, 0);
-				}
-			}
-
-			break;
-
-		case TE_SCREEN_SPARKS:
-		case TE_SHIELD_SPARKS:
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-
-			if (type == TE_SCREEN_SPARKS)
-			{
-				CL_ParticleEffect(pos, dir, 0xd0, 40);
-			}
-
-			else
-			{
-				CL_ParticleEffect(pos, dir, 0xb0, 40);
-			}
-
-			num_power_sounds++;
-
-			/* If too many of these sounds are started in one frame (for
-			 * example if the player shoots with the super shotgun into
-			 * the power screen of a Brain) things get too loud and OpenAL
-			 * is forced to scale the volume of several other sounds and
-			 * the background music down. That leads to a noticable and
-			 * annoying drop in the overall volume.
-			 *
-			 * Work around that by limiting the number of sounds started.
-			 * 16 was choosen by empirical testing.
-			 */
-			if (sound_started == SS_OAL && num_power_sounds < 16)
-			{
-				S_StartSound(pos, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
-			}
-
-			break;
-
-		case TE_SHOTGUN: /* bullet hitting wall */
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-			CL_ParticleEffect(pos, dir, 0, 20);
-			CL_SmokeAndFlash(pos);
-			break;
-
-		case TE_SPLASH: /* bullet hitting water */
-			cnt = MSG_ReadByte(&net_message);
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-			r = MSG_ReadByte(&net_message);
-
-			if (r > 6)
-			{
-				color = 0x00;
-			}
-
-			else
-			{
-				color = splash_color[r];
-			}
-
-			CL_ParticleEffect(pos, dir, color, cnt);
-
-			if (r == SPLASH_SPARKS)
-			{
-				r = randk() & 3;
-
-				if (r == 0)
-				{
-					S_StartSound(pos, 0, 0, cl_sfx_spark5, 1, ATTN_STATIC, 0);
-				}
-
-				else if (r == 1)
-				{
-					S_StartSound(pos, 0, 0, cl_sfx_spark6, 1, ATTN_STATIC, 0);
-				}
-
-				else
-				{
-					S_StartSound(pos, 0, 0, cl_sfx_spark7, 1, ATTN_STATIC, 0);
-				}
-			}
-
-			break;
-
-		case TE_LASER_SPARKS:
-			cnt = MSG_ReadByte(&net_message);
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-			color = MSG_ReadByte(&net_message);
-			CL_ParticleEffect2(pos, dir, color, cnt);
-			break;
-
-		case TE_BLUEHYPERBLASTER:
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadPos(&net_message, dir);
-			CL_BlasterParticles(pos, dir);
-			break;
-
-		case TE_BLASTER: /* blaster hitting wall */
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-			CL_BlasterParticles(pos, dir);
-
-			ex = CL_AllocExplosion();
-			VectorCopy(pos, ex->ent.origin);
-			ex->ent.angles[0] = (float)acos(dir[2]) / M_PI * 180;
-
-			if (dir[0])
-			{
-				ex->ent.angles[1] = (float)atan2(dir[1], dir[0]) / M_PI * 180;
-			}
-
-			else if (dir[1] > 0)
-			{
-				ex->ent.angles[1] = 90;
-			}
-
-			else if (dir[1] < 0)
-			{
-				ex->ent.angles[1] = 270;
-			}
-
-			else
-			{
-				ex->ent.angles[1] = 0;
-			}
-
-			ex->type = ex_misc;
-			ex->ent.flags = 0;
-			ex->start = cl.frame.servertime - 100.0f;
-			ex->light = 150;
-			ex->lightcolor[0] = 1;
-			ex->lightcolor[1] = 1;
-			ex->ent.model = cl_mod_explode;
-			ex->frames = 4;
-			S_StartSound(pos, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
-			break;
-
-		case TE_RAILTRAIL: /* railgun effect */
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadPos(&net_message, pos2);
-			CL_RailTrail(pos, pos2);
-			S_StartSound(pos2, 0, 0, cl_sfx_railg, 1, ATTN_NORM, 0);
-			break;
-
-		case TE_EXPLOSION2:
-		case TE_GRENADE_EXPLOSION:
-		case TE_GRENADE_EXPLOSION_WATER:
-			MSG_ReadPos(&net_message, pos);
-			ex = CL_AllocExplosion();
-			VectorCopy(pos, ex->ent.origin);
-			ex->type = ex_poly;
-			ex->ent.flags = RF_FULLBRIGHT | RF_NOSHADOW;
-			ex->start = cl.frame.servertime - 100.0f;
-			ex->light = 350;
-			ex->lightcolor[0] = 1.0;
-			ex->lightcolor[1] = 0.5;
-			ex->lightcolor[2] = 0.5;
-			ex->ent.model = cl_mod_explo4;
-			ex->frames = 19;
-			ex->baseframe = 30;
-			ex->ent.angles[1] = (float)(randk() % 360);
-			EXPLOSION_PARTICLES(pos);
-
-			if (type == TE_GRENADE_EXPLOSION_WATER)
-			{
-				S_StartSound(pos, 0, 0, cl_sfx_watrexp, 1, ATTN_NORM, 0);
-			}
-
-			else
-			{
-				S_StartSound(pos, 0, 0, cl_sfx_grenexp, 1, ATTN_NORM, 0);
-			}
-
-			break;
-
-		case TE_PLASMA_EXPLOSION:
-			MSG_ReadPos(&net_message, pos);
-			ex = CL_AllocExplosion();
-			VectorCopy(pos, ex->ent.origin);
-			ex->type = ex_poly;
-			ex->ent.flags = RF_FULLBRIGHT | RF_NOSHADOW;
-			ex->start = cl.frame.servertime - 100.0f;
-			ex->light = 350;
-			ex->lightcolor[0] = 1.0;
-			ex->lightcolor[1] = 0.5;
-			ex->lightcolor[2] = 0.5;
-			ex->ent.angles[1] = (float)(randk() % 360);
-			ex->ent.model = cl_mod_explo4;
-
-			if (frandk() < 0.5)
-			{
-				ex->baseframe = 15;
-			}
-
-			ex->frames = 15;
-			EXPLOSION_PARTICLES(pos);
-			S_StartSound(pos, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
-			break;
-
-		case TE_EXPLOSION1_BIG:
-		case TE_EXPLOSION1_NP:
-		case TE_EXPLOSION1:
-		case TE_ROCKET_EXPLOSION:
-		case TE_ROCKET_EXPLOSION_WATER:
-			MSG_ReadPos(&net_message, pos);
-			ex = CL_AllocExplosion();
-			VectorCopy(pos, ex->ent.origin);
-			ex->type = ex_poly;
-			ex->ent.flags = RF_FULLBRIGHT | RF_NOSHADOW;
-			ex->start = cl.frame.servertime - 100.0f;
-			ex->light = 350;
-			ex->lightcolor[0] = 1.0;
-			ex->lightcolor[1] = 0.5;
-			ex->lightcolor[2] = 0.5;
-			ex->ent.angles[1] = (float)(randk() % 360);
-
-			if (type != TE_EXPLOSION1_BIG)
-			{
-				ex->ent.model = cl_mod_explo4;
-			}
-
-			else
-			{
-				ex->ent.model = cl_mod_explo4_big;
-			}
-
-			if (frandk() < 0.5)
-			{
-				ex->baseframe = 15;
-			}
-
-			ex->frames = 15;
-
-			if ((type != TE_EXPLOSION1_BIG) && (type != TE_EXPLOSION1_NP))
-			{
-				EXPLOSION_PARTICLES(pos);
-			}
-
-			if (type == TE_ROCKET_EXPLOSION_WATER)
-			{
-				S_StartSound(pos, 0, 0, cl_sfx_watrexp, 1, ATTN_NORM, 0);
-			}
-
-			else
-			{
-				S_StartSound(pos, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
-			}
-
-			break;
-
-		case TE_BFG_EXPLOSION:
-			MSG_ReadPos(&net_message, pos);
-			ex = CL_AllocExplosion();
-			VectorCopy(pos, ex->ent.origin);
-			ex->type = ex_poly;
-			ex->ent.flags = RF_FULLBRIGHT | RF_NOSHADOW;
-			ex->start = cl.frame.servertime - 100.0f;
-			ex->light = 350;
-			ex->lightcolor[0] = 0.0;
-			ex->lightcolor[1] = 1.0;
-			ex->lightcolor[2] = 0.0;
-			ex->ent.model = cl_mod_bfg_explo;
-			ex->ent.flags |= RF_TRANSLUCENT;
-			ex->ent.alpha = 0.30f;
-			ex->frames = 4;
-			break;
-
-		case TE_BFG_BIGEXPLOSION:
-			MSG_ReadPos(&net_message, pos);
-			CL_BFGExplosionParticles(pos);
-			break;
-
-		case TE_BFG_LASER:
-			CL_ParseLaser(0xd0d1d2d3);
-			break;
-
-		case TE_BUBBLETRAIL:
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadPos(&net_message, pos2);
-			CL_BubbleTrail(pos, pos2);
-			break;
-
-		case TE_PARASITE_ATTACK:
-		case TE_MEDIC_CABLE_ATTACK:
-			CL_ParseBeam(cl_mod_parasite_segment);
-			break;
-
-		case TE_BOSSTPORT: /* boss teleporting to station */
-			MSG_ReadPos(&net_message, pos);
-			CL_BigTeleportParticles(pos);
-			S_StartSound(pos, 0, 0, S_RegisterSound(
-						"misc/bigtele.wav"), 1, ATTN_NONE, 0);
-			break;
-
-		case TE_GRAPPLE_CABLE:
-			CL_ParseBeam2(cl_mod_grapple_cable);
-			break;
-
-		case TE_WELDING_SPARKS:
-			cnt = MSG_ReadByte(&net_message);
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-			color = MSG_ReadByte(&net_message);
-			CL_ParticleEffect2(pos, dir, color, cnt);
-
-			ex = CL_AllocExplosion();
-			VectorCopy(pos, ex->ent.origin);
-			ex->type = ex_flash;
-			ex->ent.flags = RF_BEAM;
-			ex->start = cl.frame.servertime - 0.1f;
-			ex->light = 100 + (float)(randk() % 75);
-			ex->lightcolor[0] = 1.0f;
-			ex->lightcolor[1] = 1.0f;
-			ex->lightcolor[2] = 0.3f;
-			ex->ent.model = cl_mod_flash;
-			ex->frames = 2;
-			break;
-
-		case TE_GREENBLOOD:
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-			CL_ParticleEffect2(pos, dir, 0xdf, 30);
-			break;
-
-		case TE_TUNNEL_SPARKS:
-			cnt = MSG_ReadByte(&net_message);
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-			color = MSG_ReadByte(&net_message);
-			CL_ParticleEffect3(pos, dir, color, cnt);
-			break;
-
-		case TE_BLASTER2:
-		case TE_FLECHETTE:
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-
-			if (type == TE_BLASTER2)
-			{
-				CL_BlasterParticles2(pos, dir, 0xd0);
-			}
-
-			else
-			{
-				CL_BlasterParticles2(pos, dir, 0x6f);
-			}
-
-			ex = CL_AllocExplosion();
-			VectorCopy(pos, ex->ent.origin);
-			ex->ent.angles[0] = (float)acos(dir[2]) / M_PI * 180;
-
-			if (dir[0])
-			{
-				ex->ent.angles[1] = (float)atan2(dir[1], dir[0]) / M_PI * 180;
-			}
-
-			else if (dir[1] > 0)
-			{
-				ex->ent.angles[1] = 90;
-			}
-
-			else if (dir[1] < 0)
-			{
-				ex->ent.angles[1] = 270;
-			}
-
-			else
-			{
-				ex->ent.angles[1] = 0;
-			}
-
-			ex->type = ex_misc;
-			ex->ent.flags = RF_FULLBRIGHT | RF_TRANSLUCENT;
-
-			if (type == TE_BLASTER2)
-			{
-				ex->ent.skinnum = 1;
-			}
-
-			else /* flechette */
-			{
-				ex->ent.skinnum = 2;
-			}
-
-			ex->start = cl.frame.servertime - 100.0f;
-			ex->light = 150;
-
-			if (type == TE_BLASTER2)
-			{
-				ex->lightcolor[1] = 1;
-			}
-
-			else
-			{
-				/* flechette */
-				ex->lightcolor[0] = 0.19f;
-				ex->lightcolor[1] = 0.41f;
-				ex->lightcolor[2] = 0.75f;
-			}
-
-			ex->ent.model = cl_mod_explode;
-			ex->frames = 4;
-			S_StartSound(pos, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
-			break;
-
-		case TE_LIGHTNING:
-			ent = CL_ParseLightning(cl_mod_lightning);
-			S_StartSound(NULL, ent, CHAN_WEAPON, cl_sfx_lightning,
-				1, ATTN_NORM, 0);
-			break;
-
-		case TE_DEBUGTRAIL:
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadPos(&net_message, pos2);
-			CL_DebugTrail(pos, pos2);
-			break;
-
-		case TE_PLAIN_EXPLOSION:
-			MSG_ReadPos(&net_message, pos);
-
-			ex = CL_AllocExplosion();
-			VectorCopy(pos, ex->ent.origin);
-			ex->type = ex_poly;
-			ex->ent.flags = RF_FULLBRIGHT | RF_NOSHADOW;
-			ex->start = cl.frame.servertime - 100.0f;
-			ex->light = 350;
-			ex->lightcolor[0] = 1.0;
-			ex->lightcolor[1] = 0.5;
-			ex->lightcolor[2] = 0.5;
-			ex->ent.angles[1] = randk() % 360;
-			ex->ent.model = cl_mod_explo4;
-
-			if (frandk() < 0.5)
-			{
-				ex->baseframe = 15;
-			}
-
-			ex->frames = 15;
-
-			if (type == TE_ROCKET_EXPLOSION_WATER)
-			{
-				S_StartSound(pos, 0, 0, cl_sfx_watrexp, 1, ATTN_NORM, 0);
-			}
-
-			else
-			{
-				S_StartSound(pos, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
-			}
-
-			break;
-
-		case TE_FLASHLIGHT:
-			MSG_ReadPos(&net_message, pos);
-			ent = MSG_ReadShort(&net_message);
-			CL_Flashlight(ent, pos);
-			break;
-
-		case TE_FORCEWALL:
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadPos(&net_message, pos2);
-			color = MSG_ReadByte(&net_message);
-			CL_ForceWall(pos, pos2, color);
-			break;
-
-		case TE_HEATBEAM:
-			CL_ParsePlayerBeam(cl_mod_heatbeam);
-			break;
-
-		case TE_MONSTER_HEATBEAM:
-			CL_ParsePlayerBeam(cl_mod_monster_heatbeam);
-			break;
-
-		case TE_HEATBEAM_SPARKS:
-			cnt = 50;
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-			r = 8;
-			magnitude = 60;
-			color = r & 0xff;
-			CL_ParticleSteamEffect(pos, dir, color, cnt, magnitude);
-			S_StartSound(pos, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
-			break;
-
-		case TE_HEATBEAM_STEAM:
-			cnt = 20;
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-			color = 0xe0;
-			magnitude = 60;
-			CL_ParticleSteamEffect(pos, dir, color, cnt, magnitude);
-			S_StartSound(pos, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
-			break;
-
-		case TE_STEAM:
-			CL_ParseSteam();
-			break;
-
-		case TE_BUBBLETRAIL2:
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadPos(&net_message, pos2);
-			CL_BubbleTrail2(pos, pos2, 8);
-			S_StartSound(pos, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
-			break;
-
-		case TE_MOREBLOOD:
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-			CL_ParticleEffect(pos, dir, 0xe8, 250);
-			break;
-
-		case TE_CHAINFIST_SMOKE:
-			dir[0] = 0;
-			dir[1] = 0;
-			dir[2] = 1;
-			MSG_ReadPos(&net_message, pos);
-			CL_ParticleSmokeEffect(pos, dir, 0, 20, 20);
-			break;
-
-		case TE_ELECTRIC_SPARKS:
-			MSG_ReadPos(&net_message, pos);
-			MSG_ReadDir(&net_message, dir);
-			CL_ParticleEffect(pos, dir, 0x75, 40);
-			S_StartSound(pos, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
-			break;
-
-		case TE_TRACKER_EXPLOSION:
-			MSG_ReadPos(&net_message, pos);
-			CL_ColorFlash(pos, 0, 150, -1, -1, -1);
-			CL_ColorExplosionParticles(pos, 0, 1);
-			S_StartSound(pos, 0, 0, cl_sfx_disrexp, 1, ATTN_NORM, 0);
-			break;
-
-		case TE_TELEPORT_EFFECT:
-		case TE_DBALL_GOAL:
-			MSG_ReadPos(&net_message, pos);
-			CL_TeleportParticles(pos);
-			break;
-
-		case TE_WIDOWBEAMOUT:
-			CL_ParseWidow();
-			break;
-
-		case TE_NUKEBLAST:
-			CL_ParseNuke();
-			break;
-
-		case TE_WIDOWSPLASH:
-			MSG_ReadPos(&net_message, pos);
-			CL_WidowSplash(pos);
-			break;
-
-		default:
-			Com_Error(ERR_DROP, "CL_ParseTEnt: bad type");
-	}
+    int        type;
+    vec3_t    pos, pos2, dir;
+    explosion_t    *ex;
+    int        cnt;
+    int        color;
+    int        r, i;
+    int        ent;
+    int        magnitude;
+    
+    type = MSG_ReadByte (&net_message);
+    
+    switch (type)
+    {
+        case TE_BLOOD:            // bullet hitting flesh
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            //Knightmare- Psychospaz's enhanced particle code
+            CL_BloodHit (pos, dir);
+            break;
+            
+        case TE_GUNSHOT:            // bullet hitting wall
+        case TE_SPARKS:
+        case TE_BULLET_SPARKS:
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            //Knightmare- Psychospaz's enhanced particle code
+            if (type == TE_BULLET_SPARKS)
+                VectorScale(dir, 2, dir);
+        {
+            vec3_t color = { 255, 125, 10 };
+            CL_ParticleEffectSparks (pos, dir, color, (type == TE_GUNSHOT)? 5 : 10);
+        }
+            
+            if (type != TE_SPARKS)
+            {
+                CL_GunSmokeEffect (pos, dir);
+#ifdef DECALS
+                if (type == TE_GUNSHOT || type == TE_BULLET_SPARKS)
+                    CL_ParticleBulletDecal(pos, dir, 2.5);
+#endif
+                // impact sound
+                cnt = rand()&15;
+                if (cnt == 1)
+                    S_StartSound (pos, 0, 0, cl_sfx_ric1, 1, ATTN_NORM, 0);
+                else if (cnt == 2)
+                    S_StartSound (pos, 0, 0, cl_sfx_ric2, 1, ATTN_NORM, 0);
+                else if (cnt == 3)
+                    S_StartSound (pos, 0, 0, cl_sfx_ric3, 1, ATTN_NORM, 0);
+            }
+            break;
+            
+        case TE_SHOTGUN:            // bullet hitting wall
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            //Knightmare- Psychospaz's enhanced particle code
+            CL_GunSmokeEffect (pos, dir);
+#ifdef DECALS
+            CL_ParticleBulletDecal(pos, dir, 2.8);
+#endif
+        {
+            vec3_t color = { 200, 100, 10 };
+            CL_ParticleEffectSparks (pos, dir, color, 8);
+        }
+            break;
+            
+        case TE_SCREEN_SPARKS:
+        case TE_SHIELD_SPARKS:
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            if (type == TE_SCREEN_SPARKS)
+                CL_ParticleEffect (pos, dir, 0xd0, 40);
+            else
+                CL_ParticleEffect (pos, dir, 0xb0, 40);
+            //FIXME : replace or remove this sound
+            S_StartSound (pos, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
+            break;
+            
+        case TE_SPLASH:            // bullet hitting water
+            cnt = MSG_ReadByte (&net_message);
+            cnt = min(cnt, 40); // cap at 40
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            r = MSG_ReadByte (&net_message);
+            if (r > 6)
+                color = 0x00;
+            else
+                color = splash_color[r];
+            // Knightmare- Psychospaz's enhanced particle code
+            CL_ParticleEffectSplash (pos, dir, color, cnt);
+            if (r == SPLASH_SPARKS)
+            {
+                r = rand() & 3;
+                if (r == 0)
+                    S_StartSound (pos, 0, 0, cl_sfx_spark5, 1, ATTN_STATIC, 0);
+                else if (r == 1)
+                    S_StartSound (pos, 0, 0, cl_sfx_spark6, 1, ATTN_STATIC, 0);
+                else
+                    S_StartSound (pos, 0, 0, cl_sfx_spark7, 1, ATTN_STATIC, 0);
+            }
+            break;
+            
+        case TE_LASER_SPARKS:
+            cnt = MSG_ReadByte (&net_message);
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            color = MSG_ReadByte (&net_message);
+            CL_ParticleEffect2 (pos, dir, color, cnt);
+            break;
+            
+        case TE_BLASTER:            // blaster hitting wall
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            //Knightmare- Psychospaz's enhanced particle code
+#if 1
+        {
+            int numparts = 40 / max(cl_particle_scale->value/2, 1);
+            CL_BlasterParticles (pos, dir, numparts, 255, 150, 50, 0, -90, -30); // was 40
+#ifdef DECALS
+            CL_ParticleBlasterDecal(pos, dir, 10, 255, 150, 50);
+#endif
+        }
+            for (r=0; r<3; r++)
+            {
+                dir[r]*=10;
+                pos[r]+=dir[r];
+            }
+#else
+            CL_BlasterParticles (pos, dir);
+            
+            ex = CL_AllocExplosion ();
+            VectorCopy (pos, ex->ent.origin);
+            ex->ent.angles[0] = acos(dir[2])/M_PI*180;
+            // PMM - fixed to correct for pitch of 0
+            if (dir[0])
+                ex->ent.angles[1] = atan2(dir[1], dir[0])/M_PI*180;
+            else if (dir[1] > 0)
+                ex->ent.angles[1] = 90;
+            else if (dir[1] < 0)
+                ex->ent.angles[1] = 270;
+            else
+                ex->ent.angles[1] = 0;
+            
+            ex->type = ex_misc;
+            ex->ent.flags |= RF_FULLBRIGHT|RF_TRANSLUCENT|RF_NOSHADOW; // Knightmare- no shadow on these
+            ex->start = cl.frame.servertime - 100;
+            ex->light = 150;
+            ex->lightcolor[0] = 1;
+            ex->lightcolor[1] = 1;
+            ex->ent.model = cl_mod_explode;
+            ex->frames = 4;
+#endif
+            S_StartSound (pos,  0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
+            break;
+            
+        case TE_RAILTRAIL:            // railgun effect
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadPos (&net_message, pos2);
+            CL_RailTrail (pos, pos2, false);
+            S_StartSound (pos2, 0, 0, cl_sfx_railg, 1, ATTN_NORM, 0);
+            break;
+            // Knightmare 12/23/2001 - red railgun trail
+        case TE_RAILTRAIL2:            // red railgun effect
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadPos (&net_message, pos2);
+            CL_RailTrail (pos, pos2, true);
+            S_StartSound (pos2, 0, 0, cl_sfx_railg, 1, ATTN_NORM, 0);
+            break;
+            // end Knightmare
+            
+        case TE_EXPLOSION2:
+        case TE_GRENADE_EXPLOSION:
+        case TE_GRENADE_EXPLOSION_WATER:
+            MSG_ReadPos (&net_message, pos);
+            //Knightmare- Psychospaz's enhanced particle code
+            CL_Explosion_Particle (pos, 0, false);
+            if (type!=TE_GRENADE_EXPLOSION_WATER)
+                CL_Explosion_Flash (pos, 10, 50, false);
+            CL_Explosion_Sparks (pos, 32);
+#ifdef DECALS
+            if (type != TE_EXPLOSION2)
+                CL_Explosion_Decal (pos, 50);
+#endif
+            if (type == TE_GRENADE_EXPLOSION_WATER)
+                S_StartSound (pos, 0, 0, cl_sfx_watrexp, 1, ATTN_NORM, 0);
+            else
+                S_StartSound (pos, 0, 0, cl_sfx_grenexp, 1, ATTN_NORM, 0);
+            break;
+            
+            // RAFAEL
+        case TE_PLASMA_EXPLOSION:
+            MSG_ReadPos (&net_message, pos);
+            //Knightmare- Psychospaz's enhanced particle code
+            CL_Explosion_Particle (pos, 0, true);
+            CL_Explosion_Sparks (pos, 32);
+            CL_Explosion_Flash (pos, 10, 50, true);
+#ifdef DECALS
+            CL_Explosion_Decal (pos, 50);
+#endif
+            S_StartSound (pos, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
+            break;
+            //Knightmare- Psychospaz's enhanced particle code
+        case TE_EXPLOSION1_BIG:                        // PMM
+            MSG_ReadPos (&net_message, pos);
+            
+            CL_Explosion_Particle (pos, 150, true); //Knightmare- increased size
+            CL_Explosion_Sparks (pos, 96);
+            CL_Explosion_Flash (pos, 30, 150, false);
+            
+            S_StartSound (pos, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
+            break;
+        case TE_EXPLOSION1_NP:                        // PMM
+            MSG_ReadPos (&net_message, pos);
+            
+            CL_Explosion_Particle (pos, 50, true);
+            CL_Explosion_Sparks (pos, 21);
+            CL_Explosion_Flash (pos, 7, 32, false);
+            
+            S_StartSound (pos, 0, 0, cl_sfx_grenexp, 1, ATTN_NORM, 0);
+            break;
+        case TE_EXPLOSION1:
+        case TE_PLAIN_EXPLOSION:
+        case TE_ROCKET_EXPLOSION:
+        case TE_ROCKET_EXPLOSION_WATER:
+            MSG_ReadPos (&net_message, pos);
+            CL_Explosion_Particle (pos, 0, true);
+            CL_Explosion_Sparks (pos, 32);
+            CL_Explosion_Flash (pos, 10, 50, false);
+#ifdef DECALS
+            if (type == TE_ROCKET_EXPLOSION || type == TE_ROCKET_EXPLOSION_WATER)
+                CL_Explosion_Decal (pos, 50);
+#endif
+            if (type == TE_ROCKET_EXPLOSION_WATER)
+                S_StartSound (pos, 0, 0, cl_sfx_watrexp, 1, ATTN_NORM, 0);
+            else
+                S_StartSound (pos, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
+            break;
+            
+        case TE_BFG_EXPLOSION:
+            MSG_ReadPos (&net_message, pos);
+            ex = CL_AllocExplosion ();
+            VectorCopy (pos, ex->ent.origin);
+            ex->type = ex_poly;
+            ex->ent.flags |= RF_FULLBRIGHT;
+            ex->start = cl.frame.servertime - 100;
+            ex->light = 350;
+            ex->lightcolor[0] = 0.0;
+            ex->lightcolor[1] = 1.0;
+            ex->lightcolor[2] = 0.0;
+            ex->ent.model = cl_mod_bfg_explo;
+            ex->ent.flags |= RF_TRANSLUCENT | RF_TRANS_ADDITIVE;
+            ex->ent.alpha = 0.30;
+            ex->frames = 4;
+            break;
+            
+        case TE_BFG_BIGEXPLOSION:
+            MSG_ReadPos (&net_message, pos);
+            CL_BFGExplosionParticles (pos);
+            break;
+            
+        case TE_BFG_LASER:
+            CL_ParseLaser (0xd0d1d2d3);
+            break;
+            
+        case TE_BUBBLETRAIL:
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadPos (&net_message, pos2);
+            CL_BubbleTrail (pos, pos2);
+            break;
+            
+        case TE_PARASITE_ATTACK:
+        case TE_MEDIC_CABLE_ATTACK:
+            ent = CL_ParseBeam (cl_mod_parasite_segment);
+            break;
+            
+        case TE_BOSSTPORT:            // boss teleporting to station
+            MSG_ReadPos (&net_message, pos);
+            CL_BigTeleportParticles (pos);
+            S_StartSound (pos, 0, 0, S_RegisterSound ("misc/bigtele.wav"), 1, ATTN_NONE, 0);
+            break;
+            
+        case TE_GRAPPLE_CABLE:
+            ent = CL_ParseBeam2 (cl_mod_grapple_cable);
+            break;
+            
+            // RAFAEL
+        case TE_WELDING_SPARKS:
+            cnt = MSG_ReadByte (&net_message);
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            color = MSG_ReadByte (&net_message);
+            //Knightmare- Psychospaz's enhanced particle code
+        {
+            vec3_t sparkcolor = {color8red(color), color8green(color), color8blue(color)};
+            CL_ParticleEffectSparks (pos, dir, sparkcolor, 40);
+        }
+            ex = CL_AllocExplosion ();
+            VectorCopy (pos, ex->ent.origin);
+            ex->type = ex_flash;
+            // note to self
+            // we need a better no draw flag
+            ex->ent.flags |= RF_BEAM;
+            ex->start = cl.frame.servertime - 0.1;
+            ex->light = 100 + (rand()%75);
+            ex->lightcolor[0] = 1.0;
+            ex->lightcolor[1] = 1.0;
+            ex->lightcolor[2] = 0.3;
+            ex->ent.model = cl_mod_flash;
+            ex->frames = 2;
+            break;
+            
+        case TE_GREENBLOOD:
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            //Knightmare- Psychospaz's enhanced particle code
+            CL_GreenBloodHit (pos, dir);
+            break;
+            
+            // RAFAEL
+        case TE_TUNNEL_SPARKS:
+            cnt = MSG_ReadByte (&net_message);
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            color = MSG_ReadByte (&net_message);
+            CL_ParticleEffect3 (pos, dir, color, cnt);
+            break;
+            
+            //=============
+            //PGM
+            // PMM -following code integrated for flechette (different color)
+        case TE_BLASTER2:            // green blaster hitting wall
+        case TE_BLUEHYPERBLASTER:    // blue blaster hitting wall
+        case TE_REDBLASTER:            // red blaster hitting wall
+        case TE_FLECHETTE:            // flechette
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            
+            //Knightmare- Psychospaz's enhanced particle code
+#if 1
+            // PMM
+        {
+            int red, green, blue;
+            int numparts = 40 / max(cl_particle_scale->value/2, 1);
+            if (type == TE_BLASTER2) {
+                CL_BlasterParticles (pos, dir, numparts, 50, 235, 50, -10, 0, -10);
+                red=50; green=235; blue=50; }
+            else if (type == TE_BLUEHYPERBLASTER) {
+                CL_BlasterParticles (pos, dir, numparts, 50, 50, 235, -10, 0, -10);
+                red=50; green=50; blue=235; }
+            else if (type == TE_REDBLASTER) {
+                CL_BlasterParticles (pos, dir, numparts, 235, 50, 50, 0, -90, -30);
+                red=235; green=50; blue=50; }
+            else { // TE_FLECHETTE
+                CL_BlasterParticles (pos, dir, numparts, 100, 100, 195, -10, 0, -10);
+                red=100; green=100; blue=195; }
+#ifdef DECALS
+            CL_ParticleBlasterDecal(pos, dir, 10, red, green, blue);
+#endif
+        }
+#else
+            // PMM
+            if (type == TE_BLASTER2)
+                CL_BlasterParticles2 (pos, dir, 0xd0);
+            else if (type == TE_REDBLASTER)
+                CL_BlasterParticles (pos, dir, 0xd0);
+            else
+                CL_BlasterParticles2 (pos, dir, 0x6f); // 75
+            
+            ex = CL_AllocExplosion ();
+            VectorCopy (pos, ex->ent.origin);
+            ex->ent.angles[0] = acos(dir[2])/M_PI*180;
+            // PMM - fixed to correct for pitch of 0
+            if (dir[0])
+                ex->ent.angles[1] = atan2(dir[1], dir[0])/M_PI*180;
+            else if (dir[1] > 0)
+                ex->ent.angles[1] = 90;
+            else if (dir[1] < 0)
+                ex->ent.angles[1] = 270;
+            else
+                ex->ent.angles[1] = 0;
+            
+            ex->type = ex_misc;
+            ex->ent.flags |= RF_FULLBRIGHT|RF_TRANSLUCENT|RF_NOSHADOW; // Knightmare- no shadow on these
+            
+            // PMM
+            if (type == TE_BLASTER2)
+                ex->ent.skinnum = 1;
+            else if (type == TE_REDBLASTER)
+                ex->ent.skinnum = 3;
+            else // flechette, bluehyperblaster
+                ex->ent.skinnum = 2;
+            
+            ex->start = cl.frame.servertime - 100;
+            ex->light = 150;
+            // PMM
+            if (type == TE_BLASTER2)
+            {
+                ex->lightcolor[0] = 0.15;
+                ex->lightcolor[1] = 1;
+                ex->lightcolor[2] = 0.15;
+            }
+            else if (type == TE_BLUEHYPERBLASTER)
+            {
+                ex->lightcolor[0] = 0.19;
+                ex->lightcolor[1] = 0.41;
+                ex->lightcolor[2] = 0.75;
+            }
+            else if (type == TE_REDBLASTER)
+            {
+                ex->lightcolor[0] = 0.75;
+                ex->lightcolor[1] = 0.41;
+                ex->lightcolor[2] = 0.19;
+            }
+            else // flechette
+            {
+                ex->lightcolor[0] = 0.39;
+                ex->lightcolor[1] = 0.61;
+                ex->lightcolor[2] = 0.75;
+            }
+            ex->ent.model = cl_mod_explode;
+            ex->frames = 4;
+#endif
+            S_StartSound (pos,  0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
+            break;
+            
+            // Knightmare- shockwave impact effect
+        case TE_SHOCKSPLASH:
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            // Spawn 5 rings
+            for (i = 0; i < 5; i++)
+            {
+                ex = CL_AllocExplosion ();
+                VectorMA (pos, 16.0*(i+1), dir, ex->ent.origin);
+                vectoangles2(dir, ex->ent.angles);
+                //VectorCopy (dir, ex->ent.angles);
+                ex->type = ex_poly2;
+                ex->ent.flags |= RF_FULLBRIGHT|RF_TRANSLUCENT|RF_NOSHADOW;
+                ex->start = cl.frame.servertime - 100;
+                
+                ex->light = 75;
+                ex->lightcolor[0] = 0.39;
+                ex->lightcolor[1] = 0.61;
+                ex->lightcolor[2] = 0.75;
+                
+                ex->ent.model = cl_mod_shocksplash;
+                ex->ent.alpha = 0.70;
+                ex->baseframe = 4-i;
+                ex->frames = 4+i;
+            }
+            S_StartSound (pos,  0, 0, cl_sfx_shockhit, 1, ATTN_NONE, 0);
+            break;
+            // end Knightmare
+            
+        case TE_LIGHTNING:
+            //Knightmare- Psychospaz's enhanced particle code
+            ent = CL_ParseLightning ();
+            S_StartSound (NULL, ent, CHAN_WEAPON, cl_sfx_lightning, 1, ATTN_NORM, 0);
+            break;
+            
+        case TE_DEBUGTRAIL:
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadPos (&net_message, pos2);
+            CL_DebugTrail (pos, pos2);
+            break;
+            
+            /*case TE_PLAIN_EXPLOSION:
+             MSG_ReadPos (&net_message, pos);
+             
+             ex = CL_AllocExplosion ();
+             VectorCopy (pos, ex->ent.origin);
+             ex->type = ex_poly;
+             ex->ent.flags |= RF_FULLBRIGHT | RF_NOSHADOW; //Knightmare- noshadow flag
+             ex->start = cl.frame.servertime - 100;
+             ex->light = 350;
+             ex->lightcolor[0] = 1.0;
+             ex->lightcolor[1] = 0.5;
+             ex->lightcolor[2] = 0.5;
+             ex->ent.angles[1] = rand() % 360;
+             ex->ent.model = cl_mod_explo4;
+             if (frand() < 0.5)
+             ex->baseframe = 15;
+             ex->frames = 15;
+             if (type == TE_ROCKET_EXPLOSION_WATER)
+             S_StartSound (pos, 0, 0, cl_sfx_watrexp, 1, ATTN_NORM, 0);
+             else
+             S_StartSound (pos, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);*/
+            
+        case TE_FLASHLIGHT:
+            MSG_ReadPos(&net_message, pos);
+            ent = MSG_ReadShort(&net_message);
+            CL_Flashlight(ent, pos);
+            break;
+            
+        case TE_FORCEWALL:
+            MSG_ReadPos(&net_message, pos);
+            MSG_ReadPos(&net_message, pos2);
+            color = MSG_ReadByte (&net_message);
+            CL_ForceWall(pos, pos2, color);
+            break;
+            
+        case TE_HEATBEAM:
+            ent = CL_ParsePlayerBeam (cl_mod_heatbeam);
+            break;
+            
+        case TE_MONSTER_HEATBEAM:
+            ent = CL_ParsePlayerBeam (cl_mod_monster_heatbeam);
+            break;
+            
+        case TE_HEATBEAM_SPARKS:
+            cnt = 50;
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            r = 8;
+            magnitude = 60;
+            CL_ParticleSteamEffect (pos, dir, 240, 240, 240, -20, -20, -20, cnt, magnitude);
+            S_StartSound (pos,  0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
+            break;
+            
+        case TE_HEATBEAM_STEAM:
+            cnt = 20;
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            magnitude = 60;
+            CL_ParticleSteamEffect (pos, dir, 255, 150, 50, 0, -90, -30, cnt, magnitude);
+#ifdef DECALS
+            CL_ParticlePlasmaBeamDecal (pos, dir, 10); // added burnmark
+#endif
+            S_StartSound (pos,  0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
+            break;
+            
+        case TE_STEAM:
+            CL_ParseSteam();
+            break;
+            
+        case TE_BUBBLETRAIL2:
+            cnt = 3; // was 8
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadPos (&net_message, pos2);
+            CL_BubbleTrail2 (pos, pos2, cnt);
+            S_StartSound (pos,  0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
+            break;
+            
+        case TE_MOREBLOOD:
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            //Knightmare- Psychospaz's enhanced particle code
+            CL_BloodHit (pos, dir);
+            CL_BloodHit (pos, dir);
+            break;
+            
+        case TE_CHAINFIST_SMOKE:
+            dir[0]=0; dir[1]=0; dir[2]=1;
+            MSG_ReadPos(&net_message, pos);
+            //Knightmare- Psychospaz's enhanced particle code
+            CL_ParticleSmokeEffect (pos, dir, 8);
+            break;
+            
+        case TE_ELECTRIC_SPARKS:
+            MSG_ReadPos (&net_message, pos);
+            MSG_ReadDir (&net_message, dir);
+            //Knightmare- new blue electric sparks
+            CL_ElectricParticles (pos, dir, 40);
+            //FIXME : replace or remove this sound
+            S_StartSound (pos, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
+            break;
+            
+        case TE_TRACKER_EXPLOSION:
+            MSG_ReadPos (&net_message, pos);
+            CL_ColorFlash (pos, 0, 150, -1, -1, -1);
+            //    CL_ColorExplosionParticles (pos, 0, 1);
+            CL_Tracker_Explode (pos);
+            S_StartSound (pos, 0, 0, cl_sfx_disrexp, 1, ATTN_NORM, 0);
+            break;
+            
+        case TE_TELEPORT_EFFECT:
+        case TE_DBALL_GOAL:
+            MSG_ReadPos (&net_message, pos);
+            CL_TeleportParticles (pos);
+            break;
+            
+        case TE_WIDOWBEAMOUT:
+            CL_ParseWidow ();
+            break;
+            
+        case TE_NUKEBLAST:
+            CL_ParseNuke ();
+            break;
+            
+        case TE_WIDOWSPLASH:
+            MSG_ReadPos (&net_message, pos);
+            CL_WidowSplash (pos);
+            break;
+            //PGM
+            //==============
+            
+        default:
+            Com_Error (ERR_DROP, "CL_ParseTEnt: bad type");
+    }
 }
 
 void

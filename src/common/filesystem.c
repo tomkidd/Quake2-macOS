@@ -268,6 +268,29 @@ FS_CreatePath(char *path)
 	}
 }
 
+//Knightmare- Psychospaz's mod detector
+qboolean modType (char *name)
+{
+    fsSearchPath_t    *search;
+    
+    for (search = fs_searchPaths ; search ; search = search->next)
+    {
+        if (strstr (search->path, name))
+            return true;
+    }
+    return (0);
+}
+
+
+//Knightmare- this enables Rogue menu options for Q2MP4
+qboolean roguepath ()
+{
+    if (modType("rogue") || modType("q2mp4"))
+        return true;
+    return false;
+}
+//end Knightmare
+
 void
 FS_DPrintf(const char *format, ...)
 {
