@@ -1435,7 +1435,15 @@ CL_ParseStartSoundPacket(void)
 	int flags;
 	float ofs;
 
-	flags = MSG_ReadByte(&net_message);
+    // Knightmare- 12/23/2001
+    // read sound indices as bytes only if playing old demos or
+    // connected to server using old protocol; otherwise, read as shorts
+    if ( LegacyProtocol() )
+        flags = MSG_ReadByte(&net_message);
+    else
+        sound_num = MSG_ReadShort (&net_message);
+    //end Knightmare
+
 	sound_num = MSG_ReadByte(&net_message);
 
 	if (flags & SND_VOLUME)
@@ -1518,6 +1526,43 @@ SHOWNET(char *s)
 	}
 }
 
+// Knightmare- server-controlled fog
+/*
+ =====================
+ CL_ParseFog
+ =====================
+ */
+// Fog is sent like this:
+// gi.WriteByte (svc_fog); // svc_fog = 21
+// gi.WriteByte (fog_enable); // 1 = on, 0 = off
+// gi.WriteByte (fog_model); // 0, 1, or 2
+// gi.WriteByte (fog_density); // 1-100
+// gi.WriteShort (fog_near); // >0, <fog_far
+// gi.WriteShort (fog_far); // >fog_near-64, <5000
+// gi.WriteByte (fog_red); // 0-255
+// gi.WriteByte (fog_green); // 0-255
+// gi.WriteByte (fog_blue); // 0-255
+// gi.unicast (player_ent, true);
+
+void CL_ParseFog (void)
+{
+    qboolean fogenable;
+    int model, density, start, end,
+    red, green, blue, temp;
+    
+    temp = MSG_ReadByte (&net_message);
+    fogenable = (temp > 0) ? true:false;
+    model = MSG_ReadByte (&net_message);
+    density = MSG_ReadByte (&net_message);
+    start = MSG_ReadShort (&net_message);
+    end = MSG_ReadShort (&net_message);
+    red = MSG_ReadByte (&net_message);
+    green = MSG_ReadByte (&net_message);
+    blue = MSG_ReadByte (&net_message);
+    
+    R_SetFogVars (fogenable, model, density, start, end, red, green, blue);
+}
+
 void
 CL_ParseServerMessage(void)
 {
@@ -1570,7 +1615,8 @@ CL_ParseServerMessage(void)
 		switch (cmd)
 		{
 			default:
-				Com_Error(ERR_DROP, "CL_ParseServerMessage: Illegible server message\n");
+                // disabling for DEBUGGING purposes -tkidd
+                Com_Error(ERR_DROP, "CL_ParseServerMessage: Illegible server message\n");
 				break;
 
 			case svc_nop:
@@ -1658,6 +1704,10 @@ CL_ParseServerMessage(void)
 				CL_ParseInventory();
 				break;
 
+            case svc_fog:    // Knightmare added
+                CL_ParseFog ();
+                break;
+                
 			case svc_layout:
 				s = MSG_ReadString(&net_message);
 				Q_strlcpy(cl.layout, s, sizeof(cl.layout));

@@ -206,6 +206,7 @@
 		A1B203C521D428E500D8D86D /* ref_gl3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3BD21111B640048A3AD /* ref_gl3.dylib */; };
 		A1B203C621D428E500D8D86D /* ref_soft.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3DC21111CB50048A3AD /* ref_soft.dylib */; };
 		A1CE4EED2218CCB3006A66DE /* sw_polyset.c in Sources */ = {isa = PBXBuildFile; fileRef = A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		A1D4D217226E75BC002FF3FA /* gl1_fog.c in Sources */ = {isa = PBXBuildFile; fileRef = A1D4D216226E75BC002FF3FA /* gl1_fog.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -477,6 +478,7 @@
 		A15FA474211153E60048A3AD /* baseq2 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = baseq2; path = ../../../Dropbox/Files/quake2/baseq2; sourceTree = "<group>"; };
 		A15FA475211153E70048A3AD /* music */ = {isa = PBXFileReference; lastKnownFileType = folder; name = music; path = ../../../Dropbox/Files/quake2/music; sourceTree = "<group>"; };
 		A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_polyset.c; sourceTree = "<group>"; };
+		A1D4D216226E75BC002FF3FA /* gl1_fog.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = gl1_fog.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1077,6 +1079,7 @@
 			isa = PBXGroup;
 			children = (
 				A15FA2452110C5BC0048A3AD /* gl1_draw.c */,
+				A1D4D216226E75BC002FF3FA /* gl1_fog.c */,
 				A15FA23F2110C5BC0048A3AD /* gl1_image.c */,
 				A15FA2432110C5BC0048A3AD /* gl1_light.c */,
 				A15FA23E2110C5BC0048A3AD /* gl1_lightmap.c */,
@@ -1556,6 +1559,7 @@
 				A15FA3B1211118AB0048A3AD /* stb.c in Sources */,
 				A15FA3AD211118540048A3AD /* gl1_warp.c in Sources */,
 				A15FA3A5211118540048A3AD /* gl1_md2.c in Sources */,
+				A1D4D217226E75BC002FF3FA /* gl1_fog.c in Sources */,
 				A15FA3A3211118540048A3AD /* gl1_lightmap.c in Sources */,
 				A15FA3AC211118540048A3AD /* gl1_surf.c in Sources */,
 				A15FA3A9211118540048A3AD /* gl1_scrap.c in Sources */,

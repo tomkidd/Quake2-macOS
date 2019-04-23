@@ -542,6 +542,10 @@ void IN_Accumulate (void);
 
 void CL_ParseLayout (void);
 
+
+void    R_SetFogVars (qboolean enable, int model, int density, int start, int end, int red, int green, int blue);
+
+
 void CL_Init (void);
 
 void CL_FixUpGender(void);

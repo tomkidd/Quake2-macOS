@@ -351,6 +351,7 @@ CL_ClearState(void)
 	S_StopAllSounds();
 	CL_ClearEffects();
 	CL_ClearTEnts();
+    R_SetFogVars (false, 0, 0, 0, 0, 0, 0, 0); // clear fog effets
 
 	/* wipe the entire cl structure */
 	memset(&cl, 0, sizeof(cl));
