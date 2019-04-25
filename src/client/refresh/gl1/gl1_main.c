@@ -78,6 +78,8 @@ cvar_t *r_lerpmodels;
 cvar_t *gl_lefthand;
 cvar_t *r_gunfov;
 cvar_t *r_farsee;
+cvar_t *r_saveshotsize;//  save shot size option
+
 
 cvar_t *r_lightlevel;
 cvar_t *gl1_overbrightbits;
@@ -1210,6 +1212,9 @@ R_Register(void)
 	r_speeds = ri.Cvar_Get("r_speeds", "0", 0);
 
 	r_lightlevel = ri.Cvar_Get("r_lightlevel", "0", 0);
+    
+    r_saveshotsize = ri.Cvar_Get ("r_saveshotsize", "1", CVAR_ARCHIVE );
+    
 	gl1_overbrightbits = ri.Cvar_Get("gl1_overbrightbits", "0", CVAR_ARCHIVE);
 
 	gl1_particle_min_size = ri.Cvar_Get("gl1_particle_min_size", "2", CVAR_ARCHIVE);

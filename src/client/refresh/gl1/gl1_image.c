@@ -1342,6 +1342,38 @@ R_InitImages(void)
 	}
 }
 
+/*
+ ===============
+ R_FreePic
+ by Knightmare
+ Frees a single pic
+ ===============
+ */
+void R_FreePic (char *name)
+{
+    int        i;
+    image_t    *image;
+    
+    for (i=0, image=gltextures; i<numgltextures; i++, image++)
+    {
+        if (!image->registration_sequence)
+            continue;        // free image_t slot
+        if (image->type != it_pic)
+            continue;        // only free pics
+        if (!strcmp(name, image->name))
+        {
+            //Heffo - Free Cinematic
+            //if (image->is_cin)
+            //    CIN_FreeCin(image->texnum);
+            
+            // free it
+            glDeleteTextures (1, &image->texnum);
+            memset (image, 0, sizeof(*image));
+            return; //we're done here
+        }
+    }
+}
+
 void
 R_ShutdownImages(void)
 {

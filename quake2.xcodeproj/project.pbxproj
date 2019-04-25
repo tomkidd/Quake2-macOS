@@ -207,6 +207,7 @@
 		A1B203C621D428E500D8D86D /* ref_soft.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3DC21111CB50048A3AD /* ref_soft.dylib */; };
 		A1CE4EED2218CCB3006A66DE /* sw_polyset.c in Sources */ = {isa = PBXBuildFile; fileRef = A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A1D4D217226E75BC002FF3FA /* gl1_fog.c in Sources */ = {isa = PBXBuildFile; fileRef = A1D4D216226E75BC002FF3FA /* gl1_fog.c */; };
+		A1D4D21A22700F2F002FF3FA /* libjpeg.9.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A1D4D21922700F2F002FF3FA /* libjpeg.9.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -479,6 +480,7 @@
 		A15FA475211153E70048A3AD /* music */ = {isa = PBXFileReference; lastKnownFileType = folder; name = music; path = ../../../Dropbox/Files/quake2/music; sourceTree = "<group>"; };
 		A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_polyset.c; sourceTree = "<group>"; };
 		A1D4D216226E75BC002FF3FA /* gl1_fog.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = gl1_fog.c; sourceTree = "<group>"; };
+		A1D4D21922700F2F002FF3FA /* libjpeg.9.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libjpeg.9.dylib; path = ../../../../../usr/local/Cellar/jpeg/9c/lib/libjpeg.9.dylib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -493,6 +495,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1D4D21A22700F2F002FF3FA /* libjpeg.9.dylib in Frameworks */,
 				A15FA3AE211118830048A3AD /* SDL2.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1291,6 +1294,7 @@
 		A15FA3532110CDDF0048A3AD /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				A1D4D21922700F2F002FF3FA /* libjpeg.9.dylib */,
 				A15FA35C2111095C0048A3AD /* OpenGL.framework */,
 				A15FA3582110CF4E0048A3AD /* SDL2.framework */,
 			);
@@ -1900,6 +1904,14 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				HEADER_SEARCH_PATHS = (
+					src/client/refresh/gl3/glad/include,
+					/Library/Frameworks/Mono.framework/Headers,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/local/Cellar/jpeg/9c/lib,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
@@ -1918,6 +1930,14 @@
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
+				HEADER_SEARCH_PATHS = (
+					src/client/refresh/gl3/glad/include,
+					/Library/Frameworks/Mono.framework/Headers,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/local/Cellar/jpeg/9c/lib,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
@@ -2020,6 +2040,10 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				HEADER_SEARCH_PATHS = (
+					src/client/refresh/gl3/glad/include,
+					/Library/Frameworks/Mono.framework/Headers,
+				);
 				INFOPLIST_FILE = quake2/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -2046,6 +2070,10 @@
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
 				GCC_NO_COMMON_BLOCKS = NO;
+				HEADER_SEARCH_PATHS = (
+					src/client/refresh/gl3/glad/include,
+					/Library/Frameworks/Mono.framework/Headers,
+				);
 				INFOPLIST_FILE = quake2/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

@@ -751,6 +751,16 @@ extern cvar_t *dedicated;
 extern cvar_t *host_speeds;
 extern cvar_t *log_stats;
 
+
+// Knightmare- for the game DLL to tell what engine it's running under
+extern    cvar_t *sv_engine;
+extern    cvar_t *sv_engine_version;
+extern    cvar_t *sv_entfile;            // whether to use .ent file
+
+// Knightmare added
+extern    cvar_t *fs_gamedirvar;
+extern    cvar_t *fs_basedir;
+
 /* External entity files. */
 extern cvar_t *sv_entfile;
 

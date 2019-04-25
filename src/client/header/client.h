@@ -656,4 +656,9 @@ qboolean roguepath (void);
 // utility function for protocol version
 qboolean LegacyProtocol (void);
 
+void    R_FreePic (char *name); // Knightmare added
+void    R_GrabScreen (void); // screenshots for savegames
+void    R_ScaledScreenshot (char *name); //  screenshots for savegames
+
+
 #endif
