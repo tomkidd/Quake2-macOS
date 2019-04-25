@@ -655,6 +655,12 @@ void CM_WritePortalState(FILE *f);
 
 /* PLAYER MOVEMENT CODE */
 
+#define DEFAULT_MAXSPEED    300
+#define DEFAULT_DUCKSPEED    100
+#define DEFAULT_WATERSPEED    400
+#define DEFAULT_ACCELERATE    10
+#define DEFAULT_STOPSPEED    100
+
 extern float pm_airaccelerate;
 
 void Pmove(pmove_t *pmove);
@@ -702,6 +708,7 @@ void FS_BuildGameSpecificSearchPath(char *dir);
 char *FS_Gamedir(void);
 char *FS_NextPath(char *prevpath);
 int FS_LoadFile(char *path, void **buffer);
+char **FS_ListPak (char *find, int *num); // Knighmare- pak list function
 qboolean FS_FileInGamedir(const char *file);
 qboolean FS_AddPAKFromGamedir(const char *pak);
 const char* FS_GetNextRawPath(const char* lastRawPath);

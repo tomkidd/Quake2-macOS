@@ -357,7 +357,9 @@ SV_StartSound(vec3_t origin, edict_t *entity, int channel, int soundindex,
 
 	MSG_WriteByte(&sv.multicast, svc_sound);
 	MSG_WriteByte(&sv.multicast, flags);
-	MSG_WriteByte(&sv.multicast, soundindex);
+
+    //Knightmare- 12/23/2001- changed to short
+    MSG_WriteShort (&sv.multicast, soundindex);
 
 	if (flags & SND_VOLUME)
 	{
@@ -436,7 +438,7 @@ SV_SendClientDatagram(client_t *client)
 	   so that entity references will be current */
 	if (client->datagram.overflowed)
 	{
-		Com_Printf("WARNING: datagram overflowed for %s\n", client->name);
+		Com_Printf(S_COLOR_YELLOW"WARNING: datagram overflowed for %s\n", client->name);
 	}
 	else
 	{
@@ -448,7 +450,7 @@ SV_SendClientDatagram(client_t *client)
 	if (msg.overflowed)
 	{
 		/* must have room left for the packet header */
-		Com_Printf("WARNING: msg overflowed for %s\n", client->name);
+		Com_Printf(S_COLOR_YELLOW"WARNING: msg overflowed for %s\n", client->name);
 		SZ_Clear(&msg);
 	}
 

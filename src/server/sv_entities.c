@@ -252,12 +252,42 @@ SV_WritePlayerstateToClient(client_frame_t *from, client_frame_t *to,
 	{
 		pflags |= PS_WEAPONFRAME;
 	}
+    
+#ifdef NEW_PLAYER_STATE_MEMBERS
+    //Knightmare added
+    if (ps->gunskin != ops->gunskin)
+        pflags |= PS_WEAPONSKIN;
+    
+    if (ps->gunframe2 != ops->gunframe2)
+        pflags |= PS_WEAPONFRAME2;
+    
+    if (ps->gunskin2 != ops->gunskin2)
+        pflags |= PS_WEAPONSKIN2;
+    
+    // server-side speed control!
+    if (ps->maxspeed != ops->maxspeed)
+        pflags |= PS_MAXSPEED;
+    
+    if (ps->duckspeed != ops->duckspeed)
+        pflags |= PS_DUCKSPEED;
+    
+    if (ps->waterspeed != ops->waterspeed)
+        pflags |= PS_WATERSPEED;
+    
+    if (ps->accel != ops->accel)
+        pflags |= PS_ACCEL;
+    
+    if (ps->stopspeed != ops->stopspeed)
+        pflags |= PS_STOPSPEED;
+#endif    //end Knightmare
 
 	pflags |= PS_WEAPONINDEX;
+    pflags |= PS_WEAPONINDEX2; //Knightmare added
 
 	/* write it */
 	MSG_WriteByte(msg, svc_playerinfo);
-	MSG_WriteShort(msg, pflags);
+    //MSG_WriteShort (msg, pflags);
+    MSG_WriteLong (msg, pflags); //Knightmare- write as long
 
 	/* write the pmove_state_t */
 	if (pflags & PS_M_TYPE)
@@ -267,9 +297,15 @@ SV_WritePlayerstateToClient(client_frame_t *from, client_frame_t *to,
 
 	if (pflags & PS_M_ORIGIN)
 	{
+#ifdef LARGE_MAP_SIZE
+        MSG_WritePMCoordNew (msg, ps->pmove.origin[0]);
+        MSG_WritePMCoordNew (msg, ps->pmove.origin[1]);
+        MSG_WritePMCoordNew (msg, ps->pmove.origin[2]);
+#else
 		MSG_WriteShort(msg, ps->pmove.origin[0]);
 		MSG_WriteShort(msg, ps->pmove.origin[1]);
 		MSG_WriteShort(msg, ps->pmove.origin[2]);
+#endif
 	}
 
 	if (pflags & PS_M_VELOCITY)
@@ -323,22 +359,53 @@ SV_WritePlayerstateToClient(client_frame_t *from, client_frame_t *to,
 		MSG_WriteChar(msg, ps->kick_angles[2] * 4);
 	}
 
-	if (pflags & PS_WEAPONINDEX)
-	{
-		MSG_WriteByte(msg, ps->gunindex);
-	}
+    if (pflags & PS_WEAPONINDEX) //Knightmare- 12/23/2001- send as short
+        MSG_WriteShort (msg, ps->gunindex);
+    
+    
+#ifdef NEW_PLAYER_STATE_MEMBERS    //Knightmare added
+    if (pflags & PS_WEAPONINDEX2)
+        MSG_WriteShort (msg, ps->gunindex2); //Knightmare- gunindex2 support
+#endif
+    
 
-	if (pflags & PS_WEAPONFRAME)
-	{
-		MSG_WriteByte(msg, ps->gunframe);
-		MSG_WriteChar(msg, ps->gunoffset[0] * 4);
-		MSG_WriteChar(msg, ps->gunoffset[1] * 4);
-		MSG_WriteChar(msg, ps->gunoffset[2] * 4);
-		MSG_WriteChar(msg, ps->gunangles[0] * 4);
-		MSG_WriteChar(msg, ps->gunangles[1] * 4);
-		MSG_WriteChar(msg, ps->gunangles[2] * 4);
-	}
+    if ((pflags & PS_WEAPONFRAME) || (pflags & PS_WEAPONFRAME2))
+    {
+        if (pflags & PS_WEAPONFRAME)
+            MSG_WriteByte(msg, ps->gunframe);
+        
+        MSG_WriteChar(msg, ps->gunoffset[0] * 4);
+        MSG_WriteChar(msg, ps->gunoffset[1] * 4);
+        MSG_WriteChar(msg, ps->gunoffset[2] * 4);
+        MSG_WriteChar(msg, ps->gunangles[0] * 4);
+        MSG_WriteChar(msg, ps->gunangles[1] * 4);
+        MSG_WriteChar(msg, ps->gunangles[2] * 4);
+    }
 
+#ifdef NEW_PLAYER_STATE_MEMBERS //Knightmare added
+    if (pflags & PS_WEAPONSKIN)
+        MSG_WriteShort (msg, ps->gunskin);
+    
+    if (pflags & PS_WEAPONSKIN2)
+        MSG_WriteShort (msg, ps->gunskin2);
+    
+    // server-side speed control!
+    if (pflags & PS_MAXSPEED)
+        MSG_WriteShort (msg, ps->maxspeed);
+    
+    if (pflags & PS_DUCKSPEED)
+        MSG_WriteShort (msg, ps->duckspeed);
+    
+    if (pflags & PS_WATERSPEED)
+        MSG_WriteShort (msg, ps->waterspeed);
+    
+    if (pflags & PS_ACCEL)
+        MSG_WriteShort (msg, ps->accel);
+    
+    if (pflags & PS_STOPSPEED)
+        MSG_WriteShort (msg, ps->stopspeed);
+#endif    //end Knightmare
+    
 	if (pflags & PS_BLEND)
 	{
 		MSG_WriteByte(msg, ps->blend[0] * 255);

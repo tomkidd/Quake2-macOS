@@ -43,6 +43,10 @@ cvar_t *allow_download_players;
 cvar_t *allow_download_models;
 cvar_t *allow_download_sounds;
 cvar_t *allow_download_maps;
+
+// Knightmare- whether to allow downloading 24-bit textures
+cvar_t    *allow_download_enh_textures;
+
 cvar_t *sv_airaccelerate;
 cvar_t *sv_noreload; /* don't reload level state when reentering */
 cvar_t *maxclients; /* rename sv_maxclients */
@@ -82,6 +86,55 @@ SV_DropClient(client_t *drop)
 	drop->state = cs_zombie; /* become free in a few seconds */
 	drop->name[0] = 0;
 }
+
+//Knightmare added
+/*
+ =====================
+ GetClientFromAdr
+ 
+ Given an netadr_t, returns the matching client.
+ =====================
+ */
+client_t *GetClientFromAdr (netadr_t address)
+{
+    client_t    *cl;
+    int            i;
+    qboolean    found = false;
+    
+    for (i = 0; i < maxclients->value; i++)
+    {
+        cl = &svs.clients[i];
+        if (NET_CompareBaseAdr(cl->netchan.remote_address, address)) {
+            found = true; break; }
+    }
+    if (found)
+        return cl;
+    else // don't return non-matching client
+        return NULL;
+}
+
+
+/*
+ =====================
+ SV_DropClientFromAdr
+ 
+ Calls SV_DropClient, takes netadr_t instead of client pointer.
+ =====================
+ */
+void SV_DropClientFromAdr (netadr_t address)
+{    // adapted Pat Aftermoon's simplified version of this
+    client_t *drop = GetClientFromAdr(address);
+    
+    if (!drop)    return; // make sure we have a client to drop
+    
+    SV_BroadcastPrintf (PRINT_HIGH, "dropping client %s\n", drop->name);
+    
+    SV_DropClient (drop);
+    
+    drop->state = cs_free;   // don't bother with zombie state
+}
+// end Knightmare
+
 
 /*
  * Builds the string that is sent as heartbeats and status replies
@@ -604,7 +657,10 @@ SV_Init(void)
 	allow_download_models = Cvar_Get("allow_download_models", "1", CVAR_ARCHIVE);
 	allow_download_sounds = Cvar_Get("allow_download_sounds", "1", CVAR_ARCHIVE);
 	allow_download_maps = Cvar_Get("allow_download_maps", "1", CVAR_ARCHIVE);
-	sv_downloadserver = Cvar_Get ("sv_downloadserver", "", 0);
+    // Knightmare- whether to allow downloading 24-bit textures
+    allow_download_enh_textures = Cvar_Get ("allow_download_enh_textures", "0", CVAR_ARCHIVE);
+
+    sv_downloadserver = Cvar_Get ("sv_downloadserver", "", 0);
 
 	sv_noreload = Cvar_Get("sv_noreload", "0", 0);
 

@@ -181,6 +181,15 @@ typedef struct
 	void (*AddCommandString)(char *text);
 
 	void (*DebugGraph)(float value, int color);
+
+    // Knightmare- support game DLL loading from pak files thru engine
+    // This can be used to load script files, etc
+#ifdef KMQUAKE2_ENGINE_MOD
+    char    **(*ListPak) (char *find, int *num);
+    int        (*LoadFile) (char *name, void **buf);
+    void    (*FreeFile) (void *buf);
+#endif
+    
 } game_import_t;
 
 /* functions exported by the game subsystem */

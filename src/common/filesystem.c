@@ -658,6 +658,62 @@ FS_FRead(void *buffer, int size, int count, fileHandle_t f)
 }
 
 /*
+ =================
+ FS_ListPak
+ 
+ Generates a listing of the contents of a pak file
+ =================
+ */
+char **FS_ListPak (char *find, int *num)
+{
+    fsSearchPath_t    *search;
+    //char            netpath[MAX_OSPATH];
+    fsPack_t        *pak;
+    
+    int nfiles = 0, nfound = 0;
+    char **list = 0;
+    int i;
+    
+    // now check pak files
+    for (search = fs_searchPaths; search; search = search->next)
+    {
+        if (!search->pack)
+            continue;
+        
+        pak = search->pack;
+        
+        //now find and build list
+        for (i=0 ; i<pak->numFiles ; i++)
+            nfiles++;
+    }
+    
+    list = malloc( sizeof( char * ) * nfiles );
+    memset( list, 0, sizeof( char * ) * nfiles );
+    
+    for (search = fs_searchPaths; search; search = search->next)
+    {
+        if (!search->pack)
+            continue;
+        
+        pak = search->pack;
+        
+        //now find and build list
+        for (i=0 ; i<pak->numFiles ; i++)
+        {
+            if (strstr(pak->files[i].name, find))
+            {
+                list[nfound] = strdup(pak->files[i].name);
+                nfound++;
+            }
+        }
+    }
+    
+    *num = nfound;
+    
+    return list;
+}
+
+/*
  * Filename are reletive to the quake search path. A null buffer will just
  * return the file length without loading.
  */
