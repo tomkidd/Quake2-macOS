@@ -425,6 +425,8 @@ void Com_Printf(char *msg, ...);
  #define CVAR_NOSET 8       /* don't allow change from console at all, */
 							/* but can be set from the command line */
  #define CVAR_LATCH 16      /* save changes until server restart */
+#define CVAR_CHEAT        32    // cannot be changed from default in
+// multiplayer games
 
 /* nothing outside the Cvar_*() functions should modify these fields! */
 typedef struct cvar_s
@@ -436,6 +438,10 @@ typedef struct cvar_s
 	qboolean modified; /* set each time the cvar is changed */
 	float value;
 	struct cvar_s *next;
+    // Knightmare- added cvar defaults
+#ifdef KMQUAKE2_ENGINE_MOD
+    char        *default_string;
+#endif
 } cvar_t;
 
 #endif /* CVAR */

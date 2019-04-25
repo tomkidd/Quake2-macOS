@@ -685,7 +685,19 @@ MSG_WriteDeltaEntity(entity_state_t *from,
 		bits |= U_MODEL4;
 	}
 
-	if (to->sound != from->sound)
+#ifdef NEW_ENTITY_STATE_MEMBERS
+    // Knightmare- 1/18/2002- extra model indices
+    if ( to->modelindex5 != from->modelindex5 )
+        bits |= U_MODEL5;
+    if ( to->modelindex6 != from->modelindex6 )
+        bits |= U_MODEL6;
+    if ( (to->modelindex7 != from->modelindex7)
+        || (to->modelindex8 != from->modelindex8) )
+        bits |= U_MODEL7_8;
+    // end Knightmare
+#endif
+    
+    if (to->sound != from->sound)
 	{
 		bits |= U_SOUND;
 	}
@@ -695,7 +707,20 @@ MSG_WriteDeltaEntity(entity_state_t *from,
 		bits |= U_OLDORIGIN;
 	}
 
-	/* write the message */
+    // Knightmare 5/11/2002- added alpha
+#ifdef NEW_ENTITY_STATE_MEMBERS
+    // cap new value to correct range
+    if (to->alpha < 0.0)
+        to->alpha = 0.0;
+    if (to->alpha > 1.0)
+        to->alpha = 1.0;
+    // Since the floating point value is never quite the same,
+    // compare the new and the old as what they will be sent as
+    if ((int)(to->alpha*255) != (int)(from->alpha*255))
+        bits |= U_ALPHA;
+#endif
+
+    /* write the message */
 	if (!bits && !force)
 	{
 		return; /* nothing to send! */
@@ -746,26 +771,41 @@ MSG_WriteDeltaEntity(entity_state_t *from,
 		MSG_WriteByte(msg, to->number);
 	}
 
+    //Knightmare- 12/23/2001
+    //changed these to shorts
 	if (bits & U_MODEL)
 	{
-		MSG_WriteByte(msg, to->modelindex);
+		MSG_WriteShort(msg, to->modelindex);
 	}
 
 	if (bits & U_MODEL2)
 	{
-		MSG_WriteByte(msg, to->modelindex2);
+		MSG_WriteShort(msg, to->modelindex2);
 	}
 
 	if (bits & U_MODEL3)
 	{
-		MSG_WriteByte(msg, to->modelindex3);
+		MSG_WriteShort(msg, to->modelindex3);
 	}
 
 	if (bits & U_MODEL4)
 	{
-		MSG_WriteByte(msg, to->modelindex4);
+		MSG_WriteShort(msg, to->modelindex4);
 	}
 
+#ifdef NEW_ENTITY_STATE_MEMBERS
+    //Knightmare- 1/18/2002- extra model indices
+    if (bits & U_MODEL5)
+        MSG_WriteShort (msg, to->modelindex5);
+    if (bits & U_MODEL6)
+        MSG_WriteShort (msg, to->modelindex6);
+    if (bits & U_MODEL7_8) {
+        MSG_WriteShort (msg, to->modelindex7);
+        MSG_WriteShort (msg, to->modelindex8);
+    }
+    //end Knightmare
+#endif
+    
 	if (bits & U_FRAME8)
 	{
 		MSG_WriteByte(msg, to->frame);
@@ -857,10 +897,21 @@ MSG_WriteDeltaEntity(entity_state_t *from,
 		MSG_WriteCoord(msg, to->old_origin[1]);
 		MSG_WriteCoord(msg, to->old_origin[2]);
 	}
+    
+#ifdef NEW_ENTITY_STATE_MEMBERS
+    //Knightmare 5/11/2002- added alpha
+    if (bits & U_ALPHA)
+    {
+        //    Com_Printf("Entity alpha: %f\n", to->alpha);
+        MSG_WriteByte (msg, (byte)(to->alpha*255));
+    }
+#endif
 
+    //Knightmare- 12/23/2001
+    //changed this to short
 	if (bits & U_SOUND)
 	{
-		MSG_WriteByte(msg, to->sound);
+		MSG_WriteShort(msg, to->sound);
 	}
 
 	if (bits & U_EVENT)

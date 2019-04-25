@@ -131,7 +131,8 @@ Com_VPrintf(int print_level, const char *fmt, va_list argptr)
 		}
 
 		/* also echo to debugging console */
-		Sys_ConsoleOutput(msg);
+        if (msg[strlen(msg)-1] != '\r') // skip overwrittten outputs
+            Sys_ConsoleOutput (msg);
 
 		/* logfile */
 		if (logfile_active && logfile_active->value)
@@ -245,8 +246,9 @@ Com_Error(int code, char *fmt, ...)
 	}
 	else if (code == ERR_DROP)
 	{
-		Com_Printf("********************\nERROR: %s\n********************\n",
-				msg);
+        Com_Printf (S_COLOR_RED"********************\n"
+                    S_COLOR_RED"ERROR: %s\n"
+                    S_COLOR_RED"********************\n", msg);
 		SV_Shutdown(va("Server crashed: %s\n", msg), false);
 #ifndef DEDICATED_ONLY
 		CL_Drop();

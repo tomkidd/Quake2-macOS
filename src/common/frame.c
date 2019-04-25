@@ -36,6 +36,10 @@ cvar_t *cl_maxfps;
 cvar_t *dedicated;
 cvar_t *busywait;
 
+// Knightmare- for the game DLL to tell what engine it's running under
+cvar_t *sv_engine;
+cvar_t *sv_engine_version;
+
 extern cvar_t *logfile_active;
 extern jmp_buf abortframe; /* an ERR_DROP occured, exit the entire frame */
 extern zhead_t z_chain;
@@ -169,6 +173,7 @@ void Qcommon_ExecConfigs(qboolean gameStartUp)
 {
 	Cbuf_AddText("exec default.cfg\n");
 	Cbuf_AddText("exec yq2.cfg\n");
+    Cbuf_AddText("exec kmq2config.cfg\n");
 	Cbuf_AddText("exec config.cfg\n");
 	if(gameStartUp)
 	{
@@ -304,12 +309,22 @@ Qcommon_Init(int argc, char **argv)
 	cl_maxfps = Cvar_Get("cl_maxfps", "60", CVAR_ARCHIVE);
 
 	developer = Cvar_Get("developer", "0", 0);
-	fixedtime = Cvar_Get("fixedtime", "0", 0);
+	fixedtime = Cvar_Get("fixedtime", "0", CVAR_CHEAT);
 
 	logfile_active = Cvar_Get("logfile", "1", CVAR_ARCHIVE);
 	modder = Cvar_Get("modder", "0", 0);
-	timescale = Cvar_Get("timescale", "1", 0);
+	timescale = Cvar_Get("timescale", "1", CVAR_CHEAT);
 
+
+    // Knightmare- for the game DLL to tell what engine it's running under
+#ifdef NEW_ENTITY_STATE_MEMBERS
+    sv_engine = Cvar_Get ("sv_engine", "KMQuake2", CVAR_SERVERINFO | CVAR_NOSET | CVAR_LATCH);
+#else
+    sv_engine = Cvar_Get ("sv_engine", "KMQuake2_eraser", CVAR_SERVERINFO | CVAR_NOSET | CVAR_LATCH);
+#endif
+    sv_engine_version = Cvar_Get ("sv_engine_version", va("%f",YQ2VERSION), CVAR_SERVERINFO | CVAR_NOSET | CVAR_LATCH);
+// end Knightmare
+    
 	char *s;
 	s = va("%s %s %s %s", YQ2VERSION, YQ2ARCH, BUILD_DATE, YQ2OSTYPE);
 	Cvar_Get("version", s, CVAR_SERVERINFO | CVAR_NOSET);
