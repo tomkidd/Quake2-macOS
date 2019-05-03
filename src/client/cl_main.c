@@ -399,6 +399,191 @@ CL_Skins_f(void)
 	}
 }
 
+// added Psychospaz's command for toggling chasecam
+/*
+ =================
+ CL_ToggleCam_f
+ 
+ toggle thirdperson camera
+ =================
+ */
+void CL_ToggleCam_f (void)
+{
+    if (cl_3dcam->value)
+        Cvar_SetValue ("cl_3dcam", 0 );
+    else
+        Cvar_SetValue ("cl_3dcam", 1 );
+}
+
+/*
+ =================
+ CL_ConnectionlessPacket
+ 
+ Responses to broadcasts, etc
+ =================
+ */
+void CL_ConnectionlessPacket (void)
+{
+    char    *s;
+    char    *c;
+    
+    MSG_BeginReading (&net_message);
+    MSG_ReadLong (&net_message);    // skip the -1
+    
+    s = MSG_ReadStringLine (&net_message);
+    
+    Cmd_TokenizeString (s, false);
+    
+    c = Cmd_Argv(0);
+    
+    Com_Printf ("%s: %s\n", NET_AdrToString (net_from), c);
+    
+    // server connection
+    if (!strcmp(c, "client_connect"))
+    {
+        if (cls.state == ca_connected)
+        {
+            Com_Printf ("Dup connect received.  Ignored.\n");
+            return;
+        }
+        Netchan_Setup (NS_CLIENT, &cls.netchan, net_from, cls.quakePort);
+        MSG_WriteChar (&cls.netchan.message, clc_stringcmd);
+        MSG_WriteString (&cls.netchan.message, "new");
+        cls.state = ca_connected;
+        return;
+    }
+    
+    // server responding to a status broadcast
+    if (!strcmp(c, "info"))
+    {
+        CL_ParseStatusMessage ();
+        return;
+    }
+    
+    // remote command from gui front end
+    if (!strcmp(c, "cmd"))
+    {
+        if (!NET_IsLocalAddress(net_from))
+        {
+            Com_Printf ("Command packet from remote host.  Ignored.\n");
+            return;
+        }
+        Sys_AppActivate ();
+        s = MSG_ReadString (&net_message);
+        Cbuf_AddText (s);
+        Cbuf_AddText ("\n");
+        return;
+    }
+    // print command from somewhere
+    if (!strcmp(c, "print"))
+    {
+        s = MSG_ReadString (&net_message);
+        Com_Printf ("%s", s);
+        return;
+    }
+    
+    // ping from somewhere
+    if (!strcmp(c, "ping"))
+    {
+        Netchan_OutOfBandPrint (NS_CLIENT, net_from, "ack");
+        return;
+    }
+    
+    // challenge from the server we are connecting to
+    if (!strcmp(c, "challenge"))
+    {
+        cls.challenge = atoi(Cmd_Argv(1));
+        CL_SendConnectPacket ();
+        return;
+    }
+    
+    // echo request from server
+    if (!strcmp(c, "echo"))
+    {
+        Netchan_OutOfBandPrint (NS_CLIENT, net_from, "%s", Cmd_Argv(1) );
+        return;
+    }
+    
+    Com_Printf ("Unknown command.\n");
+}
+
+/*
+ =================
+ CL_DumpPackets
+ 
+ A vain attempt to help bad TCP stacks that cause problems
+ when they overflow
+ =================
+ */
+void CL_DumpPackets (void)
+{
+    while (NET_GetPacket (NS_CLIENT, &net_from, &net_message))
+    {
+        Com_Printf ("dumnping a packet\n");
+    }
+}
+
+/*
+ =================
+ CL_ReadPackets
+ =================
+ */
+void CL_ReadPackets (void)
+{
+    while (NET_GetPacket (NS_CLIENT, &net_from, &net_message))
+    {
+        //    Com_Printf ("packet\n");
+        //
+        // remote command packet
+        //
+        if (*(int *)net_message.data == -1)
+        {
+            CL_ConnectionlessPacket ();
+            continue;
+        }
+        
+        if (cls.state == ca_disconnected || cls.state == ca_connecting)
+            continue;        // dump it if not connected
+        
+        if (net_message.cursize < 8)
+        {
+            Com_Printf ("%s: Runt packet\n",NET_AdrToString(net_from));
+            continue;
+        }
+        
+        //
+        // packet from server
+        //
+        if (!NET_CompareAdr (net_from, cls.netchan.remote_address))
+        {
+            Com_DPrintf ("%s:sequenced packet without connection\n"
+                         ,NET_AdrToString(net_from));
+            continue;
+        }
+        if (!Netchan_Process(&cls.netchan, &net_message))
+            continue;        // wasn't accepted for some reason
+        CL_ParseServerMessage ();
+    }
+    
+    //
+    // check timeout
+    //
+    if (cls.state >= ca_connected
+        && cls.realtime - cls.netchan.last_received > cl_timeout->value*1000)
+    {
+        if (++cl.timeoutcount > 5)    // timeoutcount saves debugger
+        {
+            Com_Printf ("\nServer connection timed out.\n");
+            CL_Disconnect ();
+            return;
+        }
+    }
+    else
+        cl.timeoutcount = 0;
+    
+}
+
+
 /* This fixes some problems with wrong tagged models and skins */
 void
 CL_FixUpGender(void)

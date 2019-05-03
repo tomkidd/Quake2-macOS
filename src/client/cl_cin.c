@@ -28,6 +28,8 @@
 #include "header/client.h"
 #include "input/header/input.h"
 
+#ifndef    ROQ_SUPPORT
+
 extern cvar_t *vid_renderer;
 
 cvar_t *cin_force43;
@@ -49,6 +51,8 @@ typedef struct
 	int height;
 	byte *pic;
 	byte *pic_pending;
+    qboolean    isStaticPic;    // Knightmare added
+    char    picName[MAX_OSPATH];// Knightmare added
 
 	/* order 1 huffman stuff */
 	int *hnodes1;
@@ -536,6 +540,7 @@ SCR_MinimalColor(void)
  * Returns true if a cinematic is active, meaning the
  * view rendering should be skipped
  */
+extern    cvar_t        *vid_ref;
 qboolean
 SCR_DrawCinematic(void)
 {
@@ -545,9 +550,17 @@ SCR_DrawCinematic(void)
 	{
 		return false;
 	}
+    
+    if (cin.isStaticPic) // Knightmare- HACK to show JPG endscreens
+    {
+        R_DrawStretchPic (0, 0, viddef.width, viddef.height, cin.picName, 1.0);
+        return true;
+    }
+
 
 	/* blank screen and pause if menu is up */
-	if (cls.key_dest == key_menu)
+    // Knightmare- pause if reloading video
+	if (cls.key_dest == key_menu || vid_ref->modified)
 	{
 		R_SetPalette(NULL);
 		cl.cinematicpalette_active = false;
@@ -631,6 +644,8 @@ SCR_PlayCinematic(char *arg)
 
 	/* make sure background music is not playing */
 	OGG_Stop();
+    
+    cin.isStaticPic = false; // Knightmare added
 
 	cl.cinematicframe = 0;
 	dot = strstr(arg, ".");
@@ -654,6 +669,9 @@ SCR_PlayCinematic(char *arg)
 		{
 			memcpy(cl.cinematicpalette, palette, sizeof(cl.cinematicpalette));
 			Z_Free(palette);
+            // Knightmare- HACK to show JPG endscreens
+            cin.isStaticPic = true;
+            Com_sprintf (cin.picName, sizeof(cin.picName), "/pics/%s", arg);
 		}
 
 		return;
@@ -692,3 +710,4 @@ SCR_PlayCinematic(char *arg)
 	cl.cinematictime = Sys_Milliseconds();
 }
 
+#endif    //!ROQ_SUPPORT
