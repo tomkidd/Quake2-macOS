@@ -399,6 +399,12 @@ InventoryMessage(edict_t *ent)
 
         for (i = 0; i < MAX_ITEMS; i++)
         {
+            // Don't show "No Weapon" or "Homing Missile Launcher" in inventory
+            if((i == noweapon_index) || (i == hml_index))
+                gi.WriteShort (0);
+            else if((i == fuel_index) && (ent->client->jetpack_infinite))
+                gi.WriteShort (0);
+            else
                 gi.WriteShort(ent->client->pers.inventory[i]);
         }
 }
