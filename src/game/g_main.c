@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,6 +45,10 @@ cvar_t *dmflags;
 cvar_t *skill;
 cvar_t *fraglimit;
 cvar_t *timelimit;
+//ZOID
+cvar_t    *capturelimit;
+cvar_t    *instantweap;
+//ZOID
 cvar_t *password;
 cvar_t *spectator_password;
 cvar_t *needpass;
@@ -80,6 +85,62 @@ cvar_t *sv_maplist;
 
 cvar_t *gib_on;
 
+cvar_t    *actorchicken;
+cvar_t    *actorjump;
+cvar_t    *actorscram;
+cvar_t    *alert_sounds;
+cvar_t    *allow_download;
+cvar_t    *allow_fog;            // Set to 0 for no fog
+
+// set to 0 to bypass target_changelevel clear inventory flag
+// because some user maps have this erroneously set
+cvar_t    *allow_clear_inventory;
+
+cvar_t    *bounce_bounce;
+cvar_t    *bounce_minv;
+cvar_t    *cd_loopcount;
+cvar_t    *cl_gun;
+cvar_t    *cl_3dcam; // Knightmare added
+cvar_t    *corpse_fade;
+cvar_t    *corpse_fadetime;
+cvar_t    *crosshair;
+cvar_t    *developer;
+cvar_t    *footstep_sounds;
+cvar_t    *fov;
+cvar_t    *gl_clear;
+cvar_t    *gl_driver;
+cvar_t    *gl_driver_fog;
+cvar_t    *hand;
+cvar_t    *jetpack_weenie;
+cvar_t    *joy_pitchsensitivity;
+cvar_t    *joy_yawsensitivity;
+cvar_t    *jump_kick;
+cvar_t    *lazarus_cd_loop;
+cvar_t    *lazarus_cl_gun;
+cvar_t    *lazarus_crosshair;
+cvar_t    *lazarus_gl_clear;
+cvar_t    *lazarus_joyp;
+cvar_t    *lazarus_joyy;
+cvar_t    *lazarus_pitch;
+cvar_t    *lazarus_yaw;
+cvar_t    *lights;
+cvar_t    *lightsmin;
+cvar_t    *m_pitch;
+cvar_t    *m_yaw;
+cvar_t    *monsterjump;
+cvar_t    *readout;
+cvar_t    *rocket_strafe;
+cvar_t    *rotate_distance;
+cvar_t    *s_primary;
+cvar_t    *shift_distance;
+cvar_t    *sv_maxgibs;
+cvar_t    *turn_rider;
+cvar_t    *vid_ref;
+cvar_t    *zoomrate;
+cvar_t    *zoomsnap;
+
+cvar_t    *blaster_color; // Knightmare added
+
 void SpawnEntities(char *mapname, char *entities, char *spawnpoint);
 void ClientThink(edict_t *ent, usercmd_t *cmd);
 qboolean ClientConnect(edict_t *ent, char *userinfo);
@@ -102,8 +163,49 @@ ShutdownGame(void)
 {
 	gi.dprintf("==== ShutdownGame ====\n");
 
-	gi.FreeTags(TAG_LEVEL);
+    if(!deathmatch->value && !coop->value) {
+#ifndef KMQUAKE2_ENGINE_MOD // engine has zoom autosensitivity
+        gi.cvar_forceset("m_pitch", va("%f",lazarus_pitch->value));
+#endif
+        //gi.cvar_forceset("cd_loopcount", va("%d",lazarus_cd_loop->value));
+        //gi.cvar_forceset("gl_clear", va("%d", lazarus_gl_clear->value));
+    }
+    // Lazarus: Turn off fog if it's on
+    if(!dedicated->value)
+        Fog_Off();
+
+    gi.FreeTags(TAG_LEVEL);
 	gi.FreeTags(TAG_GAME);
+}
+
+
+game_import_t RealFunc;
+int    max_modelindex;
+int    max_soundindex;
+
+
+int Debug_Modelindex (char *name)
+{
+    int    modelnum;
+    modelnum = RealFunc.modelindex(name);
+    if(modelnum > max_modelindex)
+    {
+        gi.dprintf("Model %03d %s\n",modelnum,name);
+        max_modelindex = modelnum;
+    }
+    return modelnum;
+}
+
+int Debug_Soundindex (char *name)
+{
+    int soundnum;
+    soundnum = RealFunc.soundindex(name);
+    if(soundnum > max_soundindex)
+    {
+        gi.dprintf("Sound %03d %s\n",soundnum,name);
+        max_soundindex = soundnum;
+    }
+    return soundnum;
 }
 
 /*
@@ -142,6 +244,24 @@ GetGameAPI(game_import_t *import)
 	/* Initalize the PRNG */
 	randk_seed();
 
+    gl_driver = gi.cvar ("gl_driver", "", 0);
+    vid_ref = gi.cvar ("vid_ref", "", 0);
+    gl_driver_fog = gi.cvar ("gl_driver_fog", "opengl32", CVAR_NOSET | CVAR_ARCHIVE);
+    
+    Fog_Init();
+    
+    developer = gi.cvar("developer", "0", CVAR_SERVERINFO);
+    readout   = gi.cvar("readout", "0", CVAR_SERVERINFO);
+    if(readout->value)
+    {
+        max_modelindex = 0;
+        max_soundindex = 0;
+        RealFunc.modelindex = gi.modelindex;
+        gi.modelindex       = Debug_Modelindex;
+        RealFunc.soundindex = gi.soundindex;
+        gi.soundindex       = Debug_Soundindex;
+    }
+    
 	return &globals;
 }
 
@@ -196,6 +316,34 @@ ClientEndServerFrames(void)
 
 		ClientEndServerFrame(ent);
 	}
+    
+    //reflection stuff -- modified from psychospaz' original code
+    if (level.num_reflectors)
+    {
+        ent = &g_edicts[0];
+        for (i=0 ; i<globals.num_edicts ; i++, ent++) //pointers, not as slow as you think
+        {
+            if (!ent->inuse)
+                continue;
+            if (!ent->s.modelindex)
+                continue;
+            //    if (ent->s.effects & EF_ROTATE)
+            //        continue;
+            if (ent->flags & FL_REFLECT)
+                continue;
+            if (!ent->client && (ent->svflags & SVF_NOCLIENT))
+                continue;
+            if (ent->client && !ent->client->chasetoggle && (ent->svflags & SVF_NOCLIENT))
+                continue;
+            if (ent->svflags&SVF_MONSTER && ent->solid!=SOLID_BBOX)
+                continue;
+            if ( (ent->solid == SOLID_BSP) && (ent->movetype != MOVETYPE_PUSHABLE))
+                continue;
+            if (ent->client && (ent->client->resp.spectator || ent->health<=0 || ent->deadflag == DEAD_DEAD))
+                continue;
+            AddReflection(ent);
+        }
+    }
 }
 
 /*
@@ -347,7 +495,7 @@ CheckDMRules(void)
 	{
 		if (level.time >= timelimit->value * 60)
 		{
-			gi.bprintf(PRINT_HIGH, "Timelimit hit.\n");
+			safe_bprintf(PRINT_HIGH, "Timelimit hit.\n");
 			EndDMLevel();
 			return;
 		}
@@ -366,7 +514,7 @@ CheckDMRules(void)
 
 			if (cl->resp.score >= fraglimit->value)
 			{
-				gi.bprintf(PRINT_HIGH, "Fraglimit hit.\n");
+				safe_bprintf(PRINT_HIGH, "Fraglimit hit.\n");
 				EndDMLevel();
 				return;
 			}
@@ -411,13 +559,25 @@ ExitLevel(void)
 /*
  * Advances the world by 0.1 seconds
  */
+void CheckNumTechs(void);
+
 void
 G_RunFrame(void)
 {
 	int i;
 	edict_t *ent;
 
-	level.framenum++;
+    // Knightmare- dm pause
+    if (paused && deathmatch->value)
+        return;
+    
+    if(level.freeze)
+    {
+        level.freezeframes++;
+        if(level.freezeframes >= stasis_time->value*10)
+            level.freeze = false;
+    } else
+        level.framenum++;
 	level.time = level.framenum * FRAMETIME;
 
 	gibsthisframe = 0;
@@ -433,7 +593,10 @@ G_RunFrame(void)
 		return;
 	}
 
-	/* treat each object in turn
+    if (use_techs->value || (ctf->value && !((int)dmflags->value & DF_CTF_NO_TECH)) )
+        CheckNumTechs ();
+
+    /* treat each object in turn
 	   even the world gets a chance
 	   to think */
 	ent = &g_edicts[0];
@@ -465,7 +628,10 @@ G_RunFrame(void)
 		if ((i > 0) && (i <= maxclients->value))
 		{
 			ClientBeginServerFrame(ent);
-			continue;
+            // ACEBOT_ADD
+            if (!ent->is_bot) // Bots need G_RunEntity called
+                continue;
+            // ACEBOT_END
 		}
 
 		G_RunEntity(ent);

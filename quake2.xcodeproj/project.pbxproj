@@ -219,7 +219,6 @@
 		A1E39FA622838FB9005B2FB7 /* g_pendulum.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9122838FB8005B2FB7 /* g_pendulum.c */; };
 		A1E39FA722838FB9005B2FB7 /* g_lights.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9222838FB8005B2FB7 /* g_lights.c */; };
 		A1E39FA822838FB9005B2FB7 /* g_lock.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9322838FB9005B2FB7 /* g_lock.c */; };
-		A1E39FA922838FB9005B2FB7 /* g_local.h in Headers */ = {isa = PBXBuildFile; fileRef = A1E39F9422838FB9005B2FB7 /* g_local.h */; };
 		A1E39FAA22838FB9005B2FB7 /* g_reflect.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9522838FB9005B2FB7 /* g_reflect.c */; };
 		A1E39FAB22838FB9005B2FB7 /* g_turret_new.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9622838FB9005B2FB7 /* g_turret_new.c */; };
 		A1E39FAC22838FB9005B2FB7 /* g_moreai.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9722838FB9005B2FB7 /* g_moreai.c */; };
@@ -510,7 +509,6 @@
 		A1E39F9122838FB8005B2FB7 /* g_pendulum.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_pendulum.c; sourceTree = "<group>"; };
 		A1E39F9222838FB8005B2FB7 /* g_lights.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_lights.c; sourceTree = "<group>"; };
 		A1E39F9322838FB9005B2FB7 /* g_lock.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_lock.c; sourceTree = "<group>"; };
-		A1E39F9422838FB9005B2FB7 /* g_local.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = g_local.h; sourceTree = "<group>"; };
 		A1E39F9522838FB9005B2FB7 /* g_reflect.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_reflect.c; sourceTree = "<group>"; };
 		A1E39F9622838FB9005B2FB7 /* g_turret_new.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_turret_new.c; sourceTree = "<group>"; };
 		A1E39F9722838FB9005B2FB7 /* g_moreai.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_moreai.c; sourceTree = "<group>"; };
@@ -732,7 +730,6 @@
 				A15FA1AF2110C5BC0048A3AD /* g_items.c */,
 				A1E39F8A22838FB8005B2FB7 /* g_jetpack.c */,
 				A1E39F9222838FB8005B2FB7 /* g_lights.c */,
-				A1E39F9422838FB9005B2FB7 /* g_local.h */,
 				A1E39F9322838FB9005B2FB7 /* g_lock.c */,
 				A15FA1B62110C5BC0048A3AD /* g_main.c */,
 				A15FA1AD2110C5BC0048A3AD /* g_misc.c */,
@@ -1374,7 +1371,6 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1E39FA922838FB9005B2FB7 /* g_local.h in Headers */,
 				A1E39FA222838FB9005B2FB7 /* g_ctf.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
