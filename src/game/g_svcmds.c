@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +32,7 @@
 void
 Svcmd_Test_f(void)
 {
-	gi.cprintf(NULL, PRINT_HIGH, "Svcmd_Test_f()\n");
+	safe_cprintf(NULL, PRINT_HIGH, "Svcmd_Test_f()\n");
 }
 
 /*
@@ -103,7 +104,7 @@ StringToFilter(char *s, ipfilter_t *f)
 	{
 		if ((*s < '0') || (*s > '9'))
 		{
-			gi.cprintf(NULL, PRINT_HIGH, "Bad filter address: %s\n", s);
+			safe_cprintf(NULL, PRINT_HIGH, "Bad filter address: %s\n", s);
 			return false;
 		}
 
@@ -190,7 +191,7 @@ SVCmd_AddIP_f(void)
 
 	if (gi.argc() < 3)
 	{
-		gi.cprintf(NULL, PRINT_HIGH, "Usage:  addip <ip-mask>\n");
+		safe_cprintf(NULL, PRINT_HIGH, "Usage:  addip <ip-mask>\n");
 		return;
 	}
 
@@ -206,7 +207,7 @@ SVCmd_AddIP_f(void)
 	{
 		if (numipfilters == MAX_IPFILTERS)
 		{
-			gi.cprintf(NULL, PRINT_HIGH, "IP filter list is full\n");
+			safe_cprintf(NULL, PRINT_HIGH, "IP filter list is full\n");
 			return;
 		}
 
@@ -227,7 +228,7 @@ SVCmd_RemoveIP_f(void)
 
 	if (gi.argc() < 3)
 	{
-		gi.cprintf(NULL, PRINT_HIGH, "Usage:  sv removeip <ip-mask>\n");
+		safe_cprintf(NULL, PRINT_HIGH, "Usage:  sv removeip <ip-mask>\n");
 		return;
 	}
 
@@ -247,12 +248,12 @@ SVCmd_RemoveIP_f(void)
 			}
 
 			numipfilters--;
-			gi.cprintf(NULL, PRINT_HIGH, "Removed.\n");
+			safe_cprintf(NULL, PRINT_HIGH, "Removed.\n");
 			return;
 		}
 	}
 
-	gi.cprintf(NULL, PRINT_HIGH, "Didn't find %s.\n", gi.argv(2));
+	safe_cprintf(NULL, PRINT_HIGH, "Didn't find %s.\n", gi.argv(2));
 }
 
 void
@@ -261,12 +262,12 @@ SVCmd_ListIP_f(void)
 	int i;
 	byte b[4];
 
-	gi.cprintf(NULL, PRINT_HIGH, "Filter list:\n");
+	safe_cprintf(NULL, PRINT_HIGH, "Filter list:\n");
 
 	for (i = 0; i < numipfilters; i++)
 	{
 		*(unsigned *)b = ipfilters[i].compare;
-		gi.cprintf(NULL, PRINT_HIGH, "%3i.%3i.%3i.%3i\n", b[0],
+		safe_cprintf(NULL, PRINT_HIGH, "%3i.%3i.%3i.%3i\n", b[0],
 				b[1], b[2], b[3]);
 	}
 }
@@ -291,13 +292,13 @@ SVCmd_WriteIP_f(void)
 		sprintf(name, "%s/listip.cfg", game->string);
 	}
 
-	gi.cprintf(NULL, PRINT_HIGH, "Writing %s.\n", name);
+	safe_cprintf(NULL, PRINT_HIGH, "Writing %s.\n", name);
 
 	f = Q_fopen(name, "wb");
 
 	if (!f)
 	{
-		gi.cprintf(NULL, PRINT_HIGH, "Couldn't open %s\n", name);
+		safe_cprintf(NULL, PRINT_HIGH, "Couldn't open %s\n", name);
 		return;
 	}
 
@@ -344,8 +345,65 @@ ServerCommand(void)
 	{
 		SVCmd_WriteIP_f();
 	}
-	else
-	{
-		gi.cprintf(NULL, PRINT_HIGH, "Unknown server command \"%s\"\n", cmd);
-	}
+
+    // ACEBOT_ADD
+    else if(Q_stricmp (cmd, "acedebug") == 0)
+        if (strcmp(gi.argv(2),"on")==0)
+        {
+            safe_bprintf (PRINT_MEDIUM, "ACE: Debug Mode On\n");
+            debug_mode = true;
+        }
+        else
+        {
+            safe_bprintf (PRINT_MEDIUM, "ACE: Debug Mode Off\n");
+            debug_mode = false;
+        }
+    
+        else if (Q_stricmp (cmd, "addbot") == 0)
+        {
+            if (!deathmatch->value) // Knightmare added
+            {
+                safe_bprintf (PRINT_MEDIUM, "ACE: Can only spawn bots in deathmatch mode.\n");
+                return;
+            }
+            if(ctf->value) // name, skin, team
+                ACESP_SpawnBot (gi.argv(2), gi.argv(3), gi.argv(4), NULL);
+            else // name, skin
+                ACESP_SpawnBot (NULL, gi.argv(2), gi.argv(3), NULL);
+        }
+    
+    // removebot
+        else if(Q_stricmp (cmd, "removebot") == 0)
+            ACESP_RemoveBot(gi.argv(2));
+    // Node saving
+        else if(Q_stricmp (cmd, "savenodes") == 0)
+            ACEND_SaveNodes();
+    // ACEBOT_END
+    // Knightmare added- DM pause
+        else if(Q_stricmp (cmd, "dmpause") == 0)
+        {
+            if (!deathmatch->value) {
+                safe_cprintf (NULL, PRINT_HIGH, "Dmpause only works in deathmatch.\n", cmd);
+                paused = false;
+                return;
+            }
+            paused = !paused;
+            if (!paused) // unfreeze players
+            {
+                int    i;
+                edict_t *player;
+                for (i=0; i<game.maxclients; i++)
+                {
+                    player = &g_edicts[1+i];
+                    if (!player->inuse || !player->client)
+                        continue;
+                    if (player->is_bot || player->client->ctf_grapple)
+                        continue;
+                    player->client->ps.pmove.pm_flags &= ~PMF_NO_PREDICTION;
+                }
+                safe_bprintf (PRINT_HIGH, "Game unpaused\n");
+            }
+        }
+        else
+            safe_cprintf (NULL, PRINT_HIGH, "Unknown server command \"%s\"\n", cmd);
 }

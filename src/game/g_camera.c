@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // g_camera.c (func_monitor)
 
-#include "g_local.h"
+#include "header/local.h"
 
 void camera_off (edict_t *ent)
 {

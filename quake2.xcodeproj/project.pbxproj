@@ -223,7 +223,6 @@
 		A1E39FAB22838FB9005B2FB7 /* g_turret_new.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9622838FB9005B2FB7 /* g_turret_new.c */; };
 		A1E39FAC22838FB9005B2FB7 /* g_moreai.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9722838FB9005B2FB7 /* g_moreai.c */; };
 		A1E39FAD22838FB9005B2FB7 /* g_splinetrain.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9822838FB9005B2FB7 /* g_splinetrain.c */; };
-		A1E39FAE22838FB9005B2FB7 /* g_save.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9922838FB9005B2FB7 /* g_save.c */; };
 		A1E39FAF22838FB9005B2FB7 /* g_vehicle.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9A22838FB9005B2FB7 /* g_vehicle.c */; };
 		A1E39FB022838FB9005B2FB7 /* g_fog.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9B22838FB9005B2FB7 /* g_fog.c */; };
 /* End PBXBuildFile section */
@@ -513,7 +512,6 @@
 		A1E39F9622838FB9005B2FB7 /* g_turret_new.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_turret_new.c; sourceTree = "<group>"; };
 		A1E39F9722838FB9005B2FB7 /* g_moreai.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_moreai.c; sourceTree = "<group>"; };
 		A1E39F9822838FB9005B2FB7 /* g_splinetrain.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_splinetrain.c; sourceTree = "<group>"; };
-		A1E39F9922838FB9005B2FB7 /* g_save.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_save.c; sourceTree = "<group>"; };
 		A1E39F9A22838FB9005B2FB7 /* g_vehicle.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_vehicle.c; sourceTree = "<group>"; };
 		A1E39F9B22838FB9005B2FB7 /* g_fog.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_fog.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -741,7 +739,6 @@
 				A1E39F9122838FB8005B2FB7 /* g_pendulum.c */,
 				A15FA1C42110C5BC0048A3AD /* g_phys.c */,
 				A1E39F9522838FB9005B2FB7 /* g_reflect.c */,
-				A1E39F9922838FB9005B2FB7 /* g_save.c */,
 				A15FA1AC2110C5BC0048A3AD /* g_spawn.c */,
 				A1E39F9822838FB9005B2FB7 /* g_splinetrain.c */,
 				A15FA1B32110C5BC0048A3AD /* g_svcmds.c */,
@@ -1586,7 +1583,6 @@
 				A15FA383211115610048A3AD /* medic.c in Sources */,
 				A15FA377211114990048A3AD /* g_weapon.c in Sources */,
 				A1E39F9C22838FB9005B2FB7 /* g_crane.c in Sources */,
-				A1E39FAE22838FB9005B2FB7 /* g_save.c in Sources */,
 				A1E39FA322838FB9005B2FB7 /* g_model.c in Sources */,
 				A15FA371211114990048A3AD /* g_spawn.c in Sources */,
 				A15FA3792111152E0048A3AD /* gladiator.c in Sources */,

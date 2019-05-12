@@ -212,6 +212,8 @@ InitGame(void)
 {
 	gi.dprintf("Game is starting up.\n");
 	gi.dprintf("Game is %s built on %s.\n", GAMEVERSION, BUILD_DATE);
+	// Knightmare- init cvars
+	lithium_defaults();
 
 	gun_x = gi.cvar("gun_x", "0", 0);
 	gun_y = gi.cvar("gun_y", "0", 0);
@@ -233,12 +235,18 @@ InitGame(void)
 	deathmatch = gi.cvar("deathmatch", "0", CVAR_LATCH);
 	coop = gi.cvar("coop", "0", CVAR_LATCH);
 	skill = gi.cvar("skill", "1", CVAR_LATCH);
-	maxentities = gi.cvar("maxentities", "1024", CVAR_LATCH);
+	// Knightmare- increase maxentities
+	//maxentities = gi.cvar ("maxentities", "1024", CVAR_LATCH);
+	maxentities = gi.cvar ("maxentities", va("%i",MAX_EDICTS), CVAR_LATCH);
 
 	/* change anytime vars */
 	dmflags = gi.cvar("dmflags", "0", CVAR_SERVERINFO);
 	fraglimit = gi.cvar("fraglimit", "0", CVAR_SERVERINFO);
 	timelimit = gi.cvar("timelimit", "0", CVAR_SERVERINFO);
+//ZOID
+	capturelimit = gi.cvar ("capturelimit", "0", CVAR_SERVERINFO);
+	instantweap = gi.cvar ("instantweap", "0", CVAR_SERVERINFO);
+//ZOID
 	password = gi.cvar("password", "", CVAR_USERINFO);
 	spectator_password = gi.cvar("spectator_password", "", CVAR_USERINFO);
 	needpass = gi.cvar("needpass", "0", CVAR_SERVERINFO);
@@ -258,6 +266,107 @@ InitGame(void)
 	/* dm map list */
 	sv_maplist = gi.cvar("sv_maplist", "", 0);
 
+	// Lazarus
+	actorchicken = gi.cvar("actorchicken", "1", CVAR_SERVERINFO|CVAR_LATCH);
+	actorjump = gi.cvar("actorjump", "1", CVAR_SERVERINFO|CVAR_LATCH);
+	actorscram = gi.cvar("actorscram", "1", CVAR_SERVERINFO|CVAR_LATCH);
+	alert_sounds = gi.cvar("alert_sounds", "0", CVAR_SERVERINFO|CVAR_LATCH);
+	allow_fog = gi.cvar ("allow_fog", "1", CVAR_ARCHIVE);
+
+	// set to 0 to bypass target_changelevel clear inventory flag
+	// because some user maps have this erroneously set
+	allow_clear_inventory = gi.cvar ("allow_clear_inventory", "1", CVAR_ARCHIVE);
+
+	cd_loopcount = gi.cvar("cd_loopcount","4",0);
+	cl_gun = gi.cvar("cl_gun", "1", 0);
+	cl_3dcam = gi.cvar("cl_3dcam", "0", 0); // Knightmare added
+	corpse_fade = gi.cvar("corpse_fade", "0", CVAR_SERVERINFO|CVAR_LATCH);
+	corpse_fadetime = gi.cvar("corpse_fadetime", "20", 0);
+	crosshair = gi.cvar("crosshair", "1", 0);
+	footstep_sounds = gi.cvar("footstep_sounds", "0", CVAR_SERVERINFO|CVAR_LATCH);
+	fov = gi.cvar("fov", "90", 0);
+	hand = gi.cvar("hand", "0", 0);
+	jetpack_weenie = gi.cvar("jetpack_weenie", "0", CVAR_SERVERINFO);
+	joy_pitchsensitivity = gi.cvar("joy_pitchsensitivity", "1", 0);
+	joy_yawsensitivity = gi.cvar("joy_yawsensitivity", "-1", 0);
+	jump_kick = gi.cvar("jump_kick", "0", CVAR_SERVERINFO|CVAR_LATCH);
+	lights = gi.cvar("lights", "1", 0);
+	lightsmin = gi.cvar("lightsmin", "a", CVAR_SERVERINFO);
+	m_pitch = gi.cvar("m_pitch", "0.022", 0);
+	m_yaw = gi.cvar("m_yaw", "0.022", 0);
+	monsterjump = gi.cvar("monsterjump", "1", CVAR_SERVERINFO|CVAR_LATCH);
+	rocket_strafe = gi.cvar("rocket_strafe", "0", 0);
+	s_primary = gi.cvar("s_primary", "0", 0);
+#ifdef KMQUAKE2_ENGINE_MOD
+	sv_maxgibs = gi.cvar("sv_maxgibs", "160", CVAR_SERVERINFO);
+#else
+	sv_maxgibs = gi.cvar("sv_maxgibs", "20", CVAR_SERVERINFO);
+#endif
+	turn_rider = gi.cvar("turn_rider", "1", CVAR_SERVERINFO);
+	zoomrate = gi.cvar("zoomrate", "80", CVAR_ARCHIVE);
+	zoomsnap = gi.cvar("zoomsnap", "20", CVAR_ARCHIVE);
+
+	// shift_ and rotate_distance only used for debugging stuff - this is the distance
+	// an entity will be moved by "item_left", "item_right", etc.
+	shift_distance = gi.cvar("shift_distance", "1", CVAR_SERVERINFO);
+	rotate_distance = gi.cvar("rotate_distance", "1", CVAR_SERVERINFO);
+
+	// GL stuff
+	gl_clear = gi.cvar("gl_clear", "0", 0);
+
+	// Lazarus saved cvars that we may or may not manipulate, but need to
+	// restore to original values upon map exit.
+	lazarus_cd_loop = gi.cvar("lazarus_cd_loop", "0", 0);
+	lazarus_gl_clear= gi.cvar("lazarus_gl_clear","0", 0);
+	lazarus_pitch   = gi.cvar("lazarus_pitch",   "0", 0);
+	lazarus_yaw     = gi.cvar("lazarus_yaw",     "0", 0);
+	lazarus_joyp    = gi.cvar("lazarus_joyp",    "0", 0);
+	lazarus_joyy    = gi.cvar("lazarus_joyy",    "0", 0);
+	lazarus_cl_gun  = gi.cvar("lazarus_cl_gun",  "0", 0);
+	lazarus_crosshair = gi.cvar("lazarus_crosshair", "0", 0);
+
+	/*if(lazarus_gl_clear->value)
+		gi.cvar_forceset("gl_clear",         va("%d",lazarus_gl_clear->value));
+	else
+		gi.cvar_forceset("lazarus_gl_clear", va("%d",gl_clear->value));*/
+
+	if(!deathmatch->value && !coop->value)
+	{
+		/*if(lazarus_pitch->value) {
+			gi.cvar_forceset("cd_loopcount",         va("%d",(int)(lazarus_cd_loop->value)));
+			gi.cvar_forceset("m_pitch",              va("%f",lazarus_pitch->value));
+			gi.cvar_forceset("m_yaw",                va("%f",lazarus_yaw->value));
+			gi.cvar_forceset("cl_gun",               va("%d",(int)(lazarus_cl_gun->value)));
+			gi.cvar_forceset("crosshair",            va("%d",(int)(lazarus_crosshair->value)));
+		} else {*/
+			gi.cvar_forceset("lazarus_cd_loop",        va("%d",(int)(cd_loopcount->value)));
+#ifndef KMQUAKE2_ENGINE_MOD // engine has zoom autosensitivity
+			gi.cvar_forceset("lazarus_pitch",          va("%f",m_pitch->value));
+			gi.cvar_forceset("lazarus_yaw",            va("%f",m_yaw->value));
+			gi.cvar_forceset("lazarus_joyp",           va("%f",joy_pitchsensitivity->value));
+			gi.cvar_forceset("lazarus_joyy",           va("%f",joy_yawsensitivity->value));
+#endif
+			gi.cvar_forceset("lazarus_cl_gun",         va("%d",(int)(cl_gun->value)));
+			gi.cvar_forceset("lazarus_crosshair",      va("%d",(int)(crosshair->value)));
+		//}
+	}
+
+	tpp = gi.cvar ("tpp", "0", CVAR_ARCHIVE);
+	tpp_auto = gi.cvar ("tpp_auto", "1", 0);
+	crossh = gi.cvar ("crossh", "1", 0);
+	allow_download = gi.cvar("allow_download", "0", 0);
+
+	blaster_color = gi.cvar("blaster_color", "1", 0); // Knightmare added
+
+	// If this is an SP game and "readout" is not set, force allow_download off
+	// so we don't get the annoying "Refusing to download path with .." messages
+	// due to misc_actor sounds.
+	if(allow_download->value && !readout->value && !deathmatch->value)
+		gi.cvar_forceset("allow_download", "0");
+
+	bounce_bounce = gi.cvar("bounce_bounce", "0.5", 0);
+	bounce_minv   = gi.cvar("bounce_minv",   "60",  0);
+
 	/* items */
 	InitItems();
 
@@ -274,6 +383,7 @@ InitGame(void)
 	game.maxclients = maxclients->value;
 	game.clients = gi.TagMalloc(game.maxclients * sizeof(game.clients[0]), TAG_GAME);
 	globals.num_edicts = game.maxclients + 1;
+    CTFInit();
 }
 
 /* ========================================================= */
@@ -739,7 +849,10 @@ ReadClient(FILE *f, gclient_t *client, short save_ver)
 
 	fread(client, sizeof(*client), 1, f);
 
-	for (field = clientfields; field->name; field++)
+    client->pers.spawn_landmark = false;
+    client->pers.spawn_levelchange = false;
+
+    for (field = clientfields; field->name; field++)
 	{
 		if (field->save_ver <= save_ver)
 		{
@@ -774,6 +887,12 @@ WriteGame(const char *filename, qboolean autosave)
 	char str_os[32];
 	char str_arch[32];
 
+    if(developer->value)
+        gi.dprintf ("==== WriteGame ====\n");
+    
+    if (!autosave)
+        game.transition_ents = 0;
+    
 	if (!autosave)
 	{
 		SaveClientData();
@@ -831,6 +950,9 @@ ReadGame(const char *filename)
 
 	short save_ver = 0;
 
+    if(developer->value)
+        gi.dprintf ("==== ReadGame ====\n");
+    
 	gi.FreeTags(TAG_GAME);
 
 	f = Q_fopen(filename, "rb");
@@ -1012,6 +1134,9 @@ WriteLevel(const char *filename)
 	int i;
 	edict_t *ent;
 	FILE *f;
+    
+    if(developer->value)
+        gi.dprintf ("==== WriteLevel ====\n");
 
 	f = Q_fopen(filename, "wb");
 
@@ -1037,6 +1162,10 @@ WriteLevel(const char *filename)
 			continue;
 		}
 
+        // Knightmare- don't save reflections
+        if (ent->flags & FL_REFLECT)
+            continue;
+
 		fwrite(&i, sizeof(i), 1, f);
 		WriteEdict(f, ent);
 	}
@@ -1059,6 +1188,7 @@ void
 ReadEdict(FILE *f, edict_t *ent)
 {
 	field_t *field;
+    int        i; // Knightmare added
 
 	fread(ent, sizeof(*ent), 1, f);
 
@@ -1066,6 +1196,9 @@ ReadEdict(FILE *f, edict_t *ent)
 	{
 		ReadField(f, field, (byte *)ent);
 	}
+    // Knightmare- nullify reflection pointers to prevent crash
+    for (i=0; i<6; i++)
+        ent->reflection[i] = NULL;
 }
 
 /*
@@ -1096,6 +1229,7 @@ ReadLevelLocals(FILE *f)
  * this function is called, no clients
  * are connected to the server.
  */
+void LoadTransitionEnts();
 void
 ReadLevel(const char *filename)
 {
@@ -1104,6 +1238,9 @@ ReadLevel(const char *filename)
 	int i;
 	edict_t *ent;
 
+    if(developer->value)
+        gi.dprintf ("==== ReadLevel ====\n");
+    
 	f = Q_fopen(filename, "rb");
 
 	if (!f)
@@ -1187,4 +1324,11 @@ ReadLevel(const char *filename)
 			}
 		}
 	}
+    
+    // DWH: Load transition entities
+    if(game.transition_ents)
+    {
+        LoadTransitionEnts();
+        actor_files();
+    }
 }

@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 #include <direct.h>
-#include "g_local.h"
+#include "header/local.h"
 
 
 // id md2 stuff

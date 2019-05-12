@@ -1,6 +1,6 @@
 // g_turret.c
 
-#include "g_local.h"
+#include "header/local.h"
 
 #define SF_TURRETDRIVER_REMOTE_DRIVER 1
 #define SF_TURRET_PLAYER_CONTROLLABLE 1

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,11 +27,7 @@
 
 #include "header/local.h"
 
-typedef struct
-{
-	char *name;
-	void (*spawn)(edict_t *ent);
-} spawn_t;
+#include "pak.h"
 
 void SP_item_health(edict_t *self);
 void SP_item_health_small(edict_t *self);
@@ -147,6 +144,89 @@ void SP_turret_breach(edict_t *self);
 void SP_turret_base(edict_t *self);
 void SP_turret_driver(edict_t *self);
 
+// Lazarus
+void SP_crane_beam (edict_t *self);
+void SP_crane_hoist (edict_t *self);
+void SP_crane_hook (edict_t *self);
+void SP_crane_control (edict_t *self);
+void SP_crane_reset (edict_t *self);
+void SP_hint_path (edict_t *self);
+void SP_func_bobbingwater (edict_t *self);
+void SP_func_door_rot_dh (edict_t *self);
+void SP_func_door_swinging (edict_t *self);
+
+void SP_func_breakaway (edict_t *self); // Knightmare added
+void SP_func_force_wall(edict_t *ent);
+void SP_func_monitor (edict_t *self);
+void SP_func_pendulum (edict_t *self);
+void SP_func_pivot (edict_t *self);
+void SP_func_pushable (edict_t *self);
+void SP_func_reflect (edict_t *self);
+void SP_func_rotating_dh (edict_t *self);
+void SP_func_trackchange (edict_t *self);
+void SP_func_tracktrain (edict_t *self);
+void SP_func_trainbutton (edict_t *self);
+void SP_func_vehicle (edict_t *self);
+void SP_info_train_start (edict_t *self);
+void SP_misc_light (edict_t *self);
+void SP_model_spawn (edict_t *self);
+void SP_model_train (edict_t *self);
+void SP_model_turret (edict_t *self);
+void SP_monster_makron (edict_t *self);
+void SP_path_track (edict_t *self);
+void SP_target_anger (edict_t *self);
+void SP_target_animation (edict_t *self);
+void SP_target_attractor (edict_t *self);
+void SP_target_CD (edict_t *self);
+void SP_target_change (edict_t *self);
+void SP_target_clone (edict_t *self);
+void SP_target_effect (edict_t *self);
+void SP_target_fade (edict_t *self);
+void SP_target_failure (edict_t *self);
+void SP_target_fog (edict_t *self);
+void SP_target_fountain (edict_t *self);
+void SP_target_lightswitch (edict_t *self);
+void SP_target_locator (edict_t *self);
+void SP_target_lock (edict_t *self);
+void SP_target_lock_clue (edict_t *self);
+void SP_target_lock_code (edict_t *self);
+void SP_target_lock_digit (edict_t *self);
+void SP_target_monitor (edict_t *ent);
+void SP_target_monsterbattle (edict_t *self);
+void SP_target_movewith (edict_t *self);
+void SP_target_precipitation (edict_t *self);
+void SP_target_rocks (edict_t *self);
+void SP_target_rotation (edict_t *self);
+void SP_target_command (edict_t *self);
+void SP_target_set_effect (edict_t *self);
+void SP_target_skill (edict_t *self);
+void SP_target_sky (edict_t *self);
+void SP_target_text (edict_t *self);
+void SP_thing (edict_t *self);
+void SP_tremor_trigger_multiple (edict_t *self);
+void SP_trigger_bbox (edict_t *self);
+void SP_trigger_disguise (edict_t *self);
+void SP_trigger_fog (edict_t *self);
+void SP_trigger_inside (edict_t *self);
+void SP_trigger_look (edict_t *self);
+void SP_trigger_mass (edict_t *self);
+void SP_trigger_scales (edict_t *self);
+void SP_trigger_switch (edict_t *self);
+void SP_trigger_speaker (edict_t *self);
+void SP_trigger_teleporter (edict_t *self);
+void SP_trigger_transition (edict_t *self);
+// transition entities
+void SP_bolt (edict_t *self);
+void SP_debris (edict_t *self);
+void SP_gib (edict_t *self);
+void SP_gibhead (edict_t *self);
+void SP_grenade (edict_t *self);
+void SP_handgrenade (edict_t *self);
+void SP_rocket (edict_t *self);
+//
+// end Lazarus
+
+
 spawn_t spawns[] = {
 	{"item_health", SP_item_health},
 	{"item_health_small", SP_item_health_small},
@@ -157,6 +237,12 @@ spawn_t spawns[] = {
 	{"info_player_deathmatch", SP_info_player_deathmatch},
 	{"info_player_coop", SP_info_player_coop},
 	{"info_player_intermission", SP_info_player_intermission},
+    
+    //ZOID
+    {"info_player_team1", SP_info_player_team1},
+    {"info_player_team2", SP_info_player_team2},
+    {"info_player_team3", SP_info_player_team3}, // Knightmare added
+    //ZOID
 
 	{"func_plat", SP_func_plat},
 	{"func_button", SP_func_button},
@@ -168,6 +254,7 @@ spawn_t spawns[] = {
 	{"func_water", SP_func_water},
 	{"func_conveyor", SP_func_conveyor},
 	{"func_areaportal", SP_func_areaportal},
+    {"func_reflect", SP_func_reflect},
 	{"func_clock", SP_func_clock},
 	{"func_wall", SP_func_wall},
 	{"func_object", SP_func_object},
@@ -195,6 +282,8 @@ spawn_t spawns[] = {
 	{"target_goal", SP_target_goal},
 	{"target_splash", SP_target_splash},
 	{"target_spawner", SP_target_spawner},
+    {"target_actor", SP_target_actor},
+    {"target_animation", SP_target_animation},
 	{"target_blaster", SP_target_blaster},
 	{"target_crosslevel_trigger", SP_target_crosslevel_trigger},
 	{"target_crosslevel_target", SP_target_crosslevel_target},
@@ -219,6 +308,10 @@ spawn_t spawns[] = {
 
 	{"misc_explobox", SP_misc_explobox},
 	{"misc_banner", SP_misc_banner},
+    //ZOID
+    {"misc_ctf_banner", SP_misc_ctf_banner},
+    {"misc_ctf_small_banner", SP_misc_ctf_small_banner},
+    //ZOID
 	{"misc_satellite_dish", SP_misc_satellite_dish},
 	{"misc_gib_arm", SP_misc_gib_arm},
 	{"misc_gib_leg", SP_misc_gib_leg},
@@ -231,6 +324,10 @@ spawn_t spawns[] = {
 	{"misc_strogg_ship", SP_misc_strogg_ship},
 	{"misc_teleporter", SP_misc_teleporter},
 	{"misc_teleporter_dest", SP_misc_teleporter_dest},
+    //ZOID
+    {"trigger_teleport", SP_trigger_teleport},
+    {"info_teleport_destination", SP_info_teleport_destination},
+    //ZOID
 	{"misc_blackhole", SP_misc_blackhole},
 	{"misc_eastertank", SP_misc_eastertank},
 	{"misc_easterchick", SP_misc_easterchick},
@@ -265,8 +362,98 @@ spawn_t spawns[] = {
 	{"turret_base", SP_turret_base},
 	{"turret_driver", SP_turret_driver},
 
+    // Lazarus
+    {"crane_beam",   SP_crane_beam},
+    {"crane_hoist",  SP_crane_hoist},
+    {"crane_hook",   SP_crane_hook},
+    {"crane_control",SP_crane_control},
+    {"crane_reset",SP_crane_reset},
+    {"func_bobbingwater", SP_func_bobbingwater},
+    {"func_door_rot_dh", SP_func_door_rot_dh},
+    {"func_door_swinging", SP_func_door_swinging},
+    {"func_force_wall", SP_func_force_wall},
+    
+    {"func_breakaway", SP_func_breakaway}, // Knightmare added
+    {"func_monitor", SP_func_monitor},
+    {"func_pendulum", SP_func_pendulum},
+    {"func_pivot", SP_func_pivot},
+    {"func_pushable", SP_func_pushable},
+    {"func_rotating_dh", SP_func_rotating_dh},
+    {"func_trackchange", SP_func_trackchange},
+    {"func_tracktrain", SP_func_tracktrain},
+    {"func_trainbutton", SP_func_trainbutton},
+    {"func_vehicle", SP_func_vehicle},
+    {"hint_path", SP_hint_path},
+    {"info_train_start", SP_info_train_start},
+    {"misc_light", SP_misc_light},
+    {"model_spawn",  SP_model_spawn},
+    {"model_train", SP_model_train},
+    {"model_turret", SP_model_turret},
+    {"monster_makron", SP_monster_makron},
+    {"path_track", SP_path_track},
+    {"target_anger", SP_target_anger},
+    {"target_attractor", SP_target_attractor},
+    {"target_bmodel_spawner", SP_target_clone},
+    {"target_cd", SP_target_CD},
+    {"target_change", SP_target_change},
+    {"target_clone", SP_target_clone},
+    {"target_effect", SP_target_effect},
+    {"target_fade", SP_target_fade},
+    {"target_failure", SP_target_failure},
+    {"target_fog", SP_target_fog},
+    {"target_fountain", SP_target_fountain},
+    {"target_lightswitch", SP_target_lightswitch},
+    {"target_locator", SP_target_locator},
+    {"target_lock", SP_target_lock},
+    {"target_lock_clue", SP_target_lock_clue},
+    {"target_lock_code", SP_target_lock_code},
+    {"target_lock_digit", SP_target_lock_digit},
+    {"target_monitor", SP_target_monitor},
+    {"target_monsterbattle", SP_target_monsterbattle},
+    {"target_movewith", SP_target_movewith},
+    {"target_precipitation", SP_target_precipitation},
+    {"target_rocks", SP_target_rocks},
+    {"target_rotation", SP_target_rotation},
+    {"target_command", SP_target_command},
+    {"target_set_effect", SP_target_set_effect},
+    {"target_skill", SP_target_skill},
+    {"target_sky", SP_target_sky},
+    {"target_text", SP_target_text},
+    {"thing", SP_thing},
+    {"tremor_trigger_multiple", SP_tremor_trigger_multiple},
+    {"trigger_bbox", SP_trigger_bbox},
+    {"trigger_disguise", SP_trigger_disguise},
+    {"trigger_fog", SP_trigger_fog},
+    {"trigger_inside", SP_trigger_inside},
+    {"trigger_look", SP_trigger_look},
+    {"trigger_mass", SP_trigger_mass},
+    {"trigger_scales", SP_trigger_scales},
+    {"trigger_speaker", SP_trigger_speaker},
+    {"trigger_switch", SP_trigger_switch},
+    {"trigger_teleporter", SP_trigger_teleporter},
+    {"trigger_transition", SP_trigger_transition},
+    // transition entities
+    {"bolt", SP_bolt},
+    {"debris", SP_debris},
+    {"gib", SP_gib},
+    {"gibhead", SP_gibhead},
+    {"grenade", SP_grenade},
+    {"hgrenade", SP_handgrenade},
+    {"rocket", SP_rocket},
+    {"homing rocket", SP_rocket},
+    // end Lazarus
+    
 	{NULL, NULL}
 };
+
+// Knightmare- global pointer for the entity alias script
+// The file should be loaded into memory, because we can't
+// re-open and read it for every entity we parse
+char    *alias_data;
+int        alias_data_size;
+#ifndef KMQUAKE2_ENGINE_MOD
+qboolean alias_from_pak;
+#endif
 
 /*
  * Finds the spawn function for
@@ -284,12 +471,18 @@ ED_CallSpawn(edict_t *ent)
 		return;
 	}
 
+    // Lazarus: if this fails, edict is freed.
+    
 	if (!ent->classname)
 	{
 		gi.dprintf("ED_CallSpawn: NULL classname\n");
 		G_FreeEdict(ent);
 		return;
 	}
+    
+    // Lazarus: Preserve original angles for movewith stuff
+    //          before G_SetMoveDir wipes 'em out
+    VectorCopy(ent->s.angles, ent->org_angles);
 
 	/* check item spawn functions */
 	for (i = 0, item = itemlist; i < game.num_items; i++, item++)
@@ -319,6 +512,7 @@ ED_CallSpawn(edict_t *ent)
 	}
 
 	gi.dprintf("%s doesn't have a spawn function\n", ent->classname);
+    G_FreeEdict(ent);
 }
 
 char *
@@ -430,6 +624,288 @@ ED_ParseField(const char *key, const char *value, edict_t *ent)
 }
 
 /*
+ ==============================================================================
+ 
+ ALIAS SCRIPT LOADING
+ 
+ ==============================================================================
+ */
+
+#ifndef KMQUAKE2_ENGINE_MOD
+/*
+ ====================
+ ReadTextFile
+ 
+ Called from LoadAliasData to try
+ loading script file from disk.
+ ====================
+ */
+char *ReadTextFile (char *filename, int *size)
+{
+    FILE *fp;
+    char *filestring = NULL;
+    int len;
+    
+    fp = fopen(filename, "r");
+    if (!fp)
+        return NULL;
+    
+    fseek(fp, 0, SEEK_END);
+    len = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    
+    filestring = gi.TagMalloc(len + 1, TAG_LEVEL);
+    if (!filestring)
+    {
+        fclose(fp);
+        return NULL;
+    }
+    
+    len = fread(filestring, 1, len, fp);
+    *size = len;
+    filestring[len] = 0;
+    
+    fclose(fp);
+    
+    return filestring;
+}
+
+/*
+ ====================
+ LoadAliasFile
+ 
+ Tries to load script file from
+ disk, and then from a pak file.
+ ====================
+ */
+qboolean LoadAliasFile (char *name)
+{
+    char aliasfilename[MAX_QPATH] = "";
+    
+    alias_from_pak = false;
+    
+    GameDirRelativePath (name, aliasfilename);
+    alias_data = ReadTextFile(aliasfilename, &alias_data_size);
+    
+    // If file doesn't exist on hard disk, it must be in a pak file
+    if (!alias_data)
+    {
+        cvar_t            *basedir, *gamedir;
+        char            filename[256];
+        char            pakfile[256];
+        char            textname[128];
+        int                i, k, num, numitems;
+        qboolean        in_pak = false;
+        FILE            *fpak;
+        pak_header_t    pakheader;
+        pak_item_t        pakitem;
+        
+        basedir = gi.cvar("basedir", "", 0);
+        gamedir = gi.cvar("gamedir", "", 0);
+        strcpy(filename,basedir->string);
+        sprintf(textname, name);
+        
+        if(strlen(gamedir->string))
+            strcpy(filename,gamedir->string);
+        // check all pakfiles in current gamedir
+        for (i=0; i<10; i++)
+        {
+            sprintf(pakfile,"%s/pak%d.pak",filename,i);
+            if (NULL != (fpak = fopen(pakfile, "rb")))
+            {
+                num=fread(&pakheader,1,sizeof(pak_header_t),fpak);
+                if(num >= sizeof(pak_header_t))
+                {
+                    if (pakheader.id[0] == 'P' &&
+                        pakheader.id[1] == 'A' &&
+                        pakheader.id[2] == 'C' &&
+                        pakheader.id[3] == 'K'   )
+                    {
+                        numitems = pakheader.dsize/sizeof(pak_item_t);
+                        fseek(fpak,pakheader.dstart,SEEK_SET);
+                        for(k=0; k<numitems && !in_pak; k++)
+                        {
+                            fread(&pakitem,1,sizeof(pak_item_t),fpak);
+                            if (!stricmp(pakitem.name,textname))
+                            {
+                                in_pak = true;
+                                fseek(fpak,pakitem.start,SEEK_SET);
+                                alias_data = gi.TagMalloc(pakitem.size + 1, TAG_LEVEL);
+                                if (!alias_data) {
+                                    fclose(fpak);
+                                    gi.dprintf("LoadAliasData: Memory allocation failure for entalias.dat\n");
+                                    return false;
+                                }
+                                alias_data_size = fread(alias_data,1,pakitem.size,fpak);
+                                alias_data[pakitem.size] = 0; // put end marker
+                                alias_from_pak = true;
+                            }
+                        }
+                    }
+                }
+                fclose(fpak);
+            }
+        }
+    }
+    
+    if (!alias_data)
+        return false;
+    
+    return true;
+}
+#endif
+
+/*
+ ====================
+ LoadAliasData
+ 
+ Loads entity alias file either on disk
+ or from a pak file in the game dir.
+ ====================
+ */
+void LoadAliasData (void)
+{
+#ifdef KMQUAKE2_ENGINE_MOD // use new engine file loading function instead
+    // try per-level script file
+    alias_data_size = gi.LoadFile(va("ext_data/entalias/%s.alias", level.mapname), (void **)&alias_data);
+    if (alias_data_size < 2) // file not found, try global file
+        alias_data_size = gi.LoadFile("ext_data/entalias.def", (void **)&alias_data);
+    if (alias_data_size < 2) // file still not found, try old filename
+        alias_data_size = gi.LoadFile("scripts/entalias.dat", (void **)&alias_data);
+#else
+    if (!LoadAliasFile(va("ext_data/entalias/%s.alias", level.mapname)))
+        if (!LoadAliasFile("ext_data/entalias.def"))
+            LoadAliasFile("scripts/entalias.dat");
+#endif
+}
+
+/*
+ ====================
+ ED_ParseEntityAlias
+ 
+ Parses an edict, looking for its classname, and then
+ looks in the entity alias file for an alias, and
+ loads that if found.
+ Returns true if an alias was loaded for the given entity.
+ ====================
+ */
+qboolean ED_ParseEntityAlias (char *data, edict_t *ent)
+{
+    qboolean    classname_found, alias_found, alias_loaded;
+    char        *search_data;
+    char        *search_token;
+    char        entclassname[256];
+    char        keyname[256];
+    int            braceLevel;
+    
+    classname_found = false;
+    alias_found    = false;
+    alias_loaded = false;
+    braceLevel = 0;
+    
+    if (!alias_data) // If no alias file was loaded, don't bother
+        return false;
+    
+    search_data = data;  // copy entity data postion
+    // go through all the dictionary pairs looking for the classname
+    while (1)
+    {    //parse keyname
+        search_token = COM_Parse (&search_data);
+        if (!search_data)
+            gi.error ("ED_ParseEntityAlias: end of entity data without closing brace");
+        if (search_token[0] == '}')
+            break;
+        if (!strcmp(search_token, "classname"))
+            classname_found = true;
+        
+        // parse value
+        search_token = COM_Parse (&search_data);
+        if (!search_data)
+            gi.error ("ED_ParseEntityAlias: end of entity data without closing brace");
+        if (search_token[0] == '}')
+            gi.error ("ED_ParseEntityAlias: closing brace without entity data");
+        // if we've found the classname, exit loop
+        if (classname_found) {
+            strncpy (entclassname, search_token, sizeof(entclassname)-1);
+            break;
+        }
+    }
+    // then search the entalias.def file for that classname
+    if (classname_found)
+    {
+        search_data = alias_data;    // copy alias data postion
+        while (search_data < (alias_data + alias_data_size))
+        {
+            search_token = COM_Parse (&search_data);
+            if (!search_data)
+                return false;
+            if (!search_token)
+                break;
+            // see if we're inside the braces of an alias definition
+            if (search_token[0] == '{') braceLevel++;
+            else if (search_token[0] == '}') braceLevel--;
+            if (braceLevel < 0) {
+                gi.dprintf ("ED_ParseEntityAlias: closing brace without matching opening brace\n");
+                return false;
+            }
+            // matching classname must be outside braces
+            if (!strcmp(search_token, entclassname) && (braceLevel == 0)) {
+                //gi.dprintf ("Alias for %s found in alias script file.\n", search_token);
+                alias_found = true;
+                break;
+            }
+        }
+        // then if that classname is found, load the fields from that alias
+        if (alias_found)
+        {    // get the opening curly brace
+            search_token = COM_Parse (&search_data);
+            if (!search_data) {
+                gi.dprintf ("ED_ParseEntityAlias: unexpected EOF\n");
+                return false;
+            }
+            if (search_token[0] != '{') {
+                gi.dprintf ("ED_ParseEntityAlias: found %s when expecting {\n", search_token);
+                return false;
+            }
+            // go through all the dictionary pairs
+            while (search_data < (alias_data + alias_data_size))
+            {
+                // parse key
+                search_token = COM_Parse (&search_data);
+                if (!search_data) {
+                    gi.dprintf ("ED_ParseEntityAlias: EOF without closing brace\n");
+                    return false;
+                }
+                if (search_token[0] == '}')
+                    break;
+                strncpy (keyname, search_token, sizeof(keyname)-1);
+                
+                // parse value
+                search_token = COM_Parse (&search_data);
+                if (!search_data) {
+                    gi.dprintf ("ED_ParseEntityAlias: EOF without closing brace\n");
+                    return false;
+                }
+                if (search_token[0] == '}') {
+                    gi.dprintf ("ED_ParseEntityAlias: closing brace without data\n");
+                    return false;
+                }
+                ED_ParseField (keyname, search_token, ent);
+                alias_loaded = true;
+            }
+        }
+    }
+    return alias_loaded;
+}
+/*
+ ==============================================================================
+ END ALIAS SCRIPT LOADING
+ ==============================================================================
+ */
+
+/*
+
+/*
  * Parses an edict out of the given string,
  * returning the new position ed should be
  * a properly initialized empty edict.
@@ -440,6 +916,8 @@ ED_ParseEdict(char *data, edict_t *ent)
 	qboolean init;
 	char keyname[256];
 	const char *com_token;
+    //Knightmare added
+    qboolean    alias_loaded = false;
 
 	if (!ent)
 	{
@@ -448,6 +926,9 @@ ED_ParseEdict(char *data, edict_t *ent)
 
 	init = false;
 	memset(&st, 0, sizeof(st));
+    
+    // Knightmare- look for and load an alias for this ent
+    alias_loaded = ED_ParseEntityAlias (data, ent);
 
 	/* go through all the dictionary pairs */
 	while (1)
@@ -489,6 +970,10 @@ ED_ParseEdict(char *data, edict_t *ent)
 		{
 			continue;
 		}
+        
+        // Knightmare- if the classname was replaced by an alias, don't load it back
+        if (alias_loaded && !strcmp(keyname, "classname"))
+            continue;
 
 		ED_ParseField(keyname, com_token, ent);
 	}
@@ -533,6 +1018,14 @@ G_FindTeams(void)
 		{
 			continue;
 		}
+        
+        // Lazarus: some entities may have psuedo-teams that shouldn't be handled here
+        if (e->classname && !Q_stricmp(e->classname,"target_change"))
+            continue;
+        if (e->classname && !Q_stricmp(e->classname,"target_bmodel_spawner"))
+            continue;
+        if (e->classname && !Q_stricmp(e->classname,"target_clone"))
+            continue;
 
 		chain = e;
 		e->teammaster = e;
@@ -567,8 +1060,94 @@ G_FindTeams(void)
 		}
 	}
 
-	gi.dprintf("%i teams with %i entities.\n", c, c2);
+    if(level.time < 2)
+        gi.dprintf("%i teams with %i entities.\n", c, c2);
 }
+
+
+void trans_ent_filename (char *);
+void ReadEdict (FILE *f, edict_t *ent);
+void LoadTransitionEnts()
+{
+    if(developer->value)
+        gi.dprintf("==== LoadTransitionEnts ====\n");
+    if(game.transition_ents)
+    {
+        char        t_file[_MAX_PATH];
+        int            i, j;
+        FILE        *f;
+        vec3_t        v_spawn;
+        edict_t        *ent;
+        edict_t        *spawn;
+        
+        VectorClear(v_spawn);
+        if(strlen(game.spawnpoint))
+        {
+            spawn = G_Find(NULL,FOFS(targetname),game.spawnpoint);
+            while(spawn)
+            {
+                if(!Q_stricmp(spawn->classname,"info_player_start"))
+                {
+                    VectorCopy(spawn->s.origin,v_spawn);
+                    break;
+                }
+                spawn = G_Find(spawn,FOFS(targetname),game.spawnpoint);
+            }
+        }
+        trans_ent_filename (t_file);
+        f = fopen(t_file,"rb");
+        if(!f)
+            gi.error("LoadTransitionEnts: Cannot open %s\n",t_file);
+        else
+        {
+            for(i=0; i<game.transition_ents; i++)
+            {
+                ent = G_Spawn();
+                ReadEdict(f,ent);
+                // Correction for monsters with health EXACTLY 0
+                // If we don't do this, spawn function will bring
+                // 'em back to life
+                if(ent->svflags & SVF_MONSTER)
+                {
+                    if(!ent->health)
+                    {
+                        ent->health = -1;
+                        ent->deadflag = DEAD_DEAD;
+                    }
+                    else if(ent->deadflag == DEAD_DEAD)
+                    {
+                        ent->health = min(ent->health,-1);
+                    }
+                }
+                VectorAdd(ent->s.origin,v_spawn,ent->s.origin);
+                VectorCopy(ent->s.origin,ent->s.old_origin);
+                ED_CallSpawn (ent);
+                if(ent->owner_id)
+                {
+                    if(ent->owner_id < 0)
+                    {
+                        ent->owner = &g_edicts[-ent->owner_id];
+                    }
+                    else
+                    {
+                        // We KNOW owners precede owned ents in the
+                        // list because of the way it was constructed
+                        ent->owner = NULL;
+                        for(j=game.maxclients+1; j<globals.num_edicts && !ent->owner; j++)
+                        {
+                            if(ent->owner_id == g_edicts[j].id)
+                                ent->owner = &g_edicts[j];
+                        }
+                    }
+                    ent->owner_id = 0;
+                }
+                ent->s.renderfx |= RF_IR_VISIBLE;
+            }
+            fclose(f);
+        }
+    }
+}
+
 
 /*
  * Creates a server's entity / program execution context by
@@ -583,11 +1162,17 @@ SpawnEntities(const char *mapname, char *entities, const char *spawnpoint)
 	int i;
 	float skill_level;
 	static qboolean monster_count_city3 = false;
+    extern int    max_modelindex;
+    extern int    max_soundindex;
+    extern int    lastgibframe;
 
 	if (!mapname || !entities || !spawnpoint)
 	{
 		return;
 	}
+    
+    if (developer->value)
+        gi.dprintf("====== SpawnEntities ========\n");
 
 	skill_level = floor(skill->value);
 
@@ -612,7 +1197,14 @@ SpawnEntities(const char *mapname, char *entities, const char *spawnpoint)
 
 	memset(&level, 0, sizeof(level));
 	memset(g_edicts, 0, game.maxentities * sizeof(g_edicts[0]));
+    // Lazarus: these are used to track model and sound indices
+    //          in g_main.c:
+    max_modelindex = 0;
+    max_soundindex = 0;
 
+    // Lazarus: last frame a gib was spawned in
+    lastgibframe = 0;
+    
 	Q_strlcpy(level.mapname, mapname, sizeof(level.mapname));
 	Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
 
@@ -624,6 +1216,10 @@ SpawnEntities(const char *mapname, char *entities, const char *spawnpoint)
 
 	ent = NULL;
 	inhibit = 0;
+
+    // Knightamre- load the entity alias script file
+    LoadAliasData();
+    //gi.dprintf ("Size of alias data: %i\n", alias_data_size);
 
 	/* parse ents */
 	while (1)
@@ -688,8 +1284,33 @@ SpawnEntities(const char *mapname, char *entities, const char *spawnpoint)
 					continue;
 				}
 			}
-			else
-			{
+            else if (coop->value) // Knightmare added- not in coop flag support
+            {
+                if ( ent->spawnflags & SPAWNFLAG_NOT_COOP )
+                {
+                    G_FreeEdict (ent);
+                    inhibit++;
+                    continue;
+                }
+                
+                // NOT_EASY && NOT_MEDIUM && NOT_HARD && NOT_DM == COOP_ONLY
+                if ( (ent->spawnflags & SPAWNFLAG_NOT_EASY)
+                    && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)
+                    && (ent->spawnflags & SPAWNFLAG_NOT_HARD)
+                    && (ent->spawnflags & SPAWNFLAG_NOT_DEATHMATCH) )
+                    goto removeflags;
+                
+                if( ((skill->value == 0) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
+                   ((skill->value == 1) && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)) ||
+                   ((skill->value >= 2) && (ent->spawnflags & SPAWNFLAG_NOT_HARD)) )
+                {
+                    G_FreeEdict (ent);
+                    inhibit++;
+                    continue;
+                }
+            }
+            else // single player
+            {
 				if (((skill->value == 0) &&
 					 (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
 					((skill->value == 1) &&
@@ -705,6 +1326,8 @@ SpawnEntities(const char *mapname, char *entities, const char *spawnpoint)
 				}
 			}
 
+removeflags:
+            // Knightmare- remove no coop flag
 			ent->spawnflags &=
 				~(SPAWNFLAG_NOT_EASY | SPAWNFLAG_NOT_MEDIUM |
 				  SPAWNFLAG_NOT_HARD |
@@ -712,13 +1335,96 @@ SpawnEntities(const char *mapname, char *entities, const char *spawnpoint)
 		}
 
 		ED_CallSpawn(ent);
+        ent->s.renderfx |= RF_IR_VISIBLE; // ir goggles flag
 	}
-
-	gi.dprintf("%i entities inhibited.\n", inhibit);
+	
+    // Knightmare- unload the alias script file
+    if (alias_data) { // If no alias file was loaded, don't bother
+#ifdef KMQUAKE2_ENGINE_MOD // use new engine function instead
+        gi.FreeFile(alias_data);
+#else
+        if (alias_from_pak)
+            gi.TagFree(alias_data);
+        else
+            free(&alias_data);
+#endif
+    }
+    
+    // Knightmare- unload the replacement entity data
+    /*    if (newents) // If no alias file was loaded, don't bother
+     #ifdef KMQUAKE2_ENGINE_MOD // use new engine function instead
+     gi.FreeFile(newents);
+     #else
+     free(&newents);
+     #endif*/
+    
+gi.dprintf("%i entities inhibited.\n", inhibit);
 
 	G_FindTeams();
 
+    // DWH
+    G_FindCraneParts();
+    
+    // Get origin offsets (mainly for brush models w/o origin brushes)
+    for (i=1, ent=g_edicts+i ; i < globals.num_edicts ; i++,ent++)
+    {
+        VectorAdd(ent->absmin,ent->absmax,ent->origin_offset);
+        VectorScale(ent->origin_offset,0.5,ent->origin_offset);
+        VectorSubtract(ent->origin_offset,ent->s.origin,ent->origin_offset);
+    }
+    
+    // end DWH
+    
 	PlayerTrail_Init();
+
+    //ZOID
+    CTFSpawn();
+    // Knightmare added
+    if (deathmatch->value && !ctf->value)
+        CTFSetupTechSpawn();
+    //ZOID
+    
+    if (!deathmatch->value)
+        SetupHintPaths();
+    
+    for(i=1, ent=g_edicts+i; i < globals.num_edicts; i++, ent++)
+    {
+        if(!ent->movewith)
+            continue;
+        if(ent->movewith_ent)
+            continue;
+        ent->movewith_ent = G_Find(NULL,FOFS(targetname),ent->movewith);
+        // Make sure that we can really "movewith" this guy. This check
+        // allows us to have movewith parent with same targetname as
+        // other entities
+        while(ent->movewith_ent &&
+              (Q_stricmp(ent->movewith_ent->classname,"func_train")     &&
+               Q_stricmp(ent->movewith_ent->classname,"model_train")    &&
+               Q_stricmp(ent->movewith_ent->classname,"func_door")      &&
+               Q_stricmp(ent->movewith_ent->classname,"func_vehicle")   &&
+               Q_stricmp(ent->movewith_ent->classname,"func_tracktrain")  ))
+            ent->movewith_ent = G_Find(ent->movewith_ent,FOFS(targetname),ent->movewith);
+        if(ent->movewith_ent)
+            movewith_init(ent->movewith_ent);
+    }
+    
+    /*    for(i=1, ent=g_edicts+i; i < globals.num_edicts; i++, ent++)
+     {
+     gi.dprintf("%s:%s - movewith=%s, movewith_ent=%s:%s, movewith_next=%s:%s\n====================\n",
+     ent->classname, (ent->targetname ? ent->targetname : "noname"),
+     (ent->movewith ? ent->movewith : "N/A"),
+     (ent->movewith_ent ? ent->movewith_ent->classname : "N/A"),
+     (ent->movewith_ent ? (ent->movewith_ent->targetname ? ent->movewith_ent->targetname : "noname") : "N/A"),
+     (ent->movewith_next ? ent->movewith_next->classname : "N/A"),
+     (ent->movewith_next ? (ent->movewith_next->targetname ? ent->movewith_next->targetname : "noname") : "N/A"));
+     
+     } */
+    
+    if(game.transition_ents)
+        LoadTransitionEnts();
+    
+    actor_files();
+    
 }
 
 /* =================================================================== */
@@ -766,10 +1472,10 @@ char *single_statusbar =
 	"	yb	-50 "
 	"endif "
 
-/* timer */
-	"if 9 "
-	"	xv	262 "
-	"	num	2	10 "
+/* timer (was xv 262) */
+    "if 9 "
+    "    xv    230 "
+    "    num    4 10 "
 	"	xv	296 "
 	"	pic	9 "
 	"endif "
@@ -779,6 +1485,20 @@ char *single_statusbar =
 	"	xv	148 "
 	"	pic	11 "
 	"endif "
+
+/* vehicle speed */
+    "if 22 "
+    "    yb -90 "
+    "    xv 128 "
+    "    pic 22 "
+    "endif "
+
+/* zoom */
+    "if 23 "
+    "   yv 0 "
+    "   xv 0 "
+    "   pic 23 "
+    "endif "
 ;
 
 char *dm_statusbar =
@@ -826,8 +1546,8 @@ char *dm_statusbar =
 
 /* timer */
 	"if 9 "
-	"	xv	246 "
-	"	num	2	10 "
+	"	xv	230 "
+	"	num	4	10 "
 	"	xv	296 "
 	"	pic	9 "
 	"endif "
@@ -842,6 +1562,13 @@ char *dm_statusbar =
 	"xr	-50 "
 	"yt 2 "
 	"num 3 14 "
+
+/* tech */
+    "yb -129 "
+    "if 26 "
+    "xr -26 "
+    "pic 26 "
+    "endif "
 
 /* spectator */
 	"if 17 "
@@ -858,6 +1585,13 @@ char *dm_statusbar =
 	"xv 64 "
 	"stat_string 16 "
 	"endif "
+
+/* vehicle speed */
+    "if 22 "
+    "    yb -90 "
+    "    xv 128 "
+    "    pic 22 "
+    "endif "
 ;
 
 /*QUAKED worldspawn (0 0 0) ?
@@ -878,14 +1612,21 @@ SP_worldspawn(edict_t *ent)
 		return;
 	}
 
-	ent->movetype = MOVETYPE_PUSH;
+    // ACEBOT_ADD
+    static char current_map[55];
+    // ACEBOT_END
+
+    ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
 	ent->inuse = true; /* since the world doesn't use G_Spawn() */
 	ent->s.modelindex = 1; /* world model is always index 1 */
 
 	/* --------------- */
 
-	/* reserve some spots for dead
+    // Knightmare- DM pause starts off
+    paused = false;
+
+    /* reserve some spots for dead
 	   player bodies for coop / deathmatch */
 	InitBodyQue();
 
@@ -922,15 +1663,37 @@ SP_worldspawn(edict_t *ent)
 	gi.configstring(CS_SKYAXIS, va("%f %f %f",
 				st.skyaxis[0], st.skyaxis[1], st.skyaxis[2]));
 
-	gi.configstring(CS_CDTRACK, va("%i", ent->sounds));
+    // Knightmare- if a named soundtrack is specified, play it instead of from CD
+    if (ent->musictrack && strlen(ent->musictrack))
+        gi.configstring (CS_CDTRACK, ent->musictrack);
+    else
+        gi.configstring(CS_CDTRACK, va("%i", ent->sounds));
 
 	gi.configstring(CS_MAXCLIENTS, va("%i", (int)(maxclients->value)));
 
+    // Knightmare added
+    if (ttctf->value)
+    {
+        gi.cvar_forceset("ctf", "1");
+        gi.cvar_forceset("deathmatch", "1");
+    }
+    else if (ctf->value)
+        gi.cvar_forceset("deathmatch", "1");
+    
 	/* status bar program */
 	if (deathmatch->value)
-	{
-		gi.configstring(CS_STATUSBAR, dm_statusbar);
-	}
+    {
+        //ZOID
+        if (ctf->value) {
+            if (ttctf->value) // Knightmare added
+                gi.configstring (CS_STATUSBAR, ttctf_statusbar);
+            else
+                gi.configstring (CS_STATUSBAR, ctf_statusbar);
+            CTFPrecache();
+        } else
+            gi.configstring (CS_STATUSBAR, dm_statusbar);
+    }
+    //ZOID
 	else
 	{
 		gi.configstring(CS_STATUSBAR, single_statusbar);
@@ -938,6 +1701,19 @@ SP_worldspawn(edict_t *ent)
 
 	/* --------------- */
 
+    // ACEBOT_ADD
+    // If the map changes on us, init and reload the nodes
+    if (deathmatch->value && strcmp(level.mapname,current_map))
+    {
+        
+        ACEND_InitNodes();
+        ACEND_LoadNodes();
+        //ACESP_LoadBots(); // Knightmare- removed this
+        ACESP_LoadBotInfo(); // Knightmare- load bot info file
+        strcpy(current_map,level.mapname);
+    }
+    // ACEBOT_END
+    
 	/* help icon for statusbar */
 	gi.imageindex("i_help");
 	level.pic_health = gi.imageindex("i_health");
@@ -988,9 +1764,9 @@ SP_worldspawn(edict_t *ent)
 	gi.soundindex("*pain100_2.wav");
 
 	/* sexed models: THIS ORDER MUST MATCH THE DEFINES IN g_local.h
-	   you can add more, max 19 (pete change)these models are only
+	   you can add more, max 64 these models are only
 	   loaded in coop or deathmatch. not singleplayer. */
-	if (coop->value || deathmatch->value)
+	if (coop->value || use_vwep->value || deathmatch->value)
 	{
 		gi.modelindex("#w_blaster.md2");
 		gi.modelindex("#w_shotgun.md2");
@@ -1003,6 +1779,8 @@ SP_worldspawn(edict_t *ent)
 		gi.modelindex("#w_hyperblaster.md2");
 		gi.modelindex("#w_railgun.md2");
 		gi.modelindex("#w_bfg.md2");
+        if (ctf->value)
+            gi.modelindex ("#w_grapple.md2");
 	}
 
 	/* ------------------- */
@@ -1037,47 +1815,59 @@ SP_worldspawn(edict_t *ent)
 	gi.modelindex("models/objects/gibs/skull/tris.md2");
 	gi.modelindex("models/objects/gibs/head2/tris.md2");
 
-	/* Setup light animation tables. 'a'
-	   is total darkness, 'z' is doublebright. */
 
-	/* 0 normal */
-	gi.configstring(CS_LIGHTS + 0, "m");
+    gi.soundindex ("mud/mud_in2.wav");
+    gi.soundindex ("mud/mud_out1.wav");
+    gi.soundindex ("mud/mud_un1.wav");
+    gi.soundindex ("mud/wade_mud1.wav");
+    gi.soundindex ("mud/wade_mud2.wav");
+    
+    Lights();
+    
+    // Fog clipping - if "fogclip" is non-zero, force gl_clear to a good
+    // value for obscuring HOM with fog... "good" is driver-dependent
+    if(ent->fogclip)
+    {
+        if(gl_driver && !Q_stricmp(gl_driver->string,"3dfxgl"))
+            gi.cvar_forceset("gl_clear", "0");
+        else
+            gi.cvar_forceset("gl_clear", "1");
+    }
+    
+    // cvar overrides for effects flags:
+    if(alert_sounds->value)
+        world->effects |= FX_WORLDSPAWN_ALERTSOUNDS;
+    if(corpse_fade->value)
+        world->effects |= FX_WORLDSPAWN_CORPSEFADE;
+    if(jump_kick->value)
+        world->effects |= FX_WORLDSPAWN_JUMPKICK;
+}
 
-	/* 1 FLICKER (first variety) */
-	gi.configstring(CS_LIGHTS + 1, "mmnmmommommnonmmonqnmmo");
+// Hud toggle ripped from TPP source
 
-	/* 2 SLOW STRONG PULSE */
-	gi.configstring(CS_LIGHTS + 2, "abcdefghijklmnopqrstuvwxyzyxwvutsrqponmlkjihgfedcba");
+int nohud = 0;
 
-	/* 3 CANDLE (first variety) */
-	gi.configstring(CS_LIGHTS + 3, "mmmmmaaaaammmmmaaaaaabcdefgabcdefg");
+void Hud_On()
+{
+    if (deathmatch->value)
+        gi.configstring (CS_STATUSBAR, dm_statusbar);
+    else
+        gi.configstring (CS_STATUSBAR, single_statusbar);
+    nohud = 0;
+}
 
-	/* 4 FAST STROBE */
-	gi.configstring(CS_LIGHTS + 4, "mamamamamama");
+void Hud_Off()
+{
+    gi.configstring (CS_STATUSBAR, NULL);
+    nohud = 1;
+}
 
-	/* 5 GENTLE PULSE 1 */
-	gi.configstring(CS_LIGHTS + 5, "jklmnopqrstuvwxyzyxwvutsrqponmlkj");
-
-	/* 6 FLICKER (second variety) */
-	gi.configstring(CS_LIGHTS + 6, "nmonqnmomnmomomno");
-
-	/* 7 CANDLE (second variety) */
-	gi.configstring(CS_LIGHTS + 7, "mmmaaaabcdefgmmmmaaaammmaamm");
-
-	/* 8 CANDLE (third variety) */
-	gi.configstring(CS_LIGHTS + 8, "mmmaaammmaaammmabcdefaaaammmmabcdefmmmaaaa");
-
-	/* 9 SLOW STROBE (fourth variety) */
-	gi.configstring(CS_LIGHTS + 9, "aaaaaaaazzzzzzzz");
-
-	/* 10 FLUORESCENT FLICKER */
-	gi.configstring(CS_LIGHTS + 10, "mmamammmmammamamaaamammma");
-
-	/* 11 SLOW PULSE NOT FADE TO BLACK */
-	gi.configstring(CS_LIGHTS + 11, "abcdefghijklmnopqrrqponmlkjihgfedcba");
-
-	/* styles 32-62 are assigned by the light program for switchable lights */
-
-	/* 63 testing */
-	gi.configstring(CS_LIGHTS + 63, "a");
+void Cmd_ToggleHud ()
+{
+    if (deathmatch->value)
+        return;
+    if (nohud)
+        Hud_On();
+    else
+        Hud_Off();
 }
