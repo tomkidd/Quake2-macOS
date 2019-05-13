@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -715,8 +716,7 @@ MakronHyperblaster(edict_t *self)
 
 	AngleVectors(dir, forward, NULL, NULL);
 
-	monster_fire_blaster(self, start, forward, 15, 1000,
-			MZ2_MAKRON_BLASTER_1, EF_BLASTER);
+    monster_fire_blaster (self, start, forward, 15, 1000, MZ2_MAKRON_BLASTER_1, EF_BLASTER, BLASTER_ORANGE);
 }
 
 void
@@ -730,7 +730,9 @@ makron_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
+        if (!(self->fogclip & 2)) //custom bloodtype flag check
+            self->blood_type = 3; //sparks and blood
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -844,6 +846,22 @@ makron_torso_think(edict_t *self)
 	}
 }
 
+void makron_torso_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+{
+    int    n;
+    self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
+    // check for gib
+    if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB))
+    {
+        for (n= 0; n < 1 /*4*/; n++)
+            ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
+        for (n= 0; n < 4; n++)
+            ThrowGib (self, "models/objects/gibs/sm_metal/tris.md2", damage, GIB_METALLIC);
+        G_FreeEdict(self);
+        return;
+    }
+}
+
 void
 makron_torso(edict_t *ent)
 {
@@ -852,11 +870,19 @@ makron_torso(edict_t *ent)
 		return;
 	}
 
+    // Lazarus changes to make makron torso gibbable
 	ent->movetype = MOVETYPE_NONE;
-	ent->solid = SOLID_NOT;
-	VectorSet(ent->mins, -8, -8, 0);
-	VectorSet(ent->maxs, 8, 8, 8);
-	ent->s.frame = 346;
+    ent->solid = SOLID_BBOX;
+    ent->svflags = SVF_DEADMONSTER;
+    VectorSet (ent->mins, -32, -32, 0);
+    VectorSet (ent->maxs,  32,  32, 32);
+    ent->health = -1;
+    ent->gib_health = -900;
+    ent->die = makron_torso_die;
+    ent->takedamage = DAMAGE_YES;
+    ent->deadflag = DEAD_DEAD;
+
+    ent->s.frame = 346;
 	ent->s.modelindex = gi.modelindex("models/monsters/boss3/rider/tris.md2");
 	ent->think = makron_torso_think;
 	ent->nextthink = level.time + 2 * FRAMETIME;
@@ -872,12 +898,16 @@ makron_dead(edict_t *self)
 		return;
 	}
 
-	VectorSet(self->mins, -60, -60, 0);
-	VectorSet(self->maxs, 60, 60, 72);
+    // Lazarus - this is way too big
+    //    VectorSet (self->mins, -60, -60, 0);
+    //    VectorSet (self->maxs, 60, 60, 72);
+    VectorSet (self->mins, -48, -48,  0);
+    VectorSet (self->maxs,  48,  48, 32);
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
 	gi.linkentity(self);
+    M_FlyCheck (self);
 }
 
 void
@@ -892,10 +922,15 @@ makron_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /* 
 		return;
 	}
 
+    self->s.skinnum |= 1;
+    if (!(self->fogclip & 2)) //custom bloodtype flag check
+        self->blood_type = 3; //sparks and blood
+    
+    self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
 	self->s.sound = 0;
 
 	/* check for gib */
-	if (self->health <= self->gib_health)
+    if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex( "misc/udeath.wav"), 1, ATTN_NORM, 0);
 
@@ -1096,9 +1131,16 @@ SP_monster_makron(edict_t *self)
 	VectorSet(self->mins, -30, -30, 0);
 	VectorSet(self->maxs, 30, 30, 90);
 
-	self->health = 3000;
-	self->gib_health = -2000;
-	self->mass = 500;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 3000;
+    
+    // Lazarus: get around Killed's prevention of health dropping below -999
+    //    if(!self->gib_health)
+    //        self->gib_health = -2000;
+    self->gib_health = -900;
+    if(!self->mass)
+        self->mass = 500;
 
 	self->pain = makron_pain;
 	self->die = makron_die;
@@ -1111,9 +1153,28 @@ SP_monster_makron(edict_t *self)
 	self->monsterinfo.sight = makron_sight;
 	self->monsterinfo.checkattack = Makron_CheckAttack;
 
+    // Knightmare- added sparks and blood type
+    if (!self->blood_type)
+        self->blood_type = 2; //sparks
+    else
+        self->fogclip |= 2; //custom bloodtype flag
+    
+    // Lazarus
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    
 	gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &makron_move_sight;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&makron_move_death2,
+            &makron_move_death3,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);
@@ -1166,5 +1227,10 @@ MakronToss(edict_t *self)
 	ent->nextthink = level.time + 0.8;
 	ent->think = MakronSpawn;
 	ent->target = self->target;
-	VectorCopy(self->s.origin, ent->s.origin);
+
+    ent->health = self->health2;
+    ent->mass   = self->mass2;
+    ent->common_name = "Makron";
+
+    VectorCopy(self->s.origin, ent->s.origin);
 }

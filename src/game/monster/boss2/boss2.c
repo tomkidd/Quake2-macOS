@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,45 +68,65 @@ Boss2Rocket(edict_t *self)
 	vec3_t start;
 	vec3_t dir;
 	vec3_t vec;
+    int        rocketSpeed;
 
 	if (!self)
 	{
 		return;
 	}
-
+    
+    if((self->spawnflags & SF_MONSTER_SPECIAL))
+        rocketSpeed = 400; // Lazarus: Homing rockets are tougher if slow
+    else
+        rocketSpeed = 500 + (100 * skill->value);
+    
 	AngleVectors(self->s.angles, forward, right, NULL);
 
-	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_1],
-			forward, right, start);
+//    G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_1],
+//            forward, right, start);
 	VectorCopy(self->enemy->s.origin, vec);
 	vec[2] += self->enemy->viewheight;
 	VectorSubtract(vec, start, dir);
 	VectorNormalize(dir);
-	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_1);
+
+    // Lazarus fog reduction of accuracy
+    if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+    {
+        vec[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        vec[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        vec[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+    }
+    
+    G_ProjectSource (self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_1], forward, right, start);
+    monster_fire_rocket (self, start, dir, 50, rocketSpeed, MZ2_BOSS2_ROCKET_1,
+                         (self->spawnflags & SF_MONSTER_SPECIAL ? self->enemy : NULL) );
 
 	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_2],
 			forward, right, start);
-	VectorCopy(self->enemy->s.origin, vec);
-	vec[2] += self->enemy->viewheight;
+//    VectorCopy(self->enemy->s.origin, vec);
+//    vec[2] += self->enemy->viewheight;
 	VectorSubtract(vec, start, dir);
 	VectorNormalize(dir);
-	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_2);
+    monster_fire_rocket (self, start, dir, 50, rocketSpeed, MZ2_BOSS2_ROCKET_2,
+                         (self->spawnflags & SF_MONSTER_SPECIAL ? self->enemy : NULL) );
 
 	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_3],
 			forward, right, start);
-	VectorCopy(self->enemy->s.origin, vec);
-	vec[2] += self->enemy->viewheight;
+//    VectorCopy(self->enemy->s.origin, vec);
+//    vec[2] += self->enemy->viewheight;
 	VectorSubtract(vec, start, dir);
 	VectorNormalize(dir);
-	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_3);
+    monster_fire_rocket (self, start, dir, 50, rocketSpeed, MZ2_BOSS2_ROCKET_3,
+                         (self->spawnflags & SF_MONSTER_SPECIAL ? self->enemy : NULL) );
 
 	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_4],
 			forward, right, start);
-	VectorCopy(self->enemy->s.origin, vec);
-	vec[2] += self->enemy->viewheight;
+//    VectorCopy(self->enemy->s.origin, vec);
+//    vec[2] += self->enemy->viewheight;
 	VectorSubtract(vec, start, dir);
 	VectorNormalize(dir);
-	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_4);
+    monster_fire_rocket (self, start, dir, 50, rocketSpeed, MZ2_BOSS2_ROCKET_4,
+                         (self->spawnflags & SF_MONSTER_SPECIAL ? self->enemy : NULL) );
 }
 
 void
@@ -125,6 +146,15 @@ boss2_firebullet_right(edict_t *self)
 
 	VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
 	target[2] += self->enemy->viewheight;
+
+    // Lazarus fog reduction of accuracy
+    if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+    {
+        target[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        target[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        target[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+    }
+    
 	VectorSubtract(target, start, forward);
 	VectorNormalize(forward);
 
@@ -151,6 +181,15 @@ boss2_firebullet_left(edict_t *self)
 	VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
 
 	target[2] += self->enemy->viewheight;
+    
+    // Lazarus fog reduction of accuracy
+    if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+    {
+        target[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        target[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        target[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+    }
+    
 	VectorSubtract(target, start, forward);
 	VectorNormalize(forward);
 
@@ -607,7 +646,9 @@ boss2_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
+        if (!(self->fogclip & 2)) //custom bloodtype flag check
+            self->blood_type = 3; //sparks and blood
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -660,6 +701,11 @@ boss2_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /* u
 		return;
 	}
 
+    self->s.skinnum |= 1;
+    if (!(self->fogclip & 2)) //custom bloodtype flag check
+        self->blood_type = 3; //sparks and blood
+    
+    self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
@@ -798,6 +844,13 @@ SP_monster_boss2(edict_t *self)
 		return;
 	}
 
+    // Lazarus: special purpose skins
+    if ( (self->spawnflags & SF_MONSTER_SPECIAL) && self->style )
+    {
+        PatchMonsterModel("models/monsters/boss2/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	sound_pain1 = gi.soundindex("bosshovr/bhvpain1.wav");
 	sound_pain2 = gi.soundindex("bosshovr/bhvpain2.wav");
 	sound_pain3 = gi.soundindex("bosshovr/bhvpain3.wav");
@@ -808,13 +861,25 @@ SP_monster_boss2(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
+
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/boss2/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/boss2/tris.md2");
 	VectorSet(self->mins, -56, -56, 0);
 	VectorSet(self->maxs, 56, 56, 80);
 
-	self->health = 2000;
-	self->gib_health = -200;
-	self->mass = 1000;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 2000;
+    if(!self->gib_health)
+        self->gib_health = -200;
+    if(!self->mass)
+        self->mass = 1000;
 
 	self->flags |= FL_IMMUNE_LASER;
 
@@ -827,10 +892,30 @@ SP_monster_boss2(edict_t *self)
 	self->monsterinfo.attack = boss2_attack;
 	self->monsterinfo.search = boss2_search;
 	self->monsterinfo.checkattack = Boss2_CheckAttack;
+
+    // Knightmare- added sparks and blood type
+    if (!self->blood_type)
+        self->blood_type = 2; //sparks
+    else
+        self->fogclip |= 2; //custom bloodtype flag
+    
 	gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &boss2_move_stand;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&boss2_move_death,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
 	self->monsterinfo.scale = MODEL_SCALE;
 
+    // Lazarus power armor
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    self->common_name = "Flying Boss";
+    
 	flymonster_start(self);
 }

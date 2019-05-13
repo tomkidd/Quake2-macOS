@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,6 +41,19 @@ static int sound_sight;
 
 void flipper_stand(edict_t *self);
 
+//Knightmare added- these sounds were unused
+void flipper_breathe (edict_t *self)
+{
+    if (self->waterlevel > 0) //only make bubble sounds if submerged
+        gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+}
+
+void flipper_search (edict_t *self)
+{
+    gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_IDLE, 0);
+}
+// end Knightmare
+
 mframe_t flipper_frames_stand[] = {
 	{ai_stand, 0, NULL}
 };
@@ -61,6 +75,9 @@ flipper_stand(edict_t *self)
 	}
 
 	self->monsterinfo.currentmove = &flipper_move_stand;
+    //Knightmare- added idle breathing
+    if (random() < 0.02)
+        flipper_breathe (self);
 }
 
 mframe_t flipper_frames_run[] = {
@@ -84,7 +101,7 @@ mframe_t flipper_frames_run[] = {
 	{ai_run, FLIPPER_RUN_SPEED, NULL},
 	{ai_run, FLIPPER_RUN_SPEED, NULL},
 	{ai_run, FLIPPER_RUN_SPEED, NULL},
-	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, flipper_breathe},
 	{ai_run, FLIPPER_RUN_SPEED, NULL},
 	{ai_run, FLIPPER_RUN_SPEED, NULL},
 	{ai_run, FLIPPER_RUN_SPEED, NULL},
@@ -161,7 +178,7 @@ mframe_t flipper_frames_walk[] = {
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL},
-	{ai_walk, 4, NULL},
+	{ai_walk, 4, flipper_breathe},
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL}
@@ -324,7 +341,7 @@ flipper_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -361,12 +378,20 @@ flipper_dead(edict_t *self)
 		return;
 	}
 
-	VectorSet(self->mins, -16, -16, -24);
-	VectorSet(self->maxs, 16, 16, -8);
+    //    VectorSet (self->mins, -16, -16, -24);
+    //    VectorSet (self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
 	gi.linkentity(self);
+    M_FlyCheck (self);
+    
+    // Lazarus monster fade
+    if(world->effects & FX_WORLDSPAWN_CORPSEFADE)
+    {
+        self->think=FadeDieSink;
+        self->nextthink=level.time+corpse_fadetime->value;
+    }
 }
 
 mframe_t flipper_frames_death[] = {
@@ -463,8 +488,10 @@ flipper_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /*
 		return;
 	}
 
+    self->s.skinnum |= 1;
+    
 	/* check for gib */
-	if (self->health <= self->gib_health)
+    if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex( "misc/udeath.wav"), 1, ATTN_NORM, 0);
 
@@ -514,6 +541,8 @@ SP_monster_flipper(edict_t *self)
 		G_FreeEdict(self);
 		return;
 	}
+    self->class_id = ENTITY_MONSTER_FLIPPER;
+    self->spawnflags |= SF_MONSTER_KNOWS_MIRRORS;
 
 	sound_pain1 = gi.soundindex("flipper/flppain1.wav");
 	sound_pain2 = gi.soundindex("flipper/flppain2.wav");
@@ -526,10 +555,26 @@ SP_monster_flipper(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
+
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/flipper/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/flipper/tris.md2");
 	VectorSet(self->mins, -16, -16, 0);
 	VectorSet(self->maxs, 16, 16, 32);
 
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 50;
+    if(!self->gib_health)
+        self->gib_health = -30;
+    if(!self->mass)
+        self->mass = 100;
+    
 	self->health = 50;
 	self->gib_health = -30;
 	self->mass = 100;
@@ -542,10 +587,21 @@ SP_monster_flipper(edict_t *self)
 	self->monsterinfo.run = flipper_start_run;
 	self->monsterinfo.melee = flipper_melee;
 	self->monsterinfo.sight = flipper_sight;
+    self->monsterinfo.search = flipper_search;    //Knightmare added
 
 	gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &flipper_move_stand;
+    if(!self->monsterinfo.flies)
+        self->monsterinfo.flies = 0.90;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&flipper_move_death,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
+    self->common_name = "Barracuda Shark";
+    
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	swimmonster_start(self);

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -219,7 +220,8 @@ mutant_idle(edict_t *self)
 	}
 
 	self->monsterinfo.currentmove = &mutant_move_idle;
-	gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+    if(!(self->spawnflags & SF_MONSTER_AMBUSH))
+        gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 void mutant_walk(edict_t *self);
@@ -562,15 +564,32 @@ mutant_check_jump(edict_t *self)
 		return false;
 	}
 
-	if (self->absmin[2] > (self->enemy->absmin[2] + 0.75 * self->enemy->size[2]))
-	{
-		return false;
-	}
-
-	if (self->absmax[2] < (self->enemy->absmin[2] + 0.25 * self->enemy->size[2]))
-	{
-		return false;
-	}
+    vec_t    speed=0;
+    
+    if (monsterjump->value)
+    {
+        if (self->absmin[2] > (self->enemy->absmin[2] + 0.75 * self->enemy->size[2]) +
+            self->monsterinfo.jumpdn )
+            return false;
+        
+        if (self->absmax[2] < (self->enemy->absmin[2] + 0.25 * self->enemy->size[2]) -
+            self->monsterinfo.jumpup )
+            return false;
+        if (self->absmax[2] < (self->enemy->absmin[2] + 0.25 * self->enemy->size[2]))
+            speed = max(self->velocity[2],200);
+    }
+    else
+    {
+        if (self->absmin[2] > (self->enemy->absmin[2] + 0.75 * self->enemy->size[2]))
+        {
+            return false;
+        }
+        
+        if (self->absmax[2] < (self->enemy->absmin[2] + 0.25 * self->enemy->size[2]))
+        {
+            return false;
+        }
+    }
 
 	v[0] = self->s.origin[0] - self->enemy->s.origin[0];
 	v[1] = self->s.origin[1] - self->enemy->s.origin[1];
@@ -589,6 +608,9 @@ mutant_check_jump(edict_t *self)
 			return false;
 		}
 	}
+    
+    if(speed)
+        self->velocity[2] = speed;
 
 	return true;
 }
@@ -684,7 +706,7 @@ mutant_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -726,6 +748,12 @@ mutant_dead(edict_t *self)
 		return;
 	}
 
+    // Lazarus: Stupid... if flies aren't set by M_FlyCheck, monster_think
+    //          will cause us to come back here over and over and over
+    //          until flies ARE set or monster is gibbed.
+    //          This line fixes that:
+    self->nextthink = 0;
+    
 	VectorSet(self->mins, -16, -16, -24);
 	VectorSet(self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
@@ -733,6 +761,13 @@ mutant_dead(edict_t *self)
 	gi.linkentity(self);
 
 	M_FlyCheck(self);
+    
+    // Lazarus monster fade
+    if(world->effects & FX_WORLDSPAWN_CORPSEFADE)
+    {
+        self->think=FadeDieSink;
+        self->nextthink=level.time+corpse_fadetime->value;
+    }
 }
 
 mframe_t mutant_frames_death1[] = {
@@ -830,6 +865,23 @@ mutant_die(edict_t *self, edict_t *inflictor /* unused */,
 	}
 }
 
+mframe_t mutant_frames_fake_jump [] =
+{
+    ai_move,     0,    NULL,
+    ai_move,     0,    NULL,
+    ai_move,     0,    NULL,
+    ai_move,     0,    NULL,
+    ai_move,     0,    NULL,
+    ai_move,     0,    NULL
+};
+mmove_t mutant_move_fake_jump = {FRAME_run03, FRAME_run08, mutant_frames_fake_jump, mutant_run};
+
+void mutant_fake_jump (edict_t *self)
+{
+    self->monsterinfo.currentmove = &mutant_move_fake_jump;
+}
+
+
 /*
  * QUAKED monster_mutant (1 .5 0) (-32 -32 -24) (32 32 32) Ambush Trigger_Spawn Sight
  */
@@ -847,6 +899,9 @@ SP_monster_mutant(edict_t *self)
 		return;
 	}
 
+    self->class_id = ENTITY_MONSTER_MUTANT;
+    self->spawnflags |= SF_MONSTER_KNOWS_MIRRORS;
+    
 	sound_swing = gi.soundindex("mutant/mutatck1.wav");
 	sound_hit = gi.soundindex("mutant/mutatck2.wav");
 	sound_hit2 = gi.soundindex("mutant/mutatck3.wav");
@@ -863,13 +918,25 @@ SP_monster_mutant(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
+
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/mutant/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/mutant/tris.md2");
 	VectorSet(self->mins, -32, -32, -24);
 	VectorSet(self->maxs, 32, 32, 48);
 
-	self->health = 300;
-	self->gib_health = -120;
-	self->mass = 300;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 300;
+    if(!self->gib_health)
+        self->gib_health = -120;
+    if(!self->mass)
+        self->mass = 300;
 
 	self->pain = mutant_pain;
 	self->die = mutant_die;
@@ -884,11 +951,26 @@ SP_monster_mutant(edict_t *self)
 	self->monsterinfo.search = mutant_search;
 	self->monsterinfo.idle = mutant_idle;
 	self->monsterinfo.checkattack = mutant_checkattack;
+    if(monsterjump->value)
+    {
+        self->monsterinfo.jump = mutant_fake_jump;
+        self->monsterinfo.jumpup = 96;
+        self->monsterinfo.jumpdn = 160;
+    }
 
 	gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &mutant_move_stand;
-
+    if(!self->monsterinfo.flies)
+        self->monsterinfo.flies = 0.90;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&mutant_move_death1,
+            &mutant_move_death2,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
+    self->common_name = "Mutant";
 	self->monsterinfo.scale = MODEL_SCALE;
 	walkmonster_start(self);
 }

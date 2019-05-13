@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,6 +40,10 @@
 #define SVF_NOCLIENT 0x00000001 /* don't send entity to clients, even if it has effects */
 #define SVF_DEADMONSTER 0x00000002 /* treat as CONTENTS_DEADMONSTER for collision */
 #define SVF_MONSTER 0x00000004 /* treat as CONTENTS_MONSTER for collision */
+#define SVF_DAMAGEABLE            0x00000008
+#define SVF_TRIGGER_CAMOWNER    0x00000010
+#define SVF_MUD                 0x00000020
+#define    SVF_GIB                    0x00000040    //Knightmare- gib flag
 
 #define MAX_ENT_CLUSTERS 16
 
@@ -181,6 +186,15 @@ typedef struct
 	void (*AddCommandString)(char *text);
 
 	void (*DebugGraph)(float value, int color);
+
+    // Knightmare- support game DLL loading from pak files thru engine
+    // This can be used to load script files, etc
+#ifdef KMQUAKE2_ENGINE_MOD
+    char    **(*ListPak) (char *find, int *num);
+    int        (*LoadFile) (char *name, void **buf);
+    void    (*FreeFile) (void *buf);
+#endif
+    
 } game_import_t;
 
 /* functions exported by the game subsystem */

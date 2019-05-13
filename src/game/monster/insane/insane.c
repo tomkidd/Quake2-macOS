@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -815,6 +816,14 @@ insane_dead(edict_t *self)
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
 	gi.linkentity(self);
+    M_FlyCheck(self);
+    
+    // Lazarus monster fade
+    if(world->effects & FX_WORLDSPAWN_CORPSEFADE)
+    {
+        self->think=FadeDieSink;
+        self->nextthink=level.time+corpse_fadetime->value;
+    }
 }
 
 void
@@ -829,7 +838,7 @@ insane_die(edict_t *self, edict_t *inflictor /* unused */,
 		return;
 	}
 
-	if (self->health <= self->gib_health)
+    if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex( "misc/udeath.wav"), 1, ATTN_IDLE, 0);
 
@@ -918,9 +927,12 @@ SP_misc_insane(edict_t *self)
 	VectorSet(self->mins, -16, -16, -24);
 	VectorSet(self->maxs, 16, 16, 32);
 
-	self->health = 100;
-	self->gib_health = -50;
-	self->mass = 300;
+    if(!self->health)
+        self->health = 100;
+    if(!self->gib_health)
+        self->gib_health = -50;
+    if(!self->mass)
+        self->mass = 300;
 
 	self->pain = insane_pain;
 	self->die = insane_die;
@@ -943,6 +955,11 @@ SP_misc_insane(edict_t *self)
 
 	self->monsterinfo.currentmove = &insane_move_stand_normal;
 
+    if(!self->monsterinfo.flies)
+        self->monsterinfo.flies = 0.30;
+    
+    self->common_name = "Insane Marine";
+    
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	if (self->spawnflags & 8) /* Crucified ? */

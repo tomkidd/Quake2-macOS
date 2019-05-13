@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -172,7 +173,17 @@ brain_idle(edict_t *self)
 		return;
 	}
 
-	gi.sound(self, CHAN_AUTO, sound_idle3, 1, ATTN_IDLE, 0);
+    if(!(self->spawnflags & SF_MONSTER_AMBUSH)) //Knightmare- play all 3 idle sounds
+    {
+        float r = random();
+        
+        if (r < 0.33)
+            gi.sound (self, CHAN_VOICE, sound_idle1, 1, ATTN_IDLE, 0);
+        else if (r < 0.67)
+            gi.sound (self, CHAN_VOICE, sound_idle2, 1, ATTN_IDLE, 0);
+        else
+            gi.sound (self, CHAN_VOICE, sound_idle3, 1, ATTN_IDLE, 0); //Knightmare- changed channel
+    }
 	self->monsterinfo.currentmove = &brain_move_idle;
 }
 
@@ -672,7 +683,7 @@ brain_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -720,6 +731,14 @@ brain_dead(edict_t *self)
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
 	gi.linkentity(self);
+    M_FlyCheck (self);
+    
+    // Lazarus monster fade
+    if(world->effects & FX_WORLDSPAWN_CORPSEFADE)
+    {
+        self->think=FadeDieSink;
+        self->nextthink=level.time+corpse_fadetime->value;
+    }
 }
 
 void
@@ -736,8 +755,10 @@ brain_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /* u
 	self->s.effects = 0;
 	self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
 
+    self->s.skinnum |= 1;
+    
 	/* check for gib */
-	if (self->health <= self->gib_health)
+    if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex( "misc/udeath.wav"), 1, ATTN_NORM, 0);
 
@@ -813,13 +834,25 @@ SP_monster_brain(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
+
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/brain/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/brain/tris.md2");
 	VectorSet(self->mins, -16, -16, -24);
 	VectorSet(self->maxs, 16, 16, 32);
 
-	self->health = 300;
-	self->gib_health = -150;
-	self->mass = 400;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 300;
+    if(!self->gib_health)
+        self->gib_health = -150;
+    if(!self->mass)
+        self->mass = 400;
 
 	self->pain = brain_pain;
 	self->die = brain_die;
@@ -836,9 +869,24 @@ SP_monster_brain(edict_t *self)
 	self->monsterinfo.power_armor_type = POWER_ARMOR_SCREEN;
 	self->monsterinfo.power_armor_power = 100;
 
+    if(!self->monsterinfo.flies)
+        self->monsterinfo.flies = 0.10;
+    self->common_name = "Brains";
+    
+    // Knightmare- added sparks and blood type
+    if (!self->blood_type)
+        self->blood_type = 3; //sparks and blood
+    
 	gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &brain_move_stand;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&brain_move_death1,
+            &brain_move_death2,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);

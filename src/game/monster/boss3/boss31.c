@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -155,7 +156,8 @@ jorg_idle(edict_t *self)
 		return;
 	}
 
-	gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_NORM, 0);
+    if(!(self->spawnflags & SF_MONSTER_AMBUSH))
+        gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_NORM, 0);
 }
 
 void
@@ -563,7 +565,9 @@ jorg_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
+        if (!(self->fogclip & 2)) //custom bloodtype flag check
+            self->blood_type = 3; //sparks and blood
 	}
 
 	self->s.sound = 0;
@@ -655,6 +659,15 @@ jorgBFG(edict_t *self)
 
 	VectorCopy(self->enemy->s.origin, vec);
 	vec[2] += self->enemy->viewheight;
+
+    // Lazarus fog reduction of accuracy
+    if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+    {
+        vec[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        vec[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        vec[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+    }
+    
 	VectorSubtract(vec, start, dir);
 	VectorNormalize(dir);
 	gi.sound(self, CHAN_VOICE, sound_attack2, 1, ATTN_NORM, 0);
@@ -678,6 +691,15 @@ jorg_firebullet_right(edict_t *self)
 
 	VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
 	target[2] += self->enemy->viewheight;
+
+    // Lazarus fog reduction of accuracy
+    if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+    {
+        target[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        target[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        target[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+    }
+    
 	VectorSubtract(target, start, forward);
 	VectorNormalize(forward);
 
@@ -703,6 +725,15 @@ jorg_firebullet_left(edict_t *self)
 
 	VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
 	target[2] += self->enemy->viewheight;
+
+    // Lazarus fog reduction of accuracy
+    if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+    {
+        target[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        target[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        target[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+    }
+    
 	VectorSubtract(target, start, forward);
 	VectorNormalize(forward);
 
@@ -759,6 +790,11 @@ jorg_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /* un
 		return;
 	}
 
+    self->s.skinnum |= 1;
+    if (!(self->fogclip & 2)) //custom bloodtype flag check
+        self->blood_type = 3; //sparks and blood
+    
+    self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
@@ -919,14 +955,18 @@ SP_monster_jorg(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex("models/monsters/boss3/rider/tris.md2");
-	self->s.modelindex2 = gi.modelindex("models/monsters/boss3/jorg/tris.md2");
+    self->s.modelindex = gi.modelindex ("models/monsters/boss3/jorg/tris.md2");
+    self->s.modelindex2 = gi.modelindex ("models/monsters/boss3/rider/tris.md2");
 	VectorSet(self->mins, -80, -80, 0);
 	VectorSet(self->maxs, 80, 80, 140);
 
-	self->health = 3000;
-	self->gib_health = -2000;
-	self->mass = 1000;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 3000;
+    if(!self->gib_health)
+        self->gib_health = -2000;
+    if(!self->mass)
+        self->mass = 1000;
 
 	self->pain = jorg_pain;
 	self->die = jorg_die;
@@ -939,10 +979,30 @@ SP_monster_jorg(edict_t *self)
 	self->monsterinfo.melee = NULL;
 	self->monsterinfo.sight = NULL;
 	self->monsterinfo.checkattack = Jorg_CheckAttack;
+
+    // Knightmare- added sparks and blood type
+    if (!self->blood_type)
+        self->blood_type = 2; //sparks
+    else
+        self->fogclip |= 2; //custom bloodtype flag
+    
 	gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &jorg_move_stand;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&jorg_move_death,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
 	self->monsterinfo.scale = MODEL_SCALE;
 
+    // Lazarus
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    self->common_name = "Jorg";
+    
 	walkmonster_start(self);
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -574,9 +575,18 @@ hover_fire_blaster(edict_t *self)
 
 	VectorCopy(self->enemy->s.origin, end);
 	end[2] += self->enemy->viewheight;
+    
+    // Lazarus fog reduction of accuracy
+    if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+    {
+        end[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        end[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        end[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+    }
+
 	VectorSubtract(end, start, dir);
 
-	monster_fire_blaster(self, start, dir, 1, 1000, MZ2_HOVER_BLASTER_1, effect);
+    monster_fire_blaster (self, start, dir, 1, 1000, MZ2_HOVER_BLASTER_1, effect, BLASTER_ORANGE);
 }
 
 void
@@ -652,7 +662,7 @@ hover_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -695,12 +705,25 @@ hover_deadthink(edict_t *self)
 		return;
 	}
 
+    int        n;
+    
 	if (!self->groundentity && (level.time < self->timestamp))
 	{
 		self->nextthink = level.time + FRAMETIME;
 		return;
 	}
 
+    // Knightmare- gibs!
+    gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+    for (n= 0; n < 8; n++)
+        ThrowGib (self, "models/objects/gibs/sm_metal/tris.md2", 200, GIB_METALLIC);
+    for (n= 0; n < 2; n++)
+        ThrowGib (self, "models/objects/gibs/gear/tris.md2", 200, GIB_METALLIC);
+    for (n= 0; n < 2; n++)
+        ThrowGib (self, "models/objects/gibs/bone/tris.md2", 200, GIB_ORGANIC);
+    for (n= 0; n < 6; n++)
+        ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", 200, GIB_ORGANIC);
+    ThrowGib (self, "models/objects/gibs/head2/tris.md2", 200, GIB_ORGANIC);
 	BecomeExplosion1(self);
 }
 
@@ -728,16 +751,24 @@ hover_die(edict_t *self, edict_t *inflictor /* unused */,
 {
 	int n;
 
+    self->s.skinnum |= 1;
+    
 	if (!self)
 	{
 		return;
 	}
 
 	/* check for gib */
-	if (self->health <= self->gib_health)
+    if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex(
 						"misc/udeath.wav"), 1, ATTN_NORM, 0);
+        
+        for (n= 0; n < 8; n++)
+            ThrowGib (self, "models/objects/gibs/sm_metal/tris.md2", damage, GIB_METALLIC);
+        
+        for (n= 0; n < 2; n++)
+            ThrowGib (self, "models/objects/gibs/gear/tris.md2", damage, GIB_METALLIC);
 
 		for (n = 0; n < 2; n++)
 		{
@@ -755,11 +786,14 @@ hover_die(edict_t *self, edict_t *inflictor /* unused */,
 					GIB_ORGANIC);
 		}
 
-		ThrowHead(self,
-				"models/objects/gibs/sm_meat/tris.md2",
-				damage,
-				GIB_ORGANIC);
-		self->deadflag = DEAD_DEAD;
+        ThrowGib (self, "models/objects/gibs/head2/tris.md2", damage, GIB_ORGANIC);
+        BecomeExplosion1(self);
+
+//        ThrowHead(self,
+//                "models/objects/gibs/sm_meat/tris.md2",
+//                damage,
+//                GIB_ORGANIC);
+//        self->deadflag = DEAD_DEAD;
 		return;
 	}
 
@@ -814,13 +848,25 @@ SP_monster_hover(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
+
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/hover/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/hover/tris.md2");
 	VectorSet(self->mins, -24, -24, -24);
 	VectorSet(self->maxs, 24, 24, 32);
 
-	self->health = 240;
-	self->gib_health = -100;
-	self->mass = 150;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 240;
+    if(!self->gib_health)
+        self->gib_health = -100;
+    if(!self->mass)
+        self->mass = 150;
 
 	self->pain = hover_pain;
 	self->die = hover_die;
@@ -832,9 +878,26 @@ SP_monster_hover(edict_t *self)
 	self->monsterinfo.sight = hover_sight;
 	self->monsterinfo.search = hover_search;
 
+    // Knightmare- added sparks and blood type
+    if (!self->blood_type)
+        self->blood_type = 3; //sparks and blood
+    
+    // Lazarus
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    
 	gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &hover_move_stand;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&hover_move_death1,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
+    self->common_name = "Icarus";
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	flymonster_start(self);

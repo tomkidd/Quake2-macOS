@@ -225,6 +225,9 @@
 		A1E39FAD22838FB9005B2FB7 /* g_splinetrain.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9822838FB9005B2FB7 /* g_splinetrain.c */; };
 		A1E39FAF22838FB9005B2FB7 /* g_vehicle.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9A22838FB9005B2FB7 /* g_vehicle.c */; };
 		A1E39FB022838FB9005B2FB7 /* g_fog.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F9B22838FB9005B2FB7 /* g_fog.c */; };
+		A1E39FB52288EB92005B2FB7 /* actor.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39FB22288EB92005B2FB7 /* actor.c */; };
+		A1E39FB62288EB92005B2FB7 /* actor_weap.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39FB32288EB92005B2FB7 /* actor_weap.c */; };
+		A1E39FB72288EB92005B2FB7 /* actor.h in Headers */ = {isa = PBXBuildFile; fileRef = A1E39FB42288EB92005B2FB7 /* actor.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -514,6 +517,9 @@
 		A1E39F9822838FB9005B2FB7 /* g_splinetrain.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_splinetrain.c; sourceTree = "<group>"; };
 		A1E39F9A22838FB9005B2FB7 /* g_vehicle.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_vehicle.c; sourceTree = "<group>"; };
 		A1E39F9B22838FB9005B2FB7 /* g_fog.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_fog.c; sourceTree = "<group>"; };
+		A1E39FB22288EB92005B2FB7 /* actor.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = actor.c; sourceTree = "<group>"; };
+		A1E39FB32288EB92005B2FB7 /* actor_weap.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = actor_weap.c; sourceTree = "<group>"; };
+		A1E39FB42288EB92005B2FB7 /* actor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = actor.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -794,6 +800,7 @@
 		A15FA1C52110C5BC0048A3AD /* monster */ = {
 			isa = PBXGroup;
 			children = (
+				A1E39FB12288EB92005B2FB7 /* actor */,
 				A15FA1FC2110C5BC0048A3AD /* berserker */,
 				A15FA2022110C5BC0048A3AD /* boss2 */,
 				A15FA1F02110C5BC0048A3AD /* boss3 */,
@@ -1361,6 +1368,16 @@
 			path = quake2;
 			sourceTree = "<group>";
 		};
+		A1E39FB12288EB92005B2FB7 /* actor */ = {
+			isa = PBXGroup;
+			children = (
+				A1E39FB22288EB92005B2FB7 /* actor.c */,
+				A1E39FB32288EB92005B2FB7 /* actor_weap.c */,
+				A1E39FB42288EB92005B2FB7 /* actor.h */,
+			);
+			path = actor;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -1368,6 +1385,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1E39FB72288EB92005B2FB7 /* actor.h in Headers */,
 				A1E39FA222838FB9005B2FB7 /* g_ctf.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1557,6 +1575,7 @@
 				A15FA38B2111158D0048A3AD /* mutant.c in Sources */,
 				A15FA368211114990048A3AD /* g_chase.c in Sources */,
 				A15FA376211114990048A3AD /* g_utils.c in Sources */,
+				A1E39FB52288EB92005B2FB7 /* actor.c in Sources */,
 				A1E39FAC22838FB9005B2FB7 /* g_moreai.c in Sources */,
 				A15FA396211117050048A3AD /* flash.c in Sources */,
 				A1E39F9E22838FB9005B2FB7 /* g_patchplayermodels.c in Sources */,
@@ -1584,6 +1603,7 @@
 				A15FA377211114990048A3AD /* g_weapon.c in Sources */,
 				A1E39F9C22838FB9005B2FB7 /* g_crane.c in Sources */,
 				A1E39FA322838FB9005B2FB7 /* g_model.c in Sources */,
+				A1E39FB62288EB92005B2FB7 /* actor_weap.c in Sources */,
 				A15FA371211114990048A3AD /* g_spawn.c in Sources */,
 				A15FA3792111152E0048A3AD /* gladiator.c in Sources */,
 				A15FA36B211114990048A3AD /* g_func.c in Sources */,

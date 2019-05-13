@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -134,7 +135,9 @@ berserk_fidget(edict_t *self)
 	}
 
 	self->monsterinfo.currentmove = &berserk_move_stand_fidget;
-	gi.sound(self, CHAN_WEAPON, sound_idle, 1, ATTN_IDLE, 0);
+
+    if(!(self->spawnflags & SF_MONSTER_AMBUSH))
+        gi.sound(self, CHAN_WEAPON, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 mframe_t berserk_frames_walk[] = {
@@ -391,8 +394,8 @@ berserk_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
-	}
+        self->s.skinnum |= 1;
+    }
 
 	if (level.time < self->pain_debounce_time)
 	{
@@ -431,6 +434,14 @@ berserk_dead(edict_t *self)
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
 	gi.linkentity(self);
+    M_FlyCheck (self);
+    
+    // Lazarus monster fade
+    if(world->effects & FX_WORLDSPAWN_CORPSEFADE)
+    {
+        self->think=FadeDieSink;
+        self->nextthink=level.time+corpse_fadetime->value;
+    }
 }
 
 mframe_t berserk_frames_death1[] = {
@@ -486,7 +497,9 @@ berserk_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /*
 		return;
 	}
 
-	if (self->health <= self->gib_health)
+    self->s.skinnum |= 1;
+    self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
+    if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex( "misc/udeath.wav"), 1, ATTN_NORM, 0);
 
@@ -527,6 +540,24 @@ berserk_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /*
 	}
 }
 
+//===========
+//Jump
+mframe_t berserk_frames_jump [] =
+{
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL
+};
+mmove_t berserk_move_jump = { FRAME_run1, FRAME_run6, berserk_frames_jump, berserk_run };
+
+void berserk_jump (edict_t *self)
+{
+    self->monsterinfo.currentmove = &berserk_move_jump;
+}
+
 /*
  * QUAKED monster_berserk (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
  */
@@ -544,6 +575,8 @@ SP_monster_berserk(edict_t *self)
 		return;
 	}
 
+    self->class_id = ENTITY_MONSTER_BERSERK;
+    self->spawnflags |= SF_MONSTER_KNOWS_MIRRORS;
 	/* pre-caches */
 	sound_pain = gi.soundindex("berserk/berpain2.wav");
 	sound_die = gi.soundindex("berserk/berdeth2.wav");
@@ -552,15 +585,26 @@ SP_monster_berserk(edict_t *self)
 	sound_search = gi.soundindex("berserk/bersrch1.wav");
 	sound_sight = gi.soundindex("berserk/sight.wav");
 
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/berserk/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/berserk/tris.md2");
 	VectorSet(self->mins, -16, -16, -24);
 	VectorSet(self->maxs, 16, 16, 32);
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
-	self->health = 240;
-	self->gib_health = -60;
-	self->mass = 250;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 240;
+    if(!self->gib_health)
+        self->gib_health = -60;
+    if(!self->mass)
+        self->mass = 250;
 
 	self->pain = berserk_pain;
 	self->die = berserk_die;
@@ -574,9 +618,36 @@ SP_monster_berserk(edict_t *self)
 	self->monsterinfo.sight = berserk_sight;
 	self->monsterinfo.search = berserk_search;
 
+    if(monsterjump->value)
+    {
+        self->monsterinfo.jump = berserk_jump;
+        self->monsterinfo.jumpup = 48;
+        self->monsterinfo.jumpdn = 160;
+    }
+    
 	self->monsterinfo.currentmove = &berserk_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&berserk_move_death1,
+            &berserk_move_death2,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
+    self->monsterinfo.scale = MODEL_SCALE;
 
+    // Knightmare- added sparks and blood type
+    if (!self->blood_type)
+        self->blood_type = 3; //sparks and blood
+    
+    // Lazarus
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    if(!self->monsterinfo.flies)
+        self->monsterinfo.flies = 0.20;
+    self->common_name = "Berserker";
+    
 	gi.linkentity(self);
 
 	walkmonster_start(self);

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,7 +66,8 @@ flyer_idle(edict_t *self)
 		return;
 	}
 
-	gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+    if(!(self->spawnflags & SF_MONSTER_AMBUSH))
+        gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 void
@@ -518,9 +520,18 @@ flyer_fire(edict_t *self, int flash_number)
 
 	VectorCopy(self->enemy->s.origin, end);
 	end[2] += self->enemy->viewheight;
+
+    // Lazarus fog reduction of accuracy
+    if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+    {
+        end[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        end[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        end[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+    }
+    
 	VectorSubtract(end, start, dir);
 
-	monster_fire_blaster(self, start, dir, 1, 1000, flash_number, effect);
+    monster_fire_blaster (self, start, dir, 1, 1000, flash_number, effect, BLASTER_ORANGE);
 }
 
 void
@@ -762,7 +773,7 @@ flyer_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -806,7 +817,14 @@ flyer_die(edict_t *self, edict_t *inflictor /* unused */,
 		return;
 	}
 
-	gi.sound(self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+    int n;
+    // Knightmare- gibs!
+    for (n= 0; n < 4; n++)
+        ThrowGib (self, "models/objects/gibs/sm_metal/tris.md2", damage, GIB_METALLIC);
+    for (n= 0; n < 2; n++)
+        ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
+
+    gi.sound(self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	BecomeExplosion1(self);
 }
 
@@ -844,16 +862,26 @@ SP_monster_flyer(edict_t *self)
 
 	gi.soundindex("flyer/flyatck3.wav");
 
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/flyer/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/flyer/tris.md2");
 	VectorSet(self->mins, -16, -16, -24);
-	VectorSet(self->maxs, 16, 16, 32);
+	VectorSet(self->maxs, 16, 16, 16);
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
 	self->s.sound = gi.soundindex("flyer/flyidle1.wav");
 
-	self->health = 50;
-	self->mass = 50;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 50;
+    if(!self->mass)
+        self->mass = 50;
 
 	self->pain = flyer_pain;
 	self->die = flyer_die;
@@ -866,6 +894,17 @@ SP_monster_flyer(edict_t *self)
 	self->monsterinfo.sight = flyer_sight;
 	self->monsterinfo.idle = flyer_idle;
 
+    // Knightmare- added sparks and blood type
+    if (!self->blood_type)
+        self->blood_type = 3; //sparks and blood
+    
+    // Lazarus
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    self->common_name = "Flyer";
+    
 	gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &flyer_move_stand;

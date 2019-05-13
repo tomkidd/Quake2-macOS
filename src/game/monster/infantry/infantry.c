@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -155,7 +156,8 @@ infantry_fidget(edict_t *self)
 	}
 
 	self->monsterinfo.currentmove = &infantry_move_fidget;
-	gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+    if(!(self->spawnflags & SF_MONSTER_AMBUSH))
+        gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 mframe_t infantry_frames_walk[] = {
@@ -279,7 +281,7 @@ infantry_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+        self->s.skinnum |= 1;
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -343,10 +345,19 @@ InfantryMachineGun(edict_t *self)
 		G_ProjectSource(self->s.origin, monster_flash_offset[flash_number],
 				forward, right, start);
 
-		if (self->enemy)
+        if (self->enemy && self->enemy->inuse)
 		{
 			VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
 			target[2] += self->enemy->viewheight;
+
+            // Lazarus fog reduction of accuracy
+            if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+            {
+                target[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+                target[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+                target[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+            }
+            
 			VectorSubtract(target, start, forward);
 			VectorNormalize(forward);
 		}
@@ -392,6 +403,12 @@ infantry_dead(edict_t *self)
 		return;
 	}
 
+    // Lazarus: Stupid... if flies aren't set by M_FlyCheck, monster_think
+    //          will cause us to come back here over and over and over
+    //          until flies ARE set or monster is gibbed.
+    //          This line fixes that:
+    self->nextthink = 0;
+    
 	VectorSet(self->mins, -16, -16, -24);
 	VectorSet(self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
@@ -399,6 +416,12 @@ infantry_dead(edict_t *self)
 	gi.linkentity(self);
 
 	M_FlyCheck(self);
+    // Lazarus monster fade
+    if(world->effects & FX_WORLDSPAWN_CORPSEFADE)
+    {
+        self->think=FadeDieSink;
+        self->nextthink=level.time+corpse_fadetime->value;
+    }
 }
 
 mframe_t infantry_frames_death1[] = {
@@ -502,7 +525,9 @@ infantry_die(edict_t *self, edict_t *inflictor /* unused */,
 	}
 
 	/* check for gib */
-	if (self->health <= self->gib_health)
+    self->s.skinnum |= 1;
+    self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
+    if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex( "misc/udeath.wav"), 1, ATTN_NORM, 0);
 
@@ -769,6 +794,25 @@ infantry_attack(edict_t *self)
 	}
 }
 
+//Jump
+mframe_t infantry_frames_jump [] =
+{
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL
+};
+mmove_t infantry_move_jump = { FRAME_run01, FRAME_run08, infantry_frames_jump, infantry_run };
+
+void infantry_jump (edict_t *self)
+{
+    self->monsterinfo.currentmove = &infantry_move_jump;
+}
+
 /*
  * QUAKED monster_infantry (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
  */
@@ -802,13 +846,25 @@ SP_monster_infantry(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
+
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/infantry/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/infantry/tris.md2");
 	VectorSet(self->mins, -16, -16, -24);
 	VectorSet(self->maxs, 16, 16, 32);
 
-	self->health = 100;
-	self->gib_health = -40;
-	self->mass = 200;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 100;
+    if(!self->gib_health)
+        self->gib_health = -40;
+    if(!self->mass)
+        self->mass = 200;
 
 	self->pain = infantry_pain;
 	self->die = infantry_die;
@@ -822,9 +878,34 @@ SP_monster_infantry(edict_t *self)
 	self->monsterinfo.sight = infantry_sight;
 	self->monsterinfo.idle = infantry_fidget;
 
+    if(monsterjump->value)
+    {
+        self->monsterinfo.jump = infantry_jump;
+        self->monsterinfo.jumpup = 48;
+        self->monsterinfo.jumpdn = 160;
+    }
+    
+    // Lazarus
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    if(!self->monsterinfo.flies)
+        self->monsterinfo.flies = 0.40;
+    
 	gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &infantry_move_stand;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&infantry_move_death1,
+            &infantry_move_death2,
+            &infantry_move_death3,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
+    self->common_name = "Enforcer";
+    
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);
