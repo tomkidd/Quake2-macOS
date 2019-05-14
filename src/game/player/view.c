@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,6 +37,8 @@ float xyspeed;
 float bobmove;
 int bobcycle; /* odd cycles are right foot going forward */
 float bobfracsin; /* sin(bobfrac*M_PI) */
+
+qboolean PlayerOnFloor (edict_t *player);
 
 float
 SV_CalcRoll(vec3_t angles, vec3_t velocity)
@@ -108,7 +111,7 @@ P_DamageFeedback(edict_t *player)
 	}
 
 	/* start a pain animation if still in the player model */
-	if ((client->anim_priority < ANIM_PAIN) && (player->s.modelindex == 255))
+    if (client->anim_priority < ANIM_PAIN && player->s.modelindex == MAX_MODELS-1)
 	{
 		static int i;
 
@@ -276,11 +279,14 @@ SV_CalcViewOffset(edict_t *ent)
 	/* if dead, fix the angle and don't add any kick */
 	if (ent->deadflag)
 	{
-		VectorClear(angles);
-
-		ent->client->ps.viewangles[ROLL] = 40;
-		ent->client->ps.viewangles[PITCH] = -15;
-		ent->client->ps.viewangles[YAW] = ent->client->killer_yaw;
+        if(ent->deadflag != DEAD_FROZEN)
+        {
+            VectorClear(angles);
+            
+            ent->client->ps.viewangles[ROLL] = 40;
+            ent->client->ps.viewangles[PITCH] = -15;
+            ent->client->ps.viewangles[YAW] = ent->client->killer_yaw;
+        }
 	}
 	else
 	{
@@ -373,32 +379,46 @@ SV_CalcViewOffset(edict_t *ent)
 	/* absolutely bound offsets
 	   so the view can never be
 	   outside the player box */
-	if (v[0] < -14)
-	{
-		v[0] = -14;
-	}
-	else if (v[0] > 14)
-	{
-		v[0] = 14;
-	}
-
-	if (v[1] < -14)
-	{
-		v[1] = -14;
-	}
-	else if (v[1] > 14)
-	{
-		v[1] = 14;
-	}
-
-	if (v[2] < -22)
-	{
-		v[2] = -22;
-	}
-	else if (v[2] > 30)
-	{
-		v[2] = 30;
-	}
+    if(ent->client->chasetoggle) {
+        VectorSet (v, 0, 0, 0);
+        if(ent->client->chasecam != NULL) {
+            ent->client->ps.pmove.origin[0] = ent->client->chasecam->s.origin[0]*8;
+            ent->client->ps.pmove.origin[1] = ent->client->chasecam->s.origin[1]*8;
+            ent->client->ps.pmove.origin[2] = ent->client->chasecam->s.origin[2]*8;
+        }
+    } else if(ent->client->spycam) {
+        VectorSet (v, 0, 0, 0);
+        VectorCopy (ent->client->spycam->s.angles, ent->client->ps.viewangles);
+        if(ent->client->spycam->svflags & SVF_MONSTER)
+            ent->client->ps.viewangles[PITCH] = ent->client->spycam->move_angles[PITCH];
+    } else {
+        if (v[0] < -14)
+        {
+            v[0] = -14;
+        }
+        else if (v[0] > 14)
+        {
+            v[0] = 14;
+        }
+        
+        if (v[1] < -14)
+        {
+            v[1] = -14;
+        }
+        else if (v[1] > 14)
+        {
+            v[1] = 14;
+        }
+        
+        if (v[2] < -22)
+        {
+            v[2] = -22;
+        }
+        else if (v[2] > 30)
+        {
+            v[2] = 30;
+        }
+    }
 
 	VectorCopy(v, ent->client->ps.viewoffset);
 }
@@ -511,7 +531,10 @@ SV_CalcBlend(edict_t *ent)
 		ent->client->ps.blend[2] = ent->client->ps.blend[3] = 0;
 
 	/* add for contents */
-	VectorAdd(ent->s.origin, ent->client->ps.viewoffset, vieworg);
+    if (ent->client->chasetoggle)
+        VectorCopy (ent->client->chasecam->s.origin, vieworg);
+    else
+        VectorAdd(ent->s.origin, ent->client->ps.viewoffset, vieworg);
 	contents = gi.pointcontents(vieworg);
 
 	if (contents & (CONTENTS_LAVA | CONTENTS_SLIME | CONTENTS_WATER))
@@ -523,7 +546,7 @@ SV_CalcBlend(edict_t *ent)
 		ent->client->ps.rdflags &= ~RDF_UNDERWATER;
 	}
 
-	if (contents & (CONTENTS_SOLID | CONTENTS_LAVA))
+    if (contents & CONTENTS_LAVA) //(CONTENTS_SOLID|CONTENTS_LAVA))
 	{
 		SV_AddBlend(1.0, 0.3, 0.0, 0.6, ent->client->ps.blend);
 	}
@@ -532,11 +555,32 @@ SV_CalcBlend(edict_t *ent)
 		SV_AddBlend(0.0, 0.1, 0.05, 0.6, ent->client->ps.blend);
 	}
 	else if (contents & CONTENTS_WATER)
-	{
-		SV_AddBlend(0.5, 0.3, 0.2, 0.4, ent->client->ps.blend);
-	}
+    {
+        if(ent->in_mud == 3)
+            SV_AddBlend (0.4, 0.3, 0.2, 0.9, ent->client->ps.blend);
+        else
+            SV_AddBlend (0.5, 0.3, 0.2, 0.4, ent->client->ps.blend);
+    }
 
 	/* add for powerups */
+
+#ifdef JETPACK_MOD
+    if ( ent->client->jetpack )
+    {
+        remaining = ent->client->pers.inventory[fuel_index];
+        // beginning to fade if 4 secs or less
+        if (remaining > 40)
+        {
+            if ( ((level.framenum % 6) == 0) && ( level.framenum - ent->client->jetpack_activation > 30 ) )
+            {
+                if (ent->client->jetpack_thrusting && (level.framenum - ent->client->jetpack_start_thrust > 10))
+                    gi.sound (ent, CHAN_AUTO, gi.soundindex("jetpack/revrun.wav"), 1, ATTN_NORM, 0);
+                gi.sound (ent, CHAN_GIZMO, gi.soundindex("jetpack/running.wav"), 1, ATTN_NORM, 0);
+            }
+        }
+    }
+#endif // #ifdef JETPACK_MOD
+    
 	if (ent->client->quad_framenum > level.framenum)
 	{
 		remaining = ent->client->quad_framenum - level.framenum;
@@ -598,6 +642,14 @@ SV_CalcBlend(edict_t *ent)
 		}
 	}
 
+    if (level.freeze && (level.freezeframes % 30 == 0))
+    {
+        if (level.freezeframes == (stasis_time->value*10 - 30)) // was 270
+            gi.sound(ent,CHAN_ITEM,gi.soundindex("items/stasis_stop.wav"), 1, ATTN_NORM, 0);
+        else
+            gi.sound(ent,CHAN_ITEM,gi.soundindex("items/stasis.wav"), 1, ATTN_NORM, 0);
+    }
+    
 	/* add for damage */
 	if (ent->client->damage_alpha > 0)
 	{
@@ -629,6 +681,101 @@ SV_CalcBlend(edict_t *ent)
 	{
 		ent->client->bonus_alpha = 0;
 	}
+    
+    // DWH: Screen fade from target_failure or target_fade
+    if (ent->client->fadein > 0)
+    {
+        float alpha;
+        
+        // Turn off fade for dead software players or they won't see menu
+        if ( (ent->health <= 0) && (stricmp(vid_ref->string,"gl")) && (stricmp(vid_ref->string,"kmgl")) )
+            ent->client->fadein = 0;
+        
+        if(ent->client->fadein > level.framenum)
+        {
+            alpha = ent->client->fadealpha*(1.0 - (ent->client->fadein-level.framenum)/(ent->client->fadein-ent->client->fadestart));
+            SV_AddBlend (ent->client->fadecolor[0],
+                         ent->client->fadecolor[1],
+                         ent->client->fadecolor[2],
+                         alpha, ent->client->ps.blend);
+        }
+        else if(ent->client->fadehold > level.framenum)
+        {
+            SV_AddBlend (ent->client->fadecolor[0],
+                         ent->client->fadecolor[1],
+                         ent->client->fadecolor[2],
+                         ent->client->fadealpha, ent->client->ps.blend);
+        }
+        else if(ent->client->fadeout > level.framenum)
+        {
+            alpha = ent->client->fadealpha*((ent->client->fadeout-level.framenum)/(ent->client->fadeout-ent->client->fadehold));
+            SV_AddBlend (ent->client->fadecolor[0],
+                         ent->client->fadecolor[1],
+                         ent->client->fadecolor[2],
+                         alpha, ent->client->ps.blend);
+        }
+        else
+            ent->client->fadein = 0;
+    }
+}
+
+/*
+ =================
+ P_SlamDamage
+ Serves same purpose as P_FallingDamage, but detects wall impacts
+ =================
+ */
+void P_SlamDamage (edict_t *ent)
+{
+    float    delta;
+    int        damage;
+    vec3_t    dir;
+    vec3_t    deltav;
+    
+    if (ent->s.modelindex != MAX_MODELS-1)
+        return;        // not in the player model
+    
+    if (ent->movetype == MOVETYPE_NOCLIP)
+        return;
+    
+    deltav[0] = ent->velocity[0] - ent->client->oldvelocity[0];
+    deltav[1] = ent->velocity[1] - ent->client->oldvelocity[1];
+    deltav[2] = 0;
+    delta = VectorLength(deltav);
+    delta = delta*delta * 0.0001;
+    
+    //
+    // never take damage if just release grapple or on grappleZOID
+    if (level.time - ent->client->ctf_grapplereleasetime <= FRAMETIME * 2 ||
+        (ent->client->ctf_grapple &&
+         ent->client->ctf_grapplestate > CTF_GRAPPLE_STATE_FLY))
+        return;
+    //ZOID
+    
+    if (delta > 40*(player_max_speed->value/300)) // Knightmare changed
+    {
+        if (ent->health > 0)
+        {
+            /*    if(delta > 65)
+             ent->s.event = EV_FALLFAR;
+             else
+             ent->s.event = EV_FALL;*/
+            //play correct PPM sounds while in third person mode
+            if (delta >= 65*(player_max_speed->value/300)) // Knightmare changed
+                gi.sound(ent,CHAN_VOICE,gi.soundindex("*fall1.wav"),1.0,ATTN_NORM,0);
+            else
+                gi.sound(ent,CHAN_VOICE,gi.soundindex("*fall2.wav"),1.0,ATTN_NORM,0);
+        }
+        ent->pain_debounce_time = level.time;    // no normal pain sound
+        damage = (delta-40*(player_max_speed->value/300))/2; // Knightmare changed
+        if (damage < 1)
+            damage = 1;
+        VectorCopy(deltav,dir);
+        VectorNegate(dir,dir);
+        VectorNormalize(dir);
+        if (!deathmatch->value || !((int)dmflags->value & DF_NO_FALLING) )
+            T_Damage (ent, world, world, dir, ent->s.origin, vec3_origin, damage, 0, 0, MOD_FALLING);
+    }
 }
 
 void
@@ -643,8 +790,8 @@ P_FallingDamage(edict_t *ent)
 		return;
 	}
 
-	if (ent->s.modelindex != 255)
-	{
+    if (ent->s.modelindex != MAX_MODELS-1)
+{
 		return; /* not in the player model */
 	}
 
@@ -652,6 +799,9 @@ P_FallingDamage(edict_t *ent)
 	{
 		return;
 	}
+    
+    if (ent->client->jetpack && ent->client->ucmd.upmove > 0)
+        return;
 
 	if ((ent->client->oldvelocity[2] < 0) &&
 		(ent->velocity[2] > ent->client->oldvelocity[2]) && (!ent->groundentity))
@@ -666,10 +816,19 @@ P_FallingDamage(edict_t *ent)
 		}
 
 		delta = ent->velocity[2] - ent->client->oldvelocity[2];
+        ent->client->jumping = 0;
 	}
 
 	delta = delta * delta * 0.0001;
 
+    //ZOID
+    // never take damage if just release grapple or on grapple
+    if (level.time - ent->client->ctf_grapplereleasetime <= FRAMETIME * 2 ||
+        (ent->client->ctf_grapple &&
+         ent->client->ctf_grapplestate > CTF_GRAPPLE_STATE_FLY))
+        return;
+    //ZOID
+    
 	/* never take falling damage if completely underwater */
 	if (ent->waterlevel == 3)
 	{
@@ -691,9 +850,12 @@ P_FallingDamage(edict_t *ent)
 		return;
 	}
 
-	if (delta < 15)
+    // Lazarus: Changed here to NOT play footstep sounds if ent isn't on the ground.
+    //          So player will no longer play footstep sounds when descending a ladder.
+    if (delta < 7) //Knightmare- was 15, changed to 7
 	{
-		ent->s.event = EV_FOOTSTEP;
+        if (!(ent->watertype & CONTENTS_MUD) && !ent->vehicle && !ent->turret && (ent->groundentity || PlayerOnFloor(ent)) )
+            ent->s.event = EV_FOOTSTEP; //Knightmare- move Lazarus footsteps client-side
 		return;
 	}
 
@@ -712,11 +874,15 @@ P_FallingDamage(edict_t *ent)
 		{
 			if (delta >= 55)
 			{
-				ent->s.event = EV_FALLFAR;
+                gi.sound(ent,CHAN_VOICE,gi.soundindex("*fall1.wav"),1.0,ATTN_NORM,0);
 			}
 			else
 			{
-				ent->s.event = EV_FALL;
+                gi.sound(ent,CHAN_VOICE,gi.soundindex("*fall2.wav"),1.0,ATTN_NORM,0);
+                
+                if(world->effects & FX_WORLDSPAWN_ALERTSOUNDS)
+                    PlayerNoise(ent,ent->s.origin,PNOISE_SELF);
+                
 			}
 		}
 
@@ -736,11 +902,15 @@ P_FallingDamage(edict_t *ent)
 					vec3_origin, damage, 0, 0, MOD_FALLING);
 		}
 	}
-	else
+    else if (delta > 15)
 	{
 		ent->s.event = EV_FALLSHORT;
-		return;
+        if(world->effects & FX_WORLDSPAWN_ALERTSOUNDS)
+            PlayerNoise(ent,ent->s.origin,PNOISE_SELF);
+        return;
 	}
+    else // if delta > 7
+        ent->s.event = EV_LOUDSTEP; //Knightmare- loud footstep for softer landing
 }
 
 void
@@ -748,7 +918,7 @@ P_WorldEffects(void)
 {
 	qboolean breather;
 	qboolean envirosuit;
-	int waterlevel, old_waterlevel;
+    int waterlevel, old_waterlevel, old_watertype;
 
 	if (current_player->movetype == MOVETYPE_NOCLIP)
 	{
@@ -758,7 +928,9 @@ P_WorldEffects(void)
 
 	waterlevel = current_player->waterlevel;
 	old_waterlevel = current_client->old_waterlevel;
+    old_watertype  = current_player->old_watertype;
 	current_client->old_waterlevel = waterlevel;
+    current_player->old_watertype  = current_player->watertype;
 
 	breather = current_client->breather_framenum > level.framenum;
 	envirosuit = current_client->enviro_framenum > level.framenum;
@@ -778,6 +950,8 @@ P_WorldEffects(void)
 			gi.sound(current_player, CHAN_BODY,
 					gi.soundindex("player/watr_in.wav"), 1, ATTN_NORM, 0);
 		}
+        else if (current_player->watertype & CONTENTS_MUD)
+            gi.sound (current_player, CHAN_BODY, gi.soundindex("mud/mud_in2.wav"), 1, ATTN_NORM, 0);
 		else if (current_player->watertype & CONTENTS_WATER)
 		{
 			gi.sound(current_player, CHAN_BODY,
@@ -794,7 +968,10 @@ P_WorldEffects(void)
 	if (old_waterlevel && !waterlevel)
 	{
 		PlayerNoise(current_player, current_player->s.origin, PNOISE_SELF);
-		gi.sound(current_player, CHAN_BODY, gi.soundindex(
+        if(old_watertype & CONTENTS_MUD)
+            gi.sound (current_player, CHAN_BODY, gi.soundindex("mud/mud_out1.wav"), 1, ATTN_NORM, 0);
+        else
+            gi.sound(current_player, CHAN_BODY, gi.soundindex(
 						"player/watr_out.wav"), 1, ATTN_NORM, 0);
 		current_player->flags &= ~FL_INWATER;
 	}
@@ -802,7 +979,10 @@ P_WorldEffects(void)
 	/* check for head just going under moove^^water */
 	if ((old_waterlevel != 3) && (waterlevel == 3))
 	{
-		gi.sound(current_player, CHAN_BODY, gi.soundindex(
+        if(current_player->in_mud)
+            gi.sound (current_player, CHAN_BODY, gi.soundindex("mud/mud_un1.wav"), 1, ATTN_NORM, 0);
+        else
+            gi.sound(current_player, CHAN_BODY, gi.soundindex(
 						"player/watr_un.wav"), 1, ATTN_NORM, 0);
 	}
 
@@ -827,6 +1007,18 @@ P_WorldEffects(void)
 	/* check for drowning */
 	if (waterlevel == 3)
 	{
+#ifdef JETPACK_MOD
+        if ( current_player->client->jetpack )
+        {
+            if ( (current_player->watertype & (CONTENTS_LAVA|CONTENTS_SLIME)) && !(current_player->flags & FL_GODMODE ) ) // blow up in lava/slime
+                T_Damage (current_player, world, world, vec3_origin, current_player->s.origin, vec3_origin, current_player->health+1, 0, DAMAGE_NO_ARMOR, 0);
+            else
+            {
+                gitem_t    *jetpack = FindItem("jetpack");
+                Use_Jet (current_player, jetpack);            // shut down in water
+            }
+        }
+#endif
 		/* breather or envirosuit give air */
 		if (breather || envirosuit)
 		{
@@ -963,13 +1155,16 @@ G_SetClientEffects(edict_t *ent)
 	}
 
 	ent->s.effects = 0;
-	ent->s.renderfx = RF_IR_VISIBLE;
+    ent->s.renderfx = RF_IR_VISIBLE; // was 0, because all players are ir-goggle visible
 
 	if ((ent->health <= 0) || level.intermissiontime)
 	{
 		return;
 	}
 
+    if(ent->flags & FL_DISGUISED)
+        ent->s.renderfx |= RF_USE_DISGUISE;
+    
 	if (ent->powerarmor_time > level.time)
 	{
 		pa_type = PowerArmorType(ent);
@@ -985,6 +1180,10 @@ G_SetClientEffects(edict_t *ent)
 		}
 	}
 
+    //ZOID
+    CTFEffects(ent);
+    //ZOID
+    
 	if (ent->client->quad_framenum > level.framenum)
 	{
 		remaining = ent->client->quad_framenum - level.framenum;
@@ -1011,6 +1210,42 @@ G_SetClientEffects(edict_t *ent)
 		ent->s.effects |= EF_COLOR_SHELL;
 		ent->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
 	}
+    
+    if (ent->client->flashlight)
+    {
+        vec3_t end, forward, offset, right, start, up;
+        trace_t tr;
+        
+        if(level.flashlight_cost > 0) {
+            if(!Q_stricmp(FLASHLIGHT_ITEM,"health") ||
+               (ent->client->pers.inventory[ITEM_INDEX(FindItem(FLASHLIGHT_ITEM))]>=level.flashlight_cost) ) {
+                // Player has items remaining
+                if(ent->client->flashlight_time <= level.time) {
+                    ent->client->pers.inventory[ITEM_INDEX(FindItem(FLASHLIGHT_ITEM))]-=level.flashlight_cost;
+                    ent->client->flashlight_time = level.time + FLASHLIGHT_DRAIN;
+                }
+            } else {
+                // Out of item
+                ent->client->flashlight = false;
+            }
+        }
+        if(ent->client->flashlight) {
+            AngleVectors (ent->s.angles, forward, right, up);
+            VectorSet(offset, 0, 0, ent->viewheight-8);
+            G_ProjectSource (ent->s.origin, offset, forward, right, start);
+            VectorMA(start,384,forward,end);    // was 128
+            tr = gi.trace (start,NULL,NULL, end, ent, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_DEADMONSTER);
+            if (tr.fraction != 1)
+                VectorMA(tr.endpos,-4,forward,end);
+            VectorCopy(tr.endpos,end);
+            gi.WriteByte (svc_temp_entity);
+            gi.WriteByte (TE_FLASHLIGHT);
+            gi.WritePosition (end);
+            gi.WriteShort (ent - g_edicts);
+            gi.multicast (end, MULTICAST_PVS);
+            
+        }
+    }
 }
 
 void
@@ -1026,13 +1261,48 @@ G_SetClientEvent(edict_t *ent)
 		return;
 	}
 
-	if (ent->groundentity && (xyspeed > 225))
-	{
-		if ((int)(current_client->bobtime + bobmove) != bobcycle)
-		{
-			ent->s.event = EV_FOOTSTEP;
-		}
-	}
+    if ( ent->groundentity || PlayerOnFloor(ent))
+    {
+        if (!ent->waterlevel && ( xyspeed > 225) && !ent->vehicle)
+        {
+            if ( (int)(current_client->bobtime+bobmove) != bobcycle )
+                ent->s.event = EV_FOOTSTEP;     //Knightmare- move Lazarus footsteps client-side
+        }
+        else if( ent->in_mud && (ent->waterlevel == 1) && (xyspeed > 40))
+        {
+            if ( (level.framenum % 10) == 0 )
+                ent->s.event = EV_WADE_MUD; //Knightmare- move this client-side
+        }
+        else if ( ((ent->waterlevel == 1) || (ent->waterlevel == 2)) && (xyspeed > 100) && !(ent->in_mud) )
+        {
+            if ( (int)(current_client->bobtime+bobmove) != bobcycle )
+            {
+                if (ent->waterlevel == 1)
+                    ent->s.event = EV_SLOSH;     //Knightmare- move Lazarus footsteps client-side
+                else if (ent->waterlevel == 2)
+                    ent->s.event = EV_WADE;     //Knightmare- move Lazarus footsteps client-side
+            }
+        }
+    }
+    //Knightmare- swimming sounds
+    else if ((ent->waterlevel == 2) && (xyspeed > 60) && !(ent->in_mud))
+    {
+        if ( (int)(current_client->bobtime+bobmove) != bobcycle )
+            ent->s.event = EV_WADE;     //Knightmare- move Lazarus footsteps client-side
+    }
+    else if( (level.framenum % 4) == 0)
+    {
+        if(!ent->waterlevel && (ent->movetype != MOVETYPE_NOCLIP) && (fabs(ent->velocity[2]) > 50))
+        {
+            vec3_t    end, forward;
+            trace_t    tr;
+            AngleVectors(ent->s.angles,forward,NULL,NULL);
+            VectorMA(ent->s.origin,2,forward,end);
+            tr = gi.trace(ent->s.origin,ent->mins,ent->maxs,end,ent,CONTENTS_LADDER);
+            if(tr.fraction < 1.0)
+                ent->s.event = EV_CLIMB_LADDER;     //Knightmare- move Lazarus footsteps client-side
+        }
+    }
 }
 
 void
@@ -1073,6 +1343,8 @@ G_SetClientSound(edict_t *ent)
 	{
 		ent->s.sound = snd_fry;
 	}
+    else if ( ent->client->jetpack && (ent->client->pers.inventory[fuel_index] < 40 ))
+        ent->s.sound = gi.soundindex("jetpack/stutter.wav");
 	else if (strcmp(weap, "weapon_railgun") == 0)
 	{
 		ent->s.sound = gi.soundindex("weapons/rg_hum.wav");
@@ -1091,18 +1363,39 @@ G_SetClientSound(edict_t *ent)
 	}
 }
 
+#define MAX_STEP_FRACTION 0.80
+qboolean PlayerOnFloor (edict_t *player)
+{
+    trace_t        tr;
+    vec3_t        end = {0, 0, -2};
+    
+    if (!player->client)
+        return false;
+    
+    VectorMA (player->s.origin, 50, end, end);
+    tr = gi.trace (player->s.origin, NULL, NULL, end, player, MASK_ALL);
+    //Com_Printf("%f\n", tr.fraction);
+    if (tr.fraction >= MAX_STEP_FRACTION)
+        return false;
+    else if (player->client->oldvelocity[2] > 0 || player->velocity[2] > 0)
+        return false;
+    
+    return true;
+}
+
 void
 G_SetClientFrame(edict_t *ent)
 {
 	gclient_t *client;
 	qboolean duck, run;
-
+    qboolean    floor;
+    
 	if (!ent)
 	{
 		return;
 	}
 
-	if (ent->s.modelindex != 255)
+    if (ent->s.modelindex != MAX_MODELS-1)
 	{
 		return; /* not in the player model */
 	}
@@ -1118,15 +1411,25 @@ G_SetClientFrame(edict_t *ent)
 		duck = false;
 	}
 
-	if (xyspeed)
+    // Knightmare- don't always play running animation when in mud
+    if (ent->in_mud && xyspeed > 40)
 	{
 		run = true;
 	}
+    else if (!ent->in_mud && xyspeed)
+        run = true;
 	else
 	{
 		run = false;
 	}
 
+    // Lazarus: override run animations for vehicle drivers
+    if (ent->vehicle)
+        run = false;
+    
+    // Knightmare- do the check here, to be sure not to skip over the frame increment
+    floor = PlayerOnFloor(ent);
+    
 	/* check for stand/duck and stop/go transitions */
 	if ((duck != client->anim_duck) && (client->anim_priority < ANIM_DEATH))
 	{
@@ -1138,7 +1441,8 @@ G_SetClientFrame(edict_t *ent)
 		goto newanim;
 	}
 
-	if (!ent->groundentity && (client->anim_priority <= ANIM_WAVE))
+    // Knightmare- only skip increment if greater than step or swimming
+    if (!ent->groundentity && client->anim_priority <= ANIM_WAVE && (!floor || ent->waterlevel > 2))
 	{
 		goto newanim;
 	}
@@ -1183,30 +1487,48 @@ newanim:
 	client->anim_duck = duck;
 	client->anim_run = run;
 
-	if (!ent->groundentity)
+    // Knightmare- added swimming check
+    if (!ent->groundentity && (!floor || ent->waterlevel > 2)) //CDawg modify this
 	{
-		client->anim_priority = ANIM_JUMP;
-
-		if (ent->s.frame != FRAME_jump2)
-		{
-			ent->s.frame = FRAME_jump1;
-		}
-
-		client->anim_end = FRAME_jump2;
+        //ZOID: if on grapple, don't go into jump frame, go into standing
+        //frame
+        if (client->ctf_grapple) {
+            ent->s.frame = FRAME_stand01;
+            client->anim_end = FRAME_stand40;
+        } else {
+            //ZOID
+            client->anim_priority = ANIM_JUMP;
+            
+            if (ent->s.frame != FRAME_jump2)
+            {
+                ent->s.frame = FRAME_jump1;
+            }
+            
+            client->anim_end = FRAME_jump2;
+        }
 	}
 	else if (run)
 	{
 		/* running */
 		if (duck)
-		{
-			ent->s.frame = FRAME_crwalk1;
-			client->anim_end = FRAME_crwalk6;
-		}
-		else
-		{
-			ent->s.frame = FRAME_run1;
-			client->anim_end = FRAME_run6;
-		}
+        {
+            ent->s.frame = FRAME_crwalk1;
+            client->anim_end = FRAME_crwalk6;
+        }
+        else
+        {    // CDawg - add here!
+            if (client->backpedaling)
+            {
+                client->anim_priority = ANIM_REVERSE;
+                ent->s.frame = FRAME_run6;
+                client->anim_end = FRAME_run1;
+            }
+            else
+            {
+                ent->s.frame = FRAME_run1;
+                client->anim_end = FRAME_run6;
+            }
+        }
 	}
 	else
 	{
@@ -1228,6 +1550,21 @@ newanim:
  * Called for each player at the end of
  * the server frame and right after spawning
  */
+// Lazarus: "whatsit" display
+
+void WhatsIt(edict_t *ent)
+{
+    char string[128];
+    
+    if(!ent->client->whatsit)
+        return;
+    
+    sprintf(string, "xv 0 yb -68 cstring2 \"%s\" ", ent->client->whatsit);
+    gi.WriteByte (svc_layout);
+    gi.WriteString (string);
+    gi.unicast(ent,true);
+}
+
 void
 ClientEndServerFrame(edict_t *ent)
 {
@@ -1294,17 +1631,24 @@ ClientEndServerFrame(edict_t *ent)
 		bobmove = 0;
 		current_client->bobtime = 0; /* start at beginning of cycle again */
 	}
-	else if (ent->groundentity)
+    //Kngightmare- exception for wading
+    else if (ent->groundentity || ent->waterlevel == 2)
 	{
 		/* so bobbing only cycles when on ground */
-		if (xyspeed > 210)
+        if (xyspeed > 450) // Knightmare added
+            bobmove = 0.50;
+        else if (xyspeed > 210)
 		{
 			bobmove = 0.25;
 		}
+        else if (!ent->groundentity && ent->waterlevel == 2 && xyspeed > 100)
+            bobmove = 0.45;
 		else if (xyspeed > 100)
 		{
 			bobmove = 0.125;
 		}
+        else if (!ent->groundentity && ent->waterlevel == 2)
+            bobmove = 0.325;
 		else
 		{
 			bobmove = 0.0625;
@@ -1319,10 +1663,18 @@ ClientEndServerFrame(edict_t *ent)
 	}
 
 	bobcycle = (int)bobtime;
-	bobfracsin = fabs(sin(bobtime * M_PI));
+
+    // Lazarus: vehicle drivers don't bob
+    if(ent->vehicle)
+        bobfracsin = 0.;
+    else
+        bobfracsin = fabs(sin(bobtime * M_PI));
 
 	/* detect hitting the floor */
 	P_FallingDamage(ent);
+
+    // Lazarus: detect hitting walls
+    P_SlamDamage (ent);
 
 	/* apply all the damage taken this frame */
 	P_DamageFeedback(ent);
@@ -1366,22 +1718,34 @@ ClientEndServerFrame(edict_t *ent)
 	VectorClear(ent->client->kick_angles);
 
 	if (!(level.framenum & 31))
-	{
-		/* if the scoreboard is up, update it */
-		if (ent->client->showscores)
-		{
-			DeathmatchScoreboardMessage(ent, ent->enemy);
-			gi.unicast(ent, false);
-		}
-
-		/* if the help computer is up, update it */
-		if (ent->client->showhelp)
-		{
-			ent->client->pers.helpchanged = 0;
-			HelpComputerMessage(ent);
-			gi.unicast(ent, false);
-		}
-	}
+    {
+        /* if the scoreboard is up, update it */
+        if (ent->client->showscores)
+        {
+            if (ent->client->menu)
+            {
+                PMenu_Do_Update(ent);
+                ent->client->menudirty = false;
+                ent->client->menutime = level.time;
+            }
+            else if (ent->client->textdisplay)
+                Text_Update(ent);
+            else
+                DeathmatchScoreboardMessage(ent, ent->enemy);
+            gi.unicast(ent, false);
+        }
+        else if(ent->client->whatsit)
+            WhatsIt(ent);
+    }
+    
+    /* if the help computer is up, update it */
+    if (ent->client->showhelp)
+    {
+        ent->client->pers.helpchanged = 0;
+        HelpComputerMessage(ent);
+        gi.unicast(ent, false);
+    }
+    
 
 	/* if the inventory is up, update it */
 	if (ent->client->showinventory)
@@ -1389,4 +1753,10 @@ ClientEndServerFrame(edict_t *ent)
 		InventoryMessage(ent);
 		gi.unicast(ent, false);
 	}
+    
+    // tpp
+    if (ent->client->chasetoggle == 1)
+        CheckChasecam_Viewent(ent);
+    // end tpp
+
 }

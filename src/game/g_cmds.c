@@ -1157,6 +1157,12 @@ Cmd_Score_f(edict_t *ent)
 	ent->client->showinventory = false;
 	ent->client->showhelp = false;
 
+    if (ent->client->menu)
+        PMenu_Close(ent);
+    
+    if (ent->client->textdisplay)
+        Text_Close(ent);
+    
 	if (!deathmatch->value && !coop->value)
 	{
 		return;
@@ -2616,7 +2622,7 @@ ClientCommand(edict_t *ent)
     else if(!Q_stricmp(cmd, "properties"))
     {
         if(parm) {
-            char    filename[_MAX_PATH];
+            char    filename[4096]; // todo: fix "PATH_MAX"
             edict_t    *e;
             FILE    *f;
             //            int        i;

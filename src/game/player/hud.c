@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +47,9 @@ MoveClientToIntermission(edict_t *ent)
 	VectorCopy(level.intermission_angle, ent->client->ps.viewangles);
 	ent->client->ps.pmove.pm_type = PM_FREEZE;
 	ent->client->ps.gunindex = 0;
+#ifdef KMQUAKE2_ENGINE_MOD
+    ent->client->ps.gunindex2 = 0;
+#endif
 	ent->client->ps.blend[3] = 0;
 	ent->client->ps.rdflags &= ~RDF_UNDERWATER;
 
@@ -61,10 +65,20 @@ MoveClientToIntermission(edict_t *ent)
 	ent->s.modelindex = 0;
 	ent->s.modelindex2 = 0;
 	ent->s.modelindex3 = 0;
-	ent->s.modelindex = 0;
+    ent->s.modelindex4 = 0;
+#ifdef KMQUAKE2_ENGINE_MOD
+    ent->s.modelindex5 = 0;
+    ent->s.modelindex6 = 0;
+    ent->s.modelindex7 = 0;
+    ent->s.modelindex8 = 0;
+#endif
 	ent->s.effects = 0;
 	ent->s.sound = 0;
 	ent->solid = SOLID_NOT;
+
+#ifdef JETPACK_MOD
+    ent->client->jetpack_framenum = 0;
+#endif
 
 	gi.linkentity(ent);
 
@@ -91,6 +105,11 @@ BeginIntermission(edict_t *targ)
 	{
 		return; /* already activated */
 	}
+
+    //ZOID
+    if (deathmatch->value && ctf->value)
+        CTFCalcScores();
+    //ZOID
 
 	game.autosaved = false;
 
@@ -227,6 +246,18 @@ DeathmatchScoreboardMessage(edict_t *ent, edict_t *killer)
 		return;
 	}
 
+    // ACEBOT_ADD
+    if (ent->is_bot)
+        return;
+    // ACEBOT_END
+    
+    //ZOID
+    if (ctf->value) {
+        CTFScoreboardMessage (ent, killer);
+        return;
+    }
+    //ZOID
+    
 	/* sort the clients by score */
 	total = 0;
 
@@ -364,23 +395,31 @@ HelpComputerMessage(edict_t *ent)
 		sk = "hard+";
 	}
 
-	/* send the layout */
-	Com_sprintf(string, sizeof(string),
-			"xv 32 yv 8 picn help " /* background */
-			"xv 202 yv 12 string2 \"%s\" " /* skill */
-			"xv 0 yv 24 cstring2 \"%s\" " /* level name */
-			"xv 0 yv 54 cstring2 \"%s\" " /* help 1 */
-			"xv 0 yv 110 cstring2 \"%s\" " /* help 2 */
-			"xv 50 yv 164 string2 \" kills     goals    secrets\" "
-			"xv 50 yv 172 string2 \"%3i/%3i     %i/%i       %i/%i\" ",
-			sk,
-			level.level_name,
-			game.helpmessage1,
-			game.helpmessage2,
-			level.killed_monsters, level.total_monsters,
-			level.found_goals, level.total_goals,
-			level.found_secrets, level.total_secrets);
-
+    /* send the layout */
+    if(world->effects & FX_WORLDSPAWN_NOHELP)
+    {
+        Com_sprintf (string, sizeof(string),
+                     "xv %d yv %d picn help ",(int)(world->bleft[0]),(int)(world->bleft[1]));
+    }
+    else
+    {
+        Com_sprintf(string, sizeof(string),
+                    "xv 32 yv 8 picn help " /* background */
+                    "xv 202 yv 12 string2 \"%s\" " /* skill */
+                    "xv 0 yv 24 cstring2 \"%s\" " /* level name */
+                    "xv 0 yv 54 cstring2 \"%s\" " /* help 1 */
+                    "xv 0 yv 110 cstring2 \"%s\" " /* help 2 */
+                    "xv 50 yv 164 string2 \" kills     goals    secrets\" "
+                    "xv 50 yv 172 string2 \"%3i/%3i     %i/%i       %i/%i\" ",
+                    sk,
+                    level.level_name,
+                    game.helpmessage1,
+                    game.helpmessage2,
+                    level.killed_monsters, level.total_monsters,
+                    level.found_goals, level.total_goals,
+                    level.found_secrets, level.total_secrets);
+    }
+    
 	gi.WriteByte(svc_layout);
 	gi.WriteString(string);
 }
@@ -412,6 +451,76 @@ InventoryMessage(edict_t *ent)
 
 /* ======================================================================= */
 
+void WhatIsIt (edict_t *ent)
+{
+    float       range;
+    int            i, num;
+    edict_t        *touch[MAX_EDICTS];
+    edict_t        *who, *best;
+    trace_t     tr;
+    vec3_t      dir, end, entp, forward, mins, maxs, start, viewp;
+    
+    /* Check for looking directly at a player or other non-trigger entity */
+    VectorCopy(ent->s.origin, start);
+    start[2] += ent->viewheight;
+    AngleVectors(ent->client->v_angle, forward, NULL, NULL);
+    VectorMA(start, 8192, forward, end);
+    tr = gi.trace(start, NULL, NULL, end, ent, MASK_SHOT|CONTENTS_SLIME|CONTENTS_LAVA);
+    if (tr.ent > world)
+    {
+        if(tr.ent->common_name)
+            ent->client->whatsit = tr.ent->common_name;
+        //        else
+        //            ent->client->whatsit = tr.ent->classname;
+        return;
+    }
+    
+    /* Check for looking directly at a pickup item */
+    VectorCopy(ent->s.origin,viewp);
+    viewp[2] += ent->viewheight;
+    AngleVectors(ent->client->v_angle, forward, NULL, NULL);
+    VectorSet(mins,-4096,-4096,-4096);
+    VectorSet(maxs, 4096, 4096, 4096);
+    num = gi.BoxEdicts (mins, maxs, touch, MAX_EDICTS, AREA_TRIGGERS);
+    best = NULL;
+    for (i=0 ; i<num ; i++)
+    {
+        who = touch[i];
+        if (!who->inuse)
+            continue;
+        if (!who->item)
+            continue;
+        if (!visible(ent,who))
+            continue;
+        if (!infront(ent,who))
+            continue;
+        VectorSubtract(who->s.origin,viewp,dir);
+        range = VectorLength(dir);
+        VectorMA(viewp, range, forward, entp);
+        if(entp[0] < who->s.origin[0] - 17) continue;
+        if(entp[1] < who->s.origin[1] - 17) continue;
+        if(entp[2] < who->s.origin[2] - 17) continue;
+        if(entp[0] > who->s.origin[0] + 17) continue;
+        if(entp[1] > who->s.origin[1] + 17) continue;
+        if(entp[2] > who->s.origin[2] + 17) continue;
+        best = who;
+        break;
+    }
+    if(best)
+    {
+        ent->client->whatsit = best->item->pickup_name;
+        return;
+    }
+}
+
+static char *tnames[] = {
+    "item_tech1", "item_tech2", "item_tech3", "item_tech4", "item_tech5", "item_tech6",
+    NULL
+};
+
+#define STAT_SPEED_CTF              31
+
+extern void WhatsIt(edict_t *ent);
 void
 G_SetStats(edict_t *ent)
 {
@@ -452,7 +561,7 @@ G_SetStats(edict_t *ent)
 		if (cells == 0)
 		{
 			/* ran out of cells for power armor */
-			ent->flags &= ~FL_POWER_ARMOR;
+            ent->flags &= ~(FL_POWER_SHIELD|FL_POWER_SCREEN);
 			gi.sound(ent, CHAN_ITEM, gi.soundindex(
 							"misc/power2.wav"), 1, ATTN_NORM, 0);
 			power_armor_type = 0;
@@ -461,12 +570,18 @@ G_SetStats(edict_t *ent)
 
 	index = ArmorIndex(ent);
 
-	if (power_armor_type && (!index || (level.framenum & 8)))
+    // Knightmare- show correct icon
+    if ((power_armor_type == POWER_ARMOR_SHIELD) && (!index || (level.framenum & 8) ) )
 	{
 		/* flash between power armor and other armor icon */
 		ent->client->ps.stats[STAT_ARMOR_ICON] = gi.imageindex("i_powershield");
 		ent->client->ps.stats[STAT_ARMOR] = cells;
 	}
+    else if ((power_armor_type == POWER_ARMOR_SCREEN) && (!index || (level.framenum & 8) ) )
+    {    // flash between power armor and other armor icon
+        ent->client->ps.stats[STAT_ARMOR_ICON] = gi.imageindex ("i_powerscreen");
+        ent->client->ps.stats[STAT_ARMOR] = cells;
+    }
 	else if (index)
 	{
 		item = GetItemByIndex(index);
@@ -512,6 +627,21 @@ G_SetStats(edict_t *ent)
 		ent->client->ps.stats[STAT_TIMER] =
 			(ent->client->breather_framenum - level.framenum) / 10;
 	}
+#ifdef JETPACK_MOD
+    else if ( (ent->client->jetpack) &&
+             (!ent->client->jetpack_infinite) &&
+             (ent->client->pers.inventory[fuel_index] >= 0) &&
+             (ent->client->pers.inventory[fuel_index] < 100000))
+    {
+        ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_jet");
+        ent->client->ps.stats[STAT_TIMER] = ent->client->pers.inventory[fuel_index];
+    }
+#endif
+    else if (level.freeze)
+    {
+        ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex ("p_freeze");
+        ent->client->ps.stats[STAT_TIMER] = stasis_time->value - level.freezeframes/10;
+    }
 	else
 	{
 		ent->client->ps.stats[STAT_TIMER_ICON] = 0;
@@ -531,6 +661,63 @@ G_SetStats(edict_t *ent)
 
 	ent->client->ps.stats[STAT_SELECTED_ITEM] = ent->client->pers.selected_item;
 
+    // Lazarus vehicle/tracktrain
+    // Knightmare- speed bar for CTF
+    if (ctf->value)
+    {
+        if(ent->vehicle && !(ent->vehicle->spawnflags & 16))
+        {
+            switch(ent->vehicle->moveinfo.state)
+            {
+                case -3: ent->client->ps.stats[STAT_SPEED_CTF] = gi.imageindex("speedr3"); break;
+                case -2: ent->client->ps.stats[STAT_SPEED_CTF] = gi.imageindex("speedr2"); break;
+                case -1: ent->client->ps.stats[STAT_SPEED_CTF] = gi.imageindex("speedr1"); break;
+                case  1: ent->client->ps.stats[STAT_SPEED_CTF] = gi.imageindex("speed1"); break;
+                case  2: ent->client->ps.stats[STAT_SPEED_CTF] = gi.imageindex("speed2"); break;
+                case  3: ent->client->ps.stats[STAT_SPEED_CTF] = gi.imageindex("speed3"); break;
+                default: ent->client->ps.stats[STAT_SPEED_CTF] = gi.imageindex("speed0"); break;
+            }
+        }
+        else
+            ent->client->ps.stats[STAT_SPEED_CTF] = 0;
+    }
+    else
+    {
+        if(ent->vehicle && !(ent->vehicle->spawnflags & 16))
+        {
+            switch(ent->vehicle->moveinfo.state)
+            {
+                case -3: ent->client->ps.stats[STAT_SPEED] = gi.imageindex("speedr3"); break;
+                case -2: ent->client->ps.stats[STAT_SPEED] = gi.imageindex("speedr2"); break;
+                case -1: ent->client->ps.stats[STAT_SPEED] = gi.imageindex("speedr1"); break;
+                case  1: ent->client->ps.stats[STAT_SPEED] = gi.imageindex("speed1"); break;
+                case  2: ent->client->ps.stats[STAT_SPEED] = gi.imageindex("speed2"); break;
+                case  3: ent->client->ps.stats[STAT_SPEED] = gi.imageindex("speed3"); break;
+                default: ent->client->ps.stats[STAT_SPEED] = gi.imageindex("speed0"); break;
+            }
+        }
+        else
+            ent->client->ps.stats[STAT_SPEED] = 0;
+    }
+    
+    // "whatsit"
+    if (world->effects & FX_WORLDSPAWN_WHATSIT)
+    {
+        if (ent->client->showscores || ent->client->showhelp || ent->client->showinventory)
+            ent->client->whatsit = NULL;
+        else if(!(level.framenum % 5))    // only update every 1/2 second
+        {
+            char *temp = ent->client->whatsit;
+            
+            ent->client->whatsit = NULL;
+            WhatIsIt(ent);
+            if(ent->client->whatsit && !temp)
+                WhatsIt(ent);
+        }
+    }
+    else
+        ent->client->whatsit = NULL;
+    
 	/* layouts */
 	ent->client->ps.stats[STAT_LAYOUTS] = 0;
 
@@ -560,6 +747,9 @@ G_SetStats(edict_t *ent)
 		}
 	}
 
+    if(!ent->client->ps.stats[STAT_LAYOUTS] && ent->client->whatsit)
+        ent->client->ps.stats[STAT_LAYOUTS] |= 1;
+    
 	/* frags */
 	ent->client->ps.stats[STAT_FRAGS] = ent->client->resp.score;
 
@@ -591,6 +781,34 @@ G_SetStats(edict_t *ent)
 	}
 
 	ent->client->ps.stats[STAT_SPECTATOR] = 0;
+
+    if(ent->client->zoomed)
+        ent->client->ps.stats[STAT_ZOOM] = gi.imageindex("zoom");
+    else
+        ent->client->ps.stats[STAT_ZOOM] = 0;
+    
+    //ZOID
+    SetCTFStats(ent);
+    //ZOID
+    
+    // Knightmare- show tech icon if in DM
+    if (deathmatch->value && !ctf->value)
+    {
+        int i = 0;
+        gitem_t *tech;
+        
+        ent->client->ps.stats[STAT_CTF_TECH] = 0;
+        while (tnames[i]) {
+            if ((tech = FindItemByClassname(tnames[i])) != NULL &&
+                ent->client->pers.inventory[ITEM_INDEX(tech)])
+            {
+                ent->client->ps.stats[STAT_CTF_TECH] = gi.imageindex(tech->icon);
+                break;
+            }
+            i++;
+        }
+    }
+    // end Knightmare
 }
 
 void

@@ -169,6 +169,8 @@ ai_stand(edict_t *self, float dist)
 	{
         if (self->enemy && self->enemy->inuse)
 		{
+            float    length;
+            
 			VectorSubtract(self->enemy->s.origin, self->s.origin, v);
             length = VectorLength(v);
 			self->ideal_yaw = vectoyaw(v);

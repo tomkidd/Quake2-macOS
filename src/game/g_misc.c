@@ -1445,7 +1445,7 @@ func_explosive_explode(edict_t *self)
 	int count;
 	int mass;
 
-	if (!self || !inflictor || !attacker)
+	if (!self)
 	{
 		return;
 	}
@@ -1559,7 +1559,7 @@ func_explosive_explode(edict_t *self)
         }
     }
     
-	G_UseTargets(self, attacker);
+	G_UseTargets(self, self->activator);
 
 	if (self->dmg)
 	{
@@ -4867,7 +4867,9 @@ void SP_target_fountain (edict_t *ent)
 #define MAX_SKINNAME    64
 #define DEADSOLDIER_MODEL "models/deadbods/dude/tris.md2"
 
+#ifdef WIN32
 #include <direct.h>
+#endif
 #include "pak.h"
 
 int PatchDeadSoldier ()

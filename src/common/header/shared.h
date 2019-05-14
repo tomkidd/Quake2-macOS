@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2000-2002 Mr. Hyde and Mad Dog
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,6 +54,45 @@ typedef unsigned char byte;
  #define NULL ((void *)0)
 #endif
 
+// Knightmare- whether to include new engine enhancements
+#define    KMQUAKE2_ENGINE_MOD
+
+// enable to build exe that is compatible with Eraser bot
+// Eraser Bot's precompiled p_trail.c not compatible with modified entity state structure
+//#define ERASER_COMPAT_BUILD
+
+// enable to build exe to host net games
+// (to bring MAX_MSG_LENGTH in line with UDP packet size)
+//#define NET_SERVER_BUILD
+
+// enable to build exe with 24-bit coordinate transmission
+// changes pmove origin size in game DLLs
+#ifdef KMQUAKE2_ENGINE_MOD
+#define LARGE_MAP_SIZE
+#endif
+
+#ifdef KMQUAKE2_ENGINE_MOD
+#ifndef ERASER_COMPAT_BUILD
+#define NEW_ENTITY_STATE_MEMBERS
+#endif
+#define NEW_PLAYER_STATE_MEMBERS
+#endif
+// end Knightmare
+
+#define ROQ_SUPPORT // whether to use new cinematic system
+
+#define OGG_SUPPORT // whether to use Ogg Vorbis soundtrack
+
+#define DECALS // whether to use decal system
+
+#define LIGHT_BLOOMS // whether to use light blooms
+
+#define MD2_AS_MD3 // whether to load md2s into md3 memory representation
+
+#ifndef MD2_AS_MD3
+#define PROJECTION_SHADOWS // whether to use projection shadows from BeefQuake
+#endif
+
 /* angle indexes */
 #define PITCH 0                     /* up / down */
 #define YAW 1                       /* left / right */
@@ -96,11 +136,29 @@ typedef unsigned char byte;
 
 /* per-level limits */
 #define MAX_CLIENTS 256             /* absolute limit */
+#ifdef KMQUAKE2_ENGINE_MOD        //Knightmare- increase MAX_EDICTS
+#define    MAX_EDICTS            8192    // must change protocol to increase more
+#else
 #define MAX_EDICTS 1024             /* must change protocol to increase more */
+#endif
 #define MAX_LIGHTSTYLES 256
+
+#ifdef KMQUAKE2_ENGINE_MOD        //Knightmare- Ding-Dong, Index: Overflow is dead!
+#define    MAX_MODELS            8192    // these are sent over the net as shorts
+#define    MAX_SOUNDS            8192    // so they cannot exceed 64K
+#define    MAX_IMAGES            2048
+#else
 #define MAX_MODELS 256              /* these are sent over the net as bytes */
 #define MAX_SOUNDS 256              /* so they cannot be blindly increased */
 #define MAX_IMAGES 256
+#endif
+
+//Knightmare- hacked offsets for old demos
+#define    OLD_MAX_MODELS        256
+#define    OLD_MAX_SOUNDS        256
+#define    OLD_MAX_IMAGES        256
+//end Knightmare
+
 #define MAX_ITEMS 256
 #define MAX_GENERAL (MAX_CLIENTS * 2)       /* general config strings */
 
@@ -138,7 +196,9 @@ typedef enum
  */
 
 typedef float vec_t;
+typedef vec_t vec2_t[2];
 typedef vec_t vec3_t[3];
+typedef vec_t vec4_t[4];
 typedef vec_t vec5_t[5];
 
 typedef int fixed4_t;
@@ -148,6 +208,18 @@ typedef int fixed16_t;
 #ifndef M_PI
  #define M_PI 3.14159265358979323846 /* matches value in gcc v2 math.h */
 #endif
+
+#ifndef M_PI2
+#define M_PI2                    6.28318530717958647692    // Matches value in GCC v2 math.h
+#endif
+
+#define SqrtFast(x)                ((x) * Q_rsqrt(x))
+
+#define DEG2RAD(a)                (((a) * M_PI) / 180.0F)
+#define RAD2DEG(a)                (((a) * 180.0F) / M_PI)
+
+//#define    frand()                    ((rand() & 0x7FFF) * (1.0/0x7FFF))        // 0 to 1
+//#define crand()                    ((rand() & 0x7FFF) * (2.0/0x7FFF) - 1)    // -1 to 1
 
 struct cplane_s;
 
@@ -190,6 +262,13 @@ void VectorInverse(vec3_t v);
 void VectorScale(vec3_t in, vec_t scale, vec3_t out);
 int Q_log2(int val);
 
+// From Q2E
+void VectorRotate (const vec3_t v, const vec3_t matrix[3], vec3_t out);
+void AnglesToAxis (const vec3_t angles, vec3_t axis[3]);
+void AxisClear (vec3_t axis[3]);
+void AxisCopy (const vec3_t in[3], vec3_t out[3]);
+qboolean AxisCompare (const vec3_t axis1[3], const vec3_t axis2[3]);
+
 void R_ConcatRotations(float in1[3][3], float in2[3][3], float out[3][3]);
 void R_ConcatTransforms(float in1[3][4], float in2[3][4], float out[3][4]);
 
@@ -229,6 +308,7 @@ void COM_StripExtension(char *in, char *out);
 const char *COM_FileExtension(const char *in);
 void COM_FileBase(char *in, char *out);
 void COM_FilePath(const char *in, char *out);
+//char *COM_FileExtension (char *in);
 void COM_DefaultExtension(char *path, const char *extension);
 
 char *COM_Parse(char **data_p);
@@ -237,6 +317,41 @@ char *COM_Parse(char **data_p);
 void Com_sprintf(char *dest, int size, char *fmt, ...);
 
 void Com_PageInMemory(byte *buffer, int size);
+
+
+//=============================================
+
+#define COLOR_GRAY        '0'
+#define COLOR_RED        '1'
+#define COLOR_GREEN        '2'
+#define COLOR_YELLOW    '3'
+#define COLOR_BLUE        '4'
+#define COLOR_CYAN        '5'
+#define COLOR_MAGENTA    '6'
+#define COLOR_WHITE        '7'
+#define COLOR_BLACK        '8'
+#define COLOR_ORANGE    '9'
+
+#define S_COLOR_GRAY    "^0"
+#define S_COLOR_RED        "^1"
+#define S_COLOR_GREEN    "^2"
+#define S_COLOR_YELLOW    "^3"
+#define S_COLOR_BLUE    "^4"
+#define S_COLOR_CYAN    "^5"
+#define S_COLOR_MAGENTA    "^6"
+#define S_COLOR_WHITE    "^7"
+#define S_COLOR_BLACK    "^8"
+#define S_COLOR_ORANGE    "^9"
+#define S_COLOR_ALT        "^a"
+#define S_COLOR_BOLD    "^b"
+#define S_COLOR_SHADOW    "^s"
+#define S_COLOR_ITALIC    "^i"
+
+#define Q_COLOR_ESCAPE        '^'
+
+#define Q_IsColorString(p)    (p && *(p) == Q_COLOR_ESCAPE && *((p)+1) && *((p)+1) != Q_COLOR_ESCAPE)
+
+
 
 /* ============================================= */
 
@@ -306,6 +421,7 @@ extern int curtime; /* time returned by last Sys_Milliseconds */
 
 int Sys_Milliseconds(void);
 void Sys_Mkdir(char *path);
+void    Sys_Rmdir (char *path);
 qboolean Sys_IsDir(const char *path);
 qboolean Sys_IsFile(const char *path);
 
@@ -348,6 +464,8 @@ void Com_Printf(char *msg, ...);
  #define CVAR_NOSET 8       /* don't allow change from console at all, */
 							/* but can be set from the command line */
  #define CVAR_LATCH 16      /* save changes until server restart */
+ #define CVAR_CHEAT        32    // cannot be changed from default in
+// multiplayer games
 
 /* nothing outside the Cvar_*() functions should modify these fields! */
 typedef struct cvar_s
@@ -359,6 +477,10 @@ typedef struct cvar_s
 	qboolean modified; /* set each time the cvar is changed */
 	float value;
 	struct cvar_s *next;
+    // Knightmare- added cvar defaults
+#ifdef KMQUAKE2_ENGINE_MOD
+    char        *default_string;
+#endif
 } cvar_t;
 
 #endif /* CVAR */
@@ -380,6 +502,7 @@ typedef struct cvar_s
 #define CONTENTS_WATER 32
 #define CONTENTS_MIST 64
 #define LAST_VISIBLE_CONTENTS 64
+#define CONTENTS_MUD            128    // not a "real" content property - used only for watertype
 
 /* remaining contents are non-visible, and don't eat brushes */
 #define CONTENTS_AREAPORTAL 0x8000
@@ -413,6 +536,38 @@ typedef struct cvar_s
 #define SURF_TRANS66 0x20
 #define SURF_FLOWING 0x40       /* scroll towards angle */
 #define SURF_NODRAW 0x80        /* don't bother referencing the texture */
+
+//Knightmare 12/22/2001
+// Never used in the game, just here for completeness:
+#define    SURF_HINT        0x100    // make a primary bsp splitter
+#define    SURF_SKIP        0x200    // completely ignore, allowing non-closed brushes
+
+// Lazarus surface flags for footstep sounds:
+#define SURF_METAL        0x00000400    // metal floor
+#define SURF_DIRT        0x00000800    // dirt, sand, rock
+#define SURF_VENT        0x00001000    // ventillation duct
+#define SURF_GRATE        0x00002000    // metal grating
+#define SURF_TILE        0x00004000    // floor tiles
+#define SURF_GRASS      0x00008000  // grass
+#define SURF_SNOW       0x00010000  // snow
+#define SURF_CARPET     0x00020000  // carpet
+#define SURF_FORCE      0x00040000  // forcefield
+#define SURF_GRAVEL     0x00080000  // gravel
+#define SURF_ICE        0x00100000  // ice
+#define SURF_SAND        0x00200000  // sand
+#define SURF_WOOD        0x00400000  // wood
+#define SURF_STANDARD    0x00800000  // standard
+
+#define SURF_STEPMASK    0x00FFFC00
+
+#define SURF_NOLIGHTENV    0x01000000    // no lightmap or envmap trans/warp surface
+#define SURF_ALPHATEST    0x02000000    // alpha test flag
+
+#define    SURF_MIRROR        0x10000000
+#define    SURF_CHOPPY        0x20000000
+#define    SURF_CHOPPY2    0x40000000
+#define    SURF_CHOPPY3    0x80000000
+//end Knightmare
 
 /* content masks */
 #define MASK_ALL (-1)
@@ -523,7 +678,11 @@ typedef struct
 {
 	pmtype_t pm_type;
 
-	short origin[3];            /* 12.3 */
+#ifdef LARGE_MAP_SIZE
+    int            origin[3];        // 20.3
+#else
+    short        origin[3];        // 12.3
+#endif
 	short velocity[3];          /* 12.3 */
 	byte pm_flags;              /* ducked, jump_held, etc */
 	byte pm_time;               /* each unit = 8 ms */
@@ -535,6 +694,8 @@ typedef struct
 /* button bits */
 #define BUTTON_ATTACK 1
 #define BUTTON_USE 2
+#define BUTTON_ATTACK2      4
+#define BUTTONS_ATTACK (BUTTON_ATTACK | BUTTON_ATTACK2)
 #define BUTTON_ANY 128 /* any key whatsoever */
 
 /* usercmd_t is sent to the server each client frame */
@@ -613,6 +774,13 @@ typedef struct
 #define EF_HALF_DAMAGE 0x40000000
 #define EF_TRACKERTRAIL 0x80000000
 
+//mappack.h
+#define    EF_EDARK             0x84000000      // pulsing dynamic black light
+#define    EF_BLUEC            0x08208000        // violet or pale blue shell
+#define    EF_REDC             0x30050001       // ef_rotate, red shell, transparent and a redlight
+#define    EF_REDG             0x22010107        // ef_rotate, gib trail and a red shell
+#define    EF_YELLOW_CRUST        0x10300070         // transparent with a yellow light
+
 /* entity_state_t->renderfx flags */
 #define RF_MINLIGHT 1               /* allways have some light (viewmodel) */
 #define RF_VIEWERMODEL 2            /* don't draw through eyes, only mirrors */
@@ -627,17 +795,35 @@ typedef struct
 #define RF_SHELL_RED 1024
 #define RF_SHELL_GREEN 2048
 #define RF_SHELL_BLUE 4096
-#define RF_NOSHADOW 8192        /* don't draw a shadow */
+//#define RF_NOSHADOW 8192        /* don't draw a shadow */
+#define RF_TRANS_ADDITIVE    16384
+#define RF_MIRRORMODEL 32768
 #define RF_IR_VISIBLE 0x00008000            /* 32768 */
 #define RF_SHELL_DOUBLE 0x00010000          /* 65536 */
 #define RF_SHELL_HALF_DAM 0x00020000
 #define RF_USE_DISGUISE 0x00040000
+
+#define RF_NOSHADOW            0x00080000 //Knightmare- no shadow flag
+#define    RF_ENVMAP            0x00100000 // Knightmare- envmap flag
+
+#define    RF2_NOSHADOW        0x00000001        //no shadow..
+#define RF2_FORCE_SHADOW    0x00000002        //forced shadow...
+#define RF2_CAMERAMODEL        0x00000004        //client camera model
 
 /* player_state_t->refdef flags */
 #define RDF_UNDERWATER 1            /* warp the screen as apropriate */
 #define RDF_NOWORLDMODEL 2          /* used for player configuration screen */
 #define RDF_IRGOGGLES 4
 #define RDF_UVGOGGLES 8
+#define RDF_BLOOM            16      // BLOOMS
+
+//Mappack - laser colors
+
+#define    LASER_RED        0xf2f2f0f0
+#define    LASER_GREEN        0xd0d1d2d3
+#define    LASER_BLUE        0xf3f3f1f1
+#define    LASER_YELLOW    0xdcdddedf
+#define    LASER_ORANGE    0xe0e1e2e3
 
 /* muzzle flashes / player effects */
 #define MZ_BLASTER 0
@@ -670,6 +856,12 @@ typedef struct
 #define MZ_NUKE2 37
 #define MZ_NUKE4 38
 #define MZ_NUKE8 39
+//Knightmare 1/3/2002- blue blaster and green hyperblaster
+#define    MZ_BLUEBLASTER        40
+#define    MZ_GREENHYPERBLASTER    41
+#define    MZ_REDBLASTER        42
+#define    MZ_REDHYPERBLASTER    43
+//end Knightmare
 
 /* monster muzzle flashes */
 #define MZ2_TANK_BLASTER_1 1
@@ -898,6 +1090,10 @@ typedef struct
 #define MZ2_WIDOW2_BEAM_SWEEP_10 209
 #define MZ2_WIDOW2_BEAM_SWEEP_11 210
 
+//Mappack - new monster firing vectors
+#define    MZ2_SUPERTANK_GRENADE_1            211
+#define    MZ2_SUPERTANK_GRENADE_2            212
+
 extern vec3_t monster_flash_offset[];
 
 /* Temp entity events are for things that happen
@@ -961,7 +1157,22 @@ typedef enum
 	TE_WIDOWSPLASH,
 	TE_EXPLOSION1_BIG,
 	TE_EXPLOSION1_NP,
-	TE_FLECHETTE
+    TE_FLECHETTE,            //55
+    TE_REDBLASTER,            //56
+    TE_SHOCKSPLASH,            //57
+    // Quake2MaX temp events
+    TE_STAIN,                //58
+    TE_SMOKEPUFF,            //59
+    TE_LIGHTNINGFLARE,        //60
+    TE_LIGHTNINGSIZED,        //61
+    TE_FOOTPRINT,            //62
+    TE_FLAMEBURST,            //63
+    TE_LASERSTUN,            //64
+    TE_STUNBLAST,            //65
+    TE_DISRUPTOR_EXPLOSION,    //66
+    TE_DISINTEGRATE,        //67
+    TE_LENSFLARE,            //68
+    TE_WEATHERFX,            //69
 } temp_event_t;
 
 #define SPLASH_UNKNOWN 0
@@ -981,6 +1192,7 @@ typedef enum
 #define CHAN_VOICE 2
 #define CHAN_ITEM 3
 #define CHAN_BODY 4
+#define CHAN_GIZMO                5
 /* modifier flags */
 #define CHAN_NO_PHS_ADD 8           /* send to all clients, not just ones in PHS (ATTN 0 will also do this) */
 #define CHAN_RELIABLE 16            /* send by reliable message, not datagram */
@@ -1010,8 +1222,15 @@ typedef enum
 #define STAT_FLASHES 15                 /* cleared each frame, 1 = health, 2 = armor */
 #define STAT_CHASE 16
 #define STAT_SPECTATOR 17
+#define STAT_SPEED              22
+#define STAT_ZOOM               23
 
-#define MAX_STATS 32
+#ifdef KMQUAKE2_ENGINE_MOD // Knightmare increased
+#define    MAX_STATS                256
+#else
+#define    MAX_STATS                32
+#endif
+#define    OLD_MAX_STATS            32    // needed for playing old demos
 
 /* dmflags->value flags */
 #define DF_NO_HEALTH 0x00000001         /* 1 */
@@ -1072,6 +1291,16 @@ typedef enum
 #define CS_GENERAL (CS_PLAYERSKINS + MAX_CLIENTS)
 #define MAX_CONFIGSTRINGS (CS_GENERAL + MAX_GENERAL)
 
+//Knightmare- hacked configstring offsets for old demos
+#define OLD_CS_SOUNDS            (CS_MODELS+OLD_MAX_MODELS)
+#define    OLD_CS_IMAGES            (OLD_CS_SOUNDS+OLD_MAX_SOUNDS)
+#define    OLD_CS_LIGHTS            (OLD_CS_IMAGES+OLD_MAX_IMAGES)
+#define    OLD_CS_ITEMS            (OLD_CS_LIGHTS+MAX_LIGHTSTYLES)
+#define    OLD_CS_PLAYERSKINS        (OLD_CS_ITEMS+MAX_ITEMS)
+#define OLD_CS_GENERAL            (OLD_CS_PLAYERSKINS+MAX_CLIENTS)
+#define    OLD_MAX_CONFIGSTRINGS    (OLD_CS_GENERAL+MAX_GENERAL)
+//end Knightmare
+
 /* ============================================== */
 
 /* entity_state_t->event values
@@ -1087,7 +1316,14 @@ typedef enum
 	EV_FALL,
 	EV_FALLFAR,
 	EV_PLAYER_TELEPORT,
-	EV_OTHER_TELEPORT
+    EV_OTHER_TELEPORT,
+    //Knightmare added
+    EV_LOUDSTEP, //loud footstep from landing
+    EV_SLOSH, //Sloshing in ankle-deep water
+    EV_WADE, //wading or treading water
+    EV_WADE_MUD, //wading in mud
+    EV_CLIMB_LADDER //climbing ladder
+    //end Knightmare
 } entity_event_t;
 
 /* entity_state_t is the information conveyed from the server
@@ -1102,8 +1338,14 @@ typedef struct entity_state_s
 	vec3_t old_origin;      /* for lerping */
 	int modelindex;
 	int modelindex2, modelindex3, modelindex4;      /* weapons, CTF flags, etc */
+#ifdef NEW_ENTITY_STATE_MEMBERS //Knightmare- Privater wanted this
+    int        modelindex5, modelindex6, modelindex7, modelindex8;    //more attached models
+#endif
 	int frame;
 	int skinnum;
+#ifdef NEW_ENTITY_STATE_MEMBERS //Knightmare- allow the server to set this
+    float    alpha;    //entity transparency
+#endif
 	unsigned int effects;
 	int renderfx;
 	int solid;              /* for client side prediction, 8*(bits 0-4) is x/y radius */
@@ -1134,6 +1376,20 @@ typedef struct
 	vec3_t gunoffset;
 	int gunindex;
 	int gunframe;
+    
+#ifdef NEW_PLAYER_STATE_MEMBERS // Knightmare added
+    int            gunskin;        // for animated weapon skins
+    int            gunindex2;        // for a second weapon model (boot)
+    int            gunframe2;
+    int            gunskin2;
+    
+    // server-side speed control!
+    int            maxspeed;
+    int            duckspeed;
+    int            waterspeed;
+    int            accel;
+    int            stopspeed;
+#endif                            //end Knightmare
 
 	float blend[4];             /* rgba full screen effect */
 	float fov;                  /* horizontal field of view */

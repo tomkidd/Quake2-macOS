@@ -35,8 +35,8 @@
    because we define the full size ones in this file */
 #define GAME_INCLUDE
 #include "game.h"
-#include "p_menu.h"
-#include "p_text.h"
+#include "menu.h"
+#include "text.h"
 #include "km_cvar.h"
 #define JETPACK_MOD
 
@@ -846,7 +846,7 @@ typedef struct
 extern field_t fields[];
 extern gitem_t itemlist[];
 extern    spawn_t    spawns[];
-AI_SetSightClient
+//AI_SetSightClient
 /* g_cmds.c */
 qboolean CheckFlood(edict_t *ent);
 void Cmd_Help_f (edict_t *ent);
@@ -871,6 +871,26 @@ void Fog_Init();
 void Fog(edict_t *ent); //vec3_t viewpoint);
 void Fog_Off();
 void Fog_SetFogParms();
+
+//
+// g_func.c
+//
+#define TRAIN_START_ON           1
+#define TRAIN_TOGGLE           2
+#define TRAIN_BLOCK_STOPS       4
+#define TRAIN_ROTATE           8
+#define TRAIN_ROTATE_CONSTANT 16
+#define TRAIN_ROTATE_MASK     (TRAIN_ROTATE | TRAIN_ROTATE_CONSTANT)
+#define TRAIN_ANIMATE         32
+#define TRAIN_ANIMATE_FAST    64
+#define TRAIN_SMOOTH         128
+#define TRAIN_SPLINE        4096
+
+qboolean box_walkmove (edict_t *ent, float yaw, float dist);
+void button_use (edict_t *self, edict_t *other, edict_t *activator);
+void trainbutton_use (edict_t *self, edict_t *other, edict_t *activator);
+void movewith_init (edict_t *self);
+void set_child_movement(edict_t *self);
 
 /* g_items.c */
 void PrecacheItem(gitem_t *it);
@@ -1153,7 +1173,7 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 void respawn(edict_t *ent);
 void BeginIntermission(edict_t *targ);
 void PutClientInServer(edict_t *ent);
-void InitClientPersistant (gclient_t *client,int style);
+void InitClientPersistant (gclient_t *client, int style);
 void InitClientResp(gclient_t *client);
 void InitBodyQue(void);
 void ClientBeginServerFrame(edict_t *ent);
@@ -1361,7 +1381,9 @@ typedef struct
     int            max_fuel;
     int            max_homing_missiles;
 
-	gitem_t *weapon;
+    int            max_armor; // Knightmare
+
+    gitem_t *weapon;
 	gitem_t *lastweapon;
 
     qboolean    fire_mode;              // Lazarus - alternate firing mode
@@ -1629,6 +1651,7 @@ struct edict_s
     // on classnames.
     
 	int movetype;
+    int            oldmovetype;    // Knightmare added
 	int flags;
 
 	char *model;
@@ -1748,6 +1771,8 @@ struct edict_s
     float        endtime;
 
 	float last_sound_time;
+    
+    float        teleport_time;
 
 	int watertype;
 	int waterlevel;
@@ -1988,7 +2013,7 @@ qboolean    paused;
 //ZOID
 
 // ACEBOT_ADD
-#include "acesrc\acebot.h"
+#include "../acesrc/acebot.h"
 // ACEBOT_END
 
 

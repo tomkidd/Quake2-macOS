@@ -1839,7 +1839,7 @@ void trans_ent_filename (char *filename)
 
 int trigger_transition_ents (edict_t *changelevel, edict_t *self)
 {
-    char        t_file[_MAX_PATH];
+    char        t_file[4096];
     int            i, j;
     int            total=0;
     qboolean    nogo;

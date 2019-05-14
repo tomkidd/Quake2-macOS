@@ -27,6 +27,10 @@
 #include "../header/local.h"
 #include "../monster/misc/player.h"
 
+#define MUD1BASE 0.20
+#define MUD1AMP  0.08
+#define MUD3     0.08
+
 void ClientUserinfoChanged(edict_t *ent, char *userinfo);
 void SP_misc_teleporter_dest(edict_t *ent);
 void Touch_Item(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf);
@@ -493,7 +497,7 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
 		meansOfDeath |= MOD_FRIENDLY_FIRE;
 	}
 
-	if (deathmatch->value || coop->value)
+    if (deathmatch->value || coop->value || !deathmatch->value)
 	{
 		ff = meansOfDeath & MOD_FRIENDLY_FIRE;
 		mod = meansOfDeath & ~MOD_FRIENDLY_FIRE;
@@ -536,6 +540,7 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
 			case MOD_BOMB:
 			case MOD_SPLASH:
 			case MOD_TRIGGER_HURT:
+            case MOD_VEHICLE:
 				message = "was in the wrong place";
 				break;
 		}
@@ -604,7 +609,7 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
 
 		if (message)
 		{
-			gi.bprintf(PRINT_MEDIUM, "%s %s.\n",
+			safe_bprintf(PRINT_MEDIUM, "%s %s.\n",
 					self->client->pers.netname,
 					message);
 
@@ -691,11 +696,25 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
 					message = "tried to invade";
 					message2 = "'s personal space";
 					break;
+                    //ZOID
+                case MOD_GRAPPLE:
+                    message = "was caught by";
+                    message2 = "'s grapple";
+                    break;
+                    //ZOID
+                case MOD_VEHICLE:
+                    message = "was splattered by";
+                    message2 = "'s vehicle";
+                    break;
+                case MOD_KICK:
+                    message = "was booted by";
+                    message2 = "'s foot";
+                    break;
 			}
 
 			if (message)
 			{
-				gi.bprintf(PRINT_MEDIUM, "%s %s %s%s\n",
+				safe_bprintf(PRINT_MEDIUM, "%s %s %s%s\n",
 						self->client->pers.netname,
 						message, attacker->client->pers.netname,
 						message2);
@@ -715,9 +734,229 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
 				return;
 			}
 		}
+        //Knightmare- Single-player obits
+        if (attacker->svflags & SVF_MONSTER)
+        {    // Light Guard
+            if (!strcmp(attacker->classname, "monster_soldier_light"))
+                message = "was blasted by a";
+            // Shotgun Guard
+            else if (!strcmp(attacker->classname, "monster_soldier"))
+                message = "was gunned down by a";
+            // Machinegun Guard
+            else if (!strcmp(attacker->classname, "monster_soldier_ss"))
+                message = "was machinegunned by a";
+            // Enforcer
+            else if (!strcmp(attacker->classname, "monster_infantry"))
+            {
+                if (mod == MOD_HIT)
+                    message = "was bludgened by an";
+                else
+                    message = "was pumped full of lead by an";
+            }
+            // Gunner
+            else if (!strcmp(attacker->classname, "monster_gunner"))
+            {
+                if (mod == MOD_GRENADE)
+                {
+                    message = "was popped by a";
+                    message2 = "'s grenade";
+                }
+                else if (mod == MOD_G_SPLASH)
+                {
+                    message = "was shredded by a";
+                    message2 = "'s shrapnel";
+                }
+                else
+                    message = "was machinegunned by a";
+            }
+            // Berserker
+            else if (!strcmp(attacker->classname, "monster_berserk"))
+                message = "was smashed by a";
+            // Gladiator
+            else if (!strcmp(attacker->classname, "monster_gladiator"))
+            {
+                if (mod == MOD_RAILGUN)
+                    message = "was railed by a";
+                else
+                {
+                    message = "was mangled by a";
+                    message2 = "'s claw";
+                }
+            }
+            // Medic
+            else if (!strcmp(attacker->classname, "monster_medic"))
+                message = "was blasted by a";
+            // Icarus
+            else if (!strcmp(attacker->classname, "monster_hover"))
+                message = "was blasted by an";
+            // Iron Maiden
+            else if (!strcmp(attacker->classname, "monster_chick"))
+            {
+                if (mod == MOD_ROCKET)
+                {
+                    message = "ate an";
+                    message2 = "'s rocket";
+                }
+                else if (mod == MOD_R_SPLASH)
+                {
+                    message = "almost dodged an";
+                    message2 = "'s rocket";
+                }
+                else if (mod == MOD_HIT)
+                    message = "was bitch-slapped by an";
+            }
+            // Parasite
+            else if (!strcmp(attacker->classname, "monster_parasite"))
+                message = "was exsanguiated by a";
+            // Brain
+            else if (!strcmp(attacker->classname, "monster_brain"))
+            {
+                message = "was torn up by a";
+                message2 = "'s tentacles";
+            }
+            // Flyer
+            else if (!strcmp(attacker->classname, "monster_flyer"))
+            {
+                if (mod == MOD_BLASTER)
+                    message = "was blasted by a";
+                else if (mod == MOD_HIT)
+                {
+                    message = "was cut up by a";
+                    message2 = "'s sharp wings";
+                }
+            }
+            // Technician
+            else if (!strcmp(attacker->classname, "monster_floater"))
+            {
+                if (mod == MOD_BLASTER)
+                    message = "was blasted by a";
+                else if (mod == MOD_HIT)
+                {
+                    message = "was gouged to death by a";
+                    message2 = "'s utility claw";
+                }
+            }
+            // Tank/Tank Commander
+            else if (!strcmp(attacker->classname, "monster_tank")
+                     || !strcmp(attacker->classname, "monster_tank_commander"))
+            {
+                if (mod == MOD_BLASTER)
+                    message = "was blasted by a";
+                else if (mod == MOD_ROCKET)
+                {
+                    message = "ate a";
+                    message2 = "'s rocket";
+                }
+                else if (mod == MOD_R_SPLASH)
+                {
+                    message = "almost dodged a";
+                    message2 = "'s rocket";
+                }
+                else
+                    message = "was pumped full of lead by a";
+            }
+            // Supertank
+            else if (!strcmp(attacker->classname, "monster_supertank"))
+            {
+                if (mod == MOD_ROCKET)
+                {
+                    message = "ate a";
+                    message2 = "'s rocket";
+                }
+                else if (mod == MOD_R_SPLASH)
+                {
+                    message = "almost dodged a";
+                    message2 = "'s rocket";
+                }
+                else
+                    message = "was chaingunned by a";
+            }
+            // Hornet
+            else if (!strcmp(attacker->classname, "monster_boss2"))
+            {
+                if (mod == MOD_ROCKET)
+                {
+                    message = "ate a";
+                    message2 = "'s rocket";
+                }
+                else if (mod == MOD_R_SPLASH)
+                {
+                    message = "almost dodged a";
+                    message2 = "'s rockets";
+                }
+                else
+                    message = "was chaingunned by a";
+            }
+            // Jorg
+            else if (!strcmp(attacker->classname, "monster_jorg"))
+            {
+                if (mod == MOD_BFG_LASER)
+                {
+                    message = "saw the pretty lights from the";
+                    message2 = "'s BFG";
+                }
+                else if (mod == MOD_BFG_BLAST)
+                {
+                    message = "was disintegrated by the";
+                    message2 = "'s BFG blast";
+                }
+                else if (mod == MOD_BFG_EFFECT)
+                {
+                    message = "couldn't hide from the";
+                    message2 = "'s BFG";
+                }
+                else
+                {
+                    message = "was shredded by the";
+                    message = "'s chain-cannons";
+                }
+            }
+            // Makron
+            else if (!strcmp(attacker->classname, "monster_makron"))
+            {
+                if (mod == MOD_BLASTER)
+                {
+                    message = "was melted by the";
+                    message = "'s hyperblaster";
+                }
+                else if (mod == MOD_RAILGUN)
+                    message = "was railed by the";
+                else if (mod == MOD_BFG_LASER)
+                {
+                    message = "saw the pretty lights from the";
+                    message2 = "'s BFG";
+                }
+                else if (mod == MOD_BFG_BLAST)
+                {
+                    message = "was disintegrated by the";
+                    message2 = "'s BFG blast";
+                }
+                else if (mod == MOD_BFG_EFFECT)
+                {
+                    message = "couldn't hide from the";
+                    message2 = "'s BFG";
+                }
+            }
+            // Barracuda Shark
+            else if (!strcmp(attacker->classname, "monster_flipper"))
+                message = "was chewed up by a";
+            // Mutant
+            else if (!strcmp(attacker->classname, "monster_mutant"))
+                message = "was clawed by a";
+        }
+        if (message)
+        {
+            safe_bprintf (PRINT_MEDIUM,"%s %s %s%s\n", self->client->pers.netname, message, attacker->common_name, message2);
+            if (coop->value)
+                self->client->resp.score--;
+            self->enemy = NULL;
+            return;
+        }
+        //end Knightmare
+
 	}
 
-	gi.bprintf(PRINT_MEDIUM, "%s died.\n", self->client->pers.netname);
+	safe_bprintf(PRINT_MEDIUM, "%s died.\n", self->client->pers.netname);
 
 	if (deathmatch->value)
 	{
@@ -754,6 +993,13 @@ TossClientWeapon(edict_t *self)
 	{
 		item = NULL;
 	}
+    if (item && (strcmp (item->pickup_name, "Grapple") == 0))
+        item = NULL;
+    if (item && (strcmp (item->pickup_name, "No Weapon") == 0))
+        item = NULL;
+    // Knightmare- don't drop homing missile launcher (null model error), drop rocket launcher instead
+    if (item && (strcmp (item->pickup_name, "Homing Missile Launcher") == 0))
+        item = FindItem("Rocket Launcher");
 
 	if (!((int)(dmflags->value) & DF_QUAD_DROP))
 	{
@@ -850,6 +1096,31 @@ player_die(edict_t *self, edict_t *inflictor, edict_t *attacker,
 {
 	int n;
 
+    // tpp
+    if (self->client->chasetoggle)
+    {
+        ChasecamRemove (self, OPTION_OFF);
+        self->client->pers.chasetoggle = 1;
+    }
+    else
+        self->client->pers.chasetoggle = 0;
+    // end tpp
+    
+    self->client->pers.spawn_landmark = false; // paranoia check
+    self->client->pers.spawn_levelchange = false;
+    SetLazarusCrosshair(self); //backup crosshair
+    self->client->zooming = 0;
+    self->client->zoomed = false;
+    SetSensitivities(self,true);
+    
+    if (self->client->spycam)
+        camera_off(self);
+    
+    if (self->turret)
+        turret_disengage(self->turret);
+    
+    if(self->client->textdisplay) Text_Close(self);
+    
 	if (!self || !inflictor || !attacker)
 	{
 		return;
@@ -861,6 +1132,9 @@ player_die(edict_t *self, edict_t *inflictor, edict_t *attacker,
 	self->movetype = MOVETYPE_TOSS;
 
 	self->s.modelindex2 = 0; /* remove linked weapon model */
+    //ZOID
+    self->s.modelindex3 = 0;    // remove linked ctf flag
+    //ZOID
 
 	self->s.angles[0] = 0;
 	self->s.angles[2] = 0;
@@ -878,8 +1152,36 @@ player_die(edict_t *self, edict_t *inflictor, edict_t *attacker,
 		LookAtKiller(self, inflictor, attacker);
 		self->client->ps.pmove.pm_type = PM_DEAD;
 		ClientObituary(self, inflictor, attacker);
+
+        //ZOID
+        if (ctf->value)
+        {
+            // if at start and same team, clear
+            if (ctf->value && meansOfDeath == MOD_TELEFRAG &&
+                self->client->resp.ctf_state < 2 &&
+                self->client->resp.ctf_team == attacker->client->resp.ctf_team) {
+                attacker->client->resp.score--;
+                self->client->resp.ctf_state = 0;
+            }
+            
+            CTFFragBonuses(self, inflictor, attacker);
+        }
+        //ZOID
+        
 		TossClientWeapon(self);
 
+        //ZOID
+        if (ctf->value)
+        {
+            CTFPlayerResetGrapple(self);
+            CTFDeadDropFlag(self);
+        }
+        CTFDeadDropTech(self);
+        //ZOID
+        // Knightmare added- drop ammogen backpack
+        if (!OnSameTeam(self, attacker))
+            CTFApplyAmmogen(attacker, self);
+        
 		if (deathmatch->value)
 		{
 			Cmd_Help_f(self); /* show scores */
@@ -904,22 +1206,47 @@ player_die(edict_t *self, edict_t *inflictor, edict_t *attacker,
 	self->client->invincible_framenum = 0;
 	self->client->breather_framenum = 0;
 	self->client->enviro_framenum = 0;
-	self->flags &= ~FL_POWER_ARMOR;
+    self->flags &= ~(FL_POWER_SHIELD|FL_POWER_SCREEN);
+    self->client->flashlight = false;
 
-	if (self->health < -40)
+    // turn off alt-fire mode if on
+    self->client->pers.fire_mode=0;
+    //self->client->nNewLatch &= ~BUTTON_ATTACK2;
+    
+    //if (self->health < self->gib_health)
+    if (self->health < player_gib_health->value)
 	{
+        int num_giblets = 4;
+        //if (deathmatch->value && (self->health < (self->gib_health*2)))
+        if (deathmatch->value && (self->health < (player_gib_health->value*2)))
+            num_giblets = 8;
+        
 		/* gib */
 		gi.sound(self, CHAN_BODY, gi.soundindex(
 						"misc/udeath.wav"), 1, ATTN_NORM, 0);
 
-		for (n = 0; n < 4; n++)
+        for (n= 0; n < num_giblets; n++)
 		{
 			ThrowGib(self, "models/objects/gibs/sm_meat/tris.md2",
 					damage, GIB_ORGANIC);
 		}
 
-		ThrowClientHead(self, damage);
+        if (mega_gibs->value)
+        {
+            ThrowGib (self, "models/objects/gibs/arm/tris.md2", damage, GIB_ORGANIC);
+            ThrowGib (self, "models/objects/gibs/arm/tris.md2", damage, GIB_ORGANIC);
+            ThrowGib (self, "models/objects/gibs/leg/tris.md2", damage, GIB_ORGANIC);
+            ThrowGib (self, "models/objects/gibs/leg/tris.md2", damage, GIB_ORGANIC);
+            ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
+            ThrowGib (self, "models/objects/gibs/bone2/tris.md2", damage, GIB_ORGANIC);
+        }
 
+        ThrowClientHead(self, damage);
+
+        //ZOID
+        self->client->anim_priority = ANIM_DEATH;
+        self->client->anim_end = 0;
+        //ZOID
 		self->takedamage = DAMAGE_NO;
 	}
 	else
@@ -963,9 +1290,199 @@ player_die(edict_t *self, edict_t *inflictor, edict_t *attacker,
 		}
 	}
 
+#ifdef JETPACK_MOD
+    if ( self->client->jetpack )
+    {
+        Jet_BecomeExplosion( self, damage );
+        /*stop jetting when dead*/
+        self->client->jetpack_framenum = 0;
+        self->client->jetpack = false;
+        // DWH: force player to gib
+        //self->health = self->gib_health-1;
+        self->health = player_gib_health->value-1;
+    }
+#endif
+    
 	self->deadflag = DEAD_DEAD;
 
 	gi.linkentity(self);
+}
+
+void SwitchToBestStartWeapon (gclient_t *client)
+{
+    if (!client)
+        return;
+    
+    if ( client->pers.inventory[slugs_index]
+        &&  client->pers.inventory[ITEM_INDEX(FindItem("railgun"))] )
+    {
+        client->pers.weapon = FindItem ("railgun");
+        return;
+    }
+    if ( client->pers.inventory[cells_index]
+        &&  client->pers.inventory[ITEM_INDEX(FindItem("hyperblaster"))] )
+    {
+        client->pers.weapon = FindItem ("hyperblaster");
+        return;
+    }
+    if ( client->pers.inventory[bullets_index]
+        &&  client->pers.inventory[ITEM_INDEX(FindItem("chaingun"))] )
+    {
+        client->pers.weapon = FindItem ("chaingun");
+        return;
+    }
+    if ( client->pers.inventory[bullets_index]
+        &&  client->pers.inventory[ITEM_INDEX(FindItem("machinegun"))] )
+    {
+        client->pers.weapon = FindItem ("machinegun");
+        return;
+    }
+    if ( client->pers.inventory[shells_index] > 1
+        &&  client->pers.inventory[ITEM_INDEX(FindItem("super shotgun"))] )
+    {
+        client->pers.weapon = FindItem ("super shotgun");
+        return;
+    }
+    if ( client->pers.inventory[shells_index]
+        &&  client->pers.inventory[ITEM_INDEX(FindItem("shotgun"))] )
+    {
+        client->pers.weapon = FindItem ("shotgun");
+        return;
+    }
+    // DWH: Dude may not HAVE a blaster
+    //ent->client->newweapon = FindItem ("blaster");
+    if ( client->pers.inventory[ITEM_INDEX(FindItem("blaster"))] )
+        client->pers.weapon = FindItem ("blaster");
+    else
+        client->pers.weapon = FindItem ("No Weapon");
+}
+
+void SelectStartWeapon (gclient_t *client, int style)
+{
+    gitem_t    *item;
+    int        n;
+    
+    // Lazarus: We allow choice of weapons (or no weapon) at startup
+    // If style is non-zero, first clear player inventory of all
+    // weapons and ammo that might have been passed over through
+    // target_changelevel or acquired when previously called by
+    // InitClientPersistant
+    if(style)
+    {
+        for (n = 0; n < MAX_ITEMS; n++)
+        {
+            if (itemlist[n].flags & IT_WEAPON)
+                client->pers.inventory[n] = 0;
+        }
+        client->pers.inventory[shells_index]   = 0;
+        client->pers.inventory[bullets_index]  = 0;
+        client->pers.inventory[grenades_index] = 0;
+        client->pers.inventory[rockets_index]  = 0;
+        client->pers.inventory[cells_index]    = 0;
+        client->pers.inventory[slugs_index]    = 0;
+        client->pers.inventory[homing_index]   = 0;
+    }
+    
+    switch(style)
+    {
+        case -1:
+            item = FindItem("No Weapon");
+            break;
+        case -2:
+        case  2:
+            item = FindItem("Shotgun");
+            break;
+        case -3:
+        case  3:
+            item = FindItem("Super Shotgun");
+            break;
+        case -4:
+        case  4:
+            item = FindItem("Machinegun");
+            break;
+        case -5:
+        case  5:
+            item = FindItem("Chaingun");
+            break;
+        case -6:
+        case  6:
+            item = FindItem("Grenade Launcher");
+            break;
+        case -7:
+        case  7:
+            item = FindItem("Rocket Launcher");
+            break;
+        case -8:
+        case  8:
+            item = FindItem("HyperBlaster");
+            break;
+        case -9:
+        case  9:
+            item = FindItem("Railgun");
+            break;
+        case -10:
+        case  10:
+            item = FindItem("BFG10K");
+            break;
+        default:
+            item = FindItem("Blaster");
+            break;
+    }
+    client->pers.selected_item = ITEM_INDEX(item);
+    client->pers.inventory[client->pers.selected_item] = 1;
+    client->pers.weapon = item;
+    
+    //ZOID
+    if (ctf->value)
+    {
+        client->pers.lastweapon = item;
+        item = FindItem("Grapple");
+        client->pers.inventory[ITEM_INDEX(item)] = 1;
+    }
+    //ZOID
+    
+    // Lazarus: If default weapon is NOT "No Weapon", then give player
+    //          a blaster
+    if(style > 1)
+        client->pers.inventory[ITEM_INDEX(FindItem("Blaster"))] = 1;
+    
+    //Knightmare- player always has null weapon to allow holstering
+    client->pers.inventory[ITEM_INDEX(FindItem("No Weapon"))] = 1;
+    
+    // and give him standard ammo
+    if (item->ammo)
+    {
+        gitem_t    *ammo;
+        
+        ammo = FindItem (item->ammo);
+        if ( deathmatch->value && ((int)dmflags->value & DF_INFINITE_AMMO) )
+            client->pers.inventory[ITEM_INDEX(ammo)] += 1000;
+        else
+            client->pers.inventory[ITEM_INDEX(ammo)] += ammo->quantity;
+    }
+    // Knightmare- DM start values
+    if (deathmatch->value)
+    {
+        client->pers.inventory[ITEM_INDEX(FindItem("Shells"))] = dm_start_shells->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("Bullets"))] = dm_start_bullets->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("Rockets"))] = dm_start_rockets->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("Homing Missiles"))] = dm_start_homing->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("Grenades"))] = dm_start_grenades->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("Cells"))] = dm_start_cells->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("Slugs"))] = dm_start_slugs->value;
+        
+        client->pers.inventory[ITEM_INDEX(FindItem("Shotgun"))] = dm_start_shotgun->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("Super Shotgun"))] = dm_start_sshotgun->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("Machinegun"))] = dm_start_machinegun->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("Chaingun"))] = dm_start_chaingun->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("Grenade Launcher"))] = dm_start_grenadelauncher->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("Rocket Launcher"))] = dm_start_rocketlauncher->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("Homing Missile Launcher"))] = dm_start_rocketlauncher->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("HyperBlaster"))] = dm_start_hyperblaster->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("Railgun"))] = dm_start_railgun->value;
+        client->pers.inventory[ITEM_INDEX(FindItem("BFG10K"))] = dm_start_bfg->value;
+        SwitchToBestStartWeapon (client);
+    }
 }
 
 /* ======================================================================= */
@@ -976,7 +1493,7 @@ player_die(edict_t *self, edict_t *inflictor, edict_t *attacker,
  * after each death and level change in deathmatch
  */
 void
-InitClientPersistant(gclient_t *client)
+InitClientPersistant (gclient_t *client, int style)
 {
 	gitem_t *item;
 
@@ -987,23 +1504,44 @@ InitClientPersistant(gclient_t *client)
 
 	memset(&client->pers, 0, sizeof(client->pers));
 
-	item = FindItem("Blaster");
-	client->pers.selected_item = ITEM_INDEX(item);
-	client->pers.inventory[client->pers.selected_item] = 1;
+//    item = FindItem("Blaster");
+//    client->pers.selected_item = ITEM_INDEX(item);
+//    client->pers.inventory[client->pers.selected_item] = 1;
+    
+    client->homing_rocket = NULL;
+    SelectStartWeapon (client, style);
 
 	client->pers.weapon = item;
 
 	client->pers.health = 100;
-	client->pers.max_health = 100;
+    if (deathmatch->value)
+        client->pers.max_health        = max_health_dm->value;
+    else
+        client->pers.max_health        = max_health->value;
+    client->pers.max_armor        = max_armor->value;
 
-	client->pers.max_bullets = 200;
-	client->pers.max_shells = 100;
-	client->pers.max_rockets = 50;
-	client->pers.max_grenades = 50;
-	client->pers.max_cells = 200;
-	client->pers.max_slugs = 50;
+    client->pers.max_bullets    = max_bullets->value;
+    client->pers.max_shells        = max_shells->value;
+    client->pers.max_rockets    = max_rockets->value;
+    client->pers.max_grenades    = max_grenades->value;
+    client->pers.max_cells        = max_cells->value;
+    client->pers.max_slugs        = max_slugs->value;
+    client->pers.max_fuel       = max_fuel->value;
+    client->pers.max_homing_missiles = max_rockets->value;
+    client->pers.fire_mode      = 0;  // Lazarus alternate fire mode
 
 	client->pers.connected = true;
+    // tpp
+    //Default chasecam to tpp setting
+    client->pers.chasetoggle = tpp->value;
+    // end tpp
+    
+    // Lazarus
+    client->zooming = 0;
+    client->zoomed = false;
+    client->spycam = NULL;
+    client->pers.spawn_landmark = false;
+    client->pers.spawn_levelchange = false;
 }
 
 void
@@ -1014,9 +1552,25 @@ InitClientResp(gclient_t *client)
 		return;
 	}
 
+    //ZOID
+    int ctf_team = client->resp.ctf_team;
+    qboolean id_state = client->resp.id_state;
+    //ZOID
+    
 	memset(&client->resp, 0, sizeof(client->resp));
-	client->resp.enterframe = level.framenum;
+
+    //ZOID
+    client->resp.ctf_team = ctf_team;
+    client->resp.id_state = id_state;
+    //ZOID
+    
+    client->resp.enterframe = level.framenum;
 	client->resp.coop_respawn = client->pers;
+
+    //ZOID
+    if (ctf->value && client->resp.ctf_team < CTF_TEAM1)
+        CTFAssignTeam(client);
+    //ZOID
 }
 
 /*
@@ -1040,10 +1594,14 @@ SaveClientData(void)
 			continue;
 		}
 
+        // tpp
+        game.clients[i].pers.chasetoggle = ent->client->pers.chasetoggle;
+        // end tpp
+        game.clients[i].pers.newweapon = ent->client->newweapon;
 		game.clients[i].pers.health = ent->health;
 		game.clients[i].pers.max_health = ent->max_health;
 		game.clients[i].pers.savedFlags =
-			(ent->flags & (FL_GODMODE | FL_NOTARGET | FL_POWER_ARMOR));
+			(ent->flags & (FL_GODMODE | FL_NOTARGET | FL_POWER_SHIELD|FL_POWER_SCREEN));
 
 		if (coop->value)
 		{
@@ -1061,6 +1619,7 @@ FetchClientEntData(edict_t *ent)
 	}
 
 	ent->health = ent->client->pers.health;
+    ent->gib_health = player_gib_health->value; // was -40
 	ent->max_health = ent->client->pers.max_health;
 	ent->flags |= ent->client->pers.savedFlags;
 
@@ -1299,7 +1858,7 @@ SelectCoopSpawnPoint(edict_t *ent)
  * Chooses a player start, deathmatch start, coop start, etc
  */
 void
-SelectSpawnPoint(edict_t *ent, vec3_t origin, vec3_t angles)
+SelectSpawnPoint (edict_t *ent, vec3_t origin, vec3_t angles, int *style, int *health)
 {
 	edict_t *spot = NULL;
 	edict_t *coopspot = NULL;
@@ -1314,7 +1873,12 @@ SelectSpawnPoint(edict_t *ent, vec3_t origin, vec3_t angles)
 
 	if (deathmatch->value)
 	{
-		spot = SelectDeathmatchSpawnPoint();
+        //ZOID
+        if (ctf->value)
+            spot = SelectCTFSpawnPoint(ent);
+        else
+        //ZOID
+            spot = SelectDeathmatchSpawnPoint();
 	}
 	else if (coop->value)
 	{
@@ -1395,9 +1959,21 @@ SelectSpawnPoint(edict_t *ent, vec3_t origin, vec3_t angles)
 		}
 	}
 
-	VectorCopy(spot->s.origin, origin);
+    *style = spot->style;
+    *health = spot->health;
+
+    VectorCopy(spot->s.origin, origin);
 	origin[2] += 9;
 	VectorCopy(spot->s.angles, angles);
+
+    if(!deathmatch->value && !coop->value) {
+        
+        spot->count--;
+        if(!spot->count) {
+            spot->think = G_FreeEdict;
+            spot->nextthink = level.time + 1;
+        }
+    }
 }
 
 /* ====================================================================== */
@@ -1432,18 +2008,34 @@ body_die(edict_t *self, edict_t *inflictor /* unused */,
 		return;
 	}
 
-	if (self->health < -40)
+    //if (self->health < self->gib_health)
+    if (self->health < player_gib_health->value)
 	{
+        int num_giblets = 4;
+        //if (deathmatch->value && (self->health < (self->gib_health*2)))
+        if (deathmatch->value && (self->health < (player_gib_health->value*2)))
+            num_giblets = 8;
+        
 		gi.sound(self, CHAN_BODY, gi.soundindex(
 						"misc/udeath.wav"), 1, ATTN_NORM, 0);
 
-		for (n = 0; n < 4; n++)
+        for (n= 0; n < num_giblets; n++)
 		{
 			ThrowGib(self, "models/objects/gibs/sm_meat/tris.md2",
 					damage, GIB_ORGANIC);
 		}
 
-		self->s.origin[2] -= 48;
+        if (mega_gibs->value)
+        {
+            ThrowGib (self, "models/objects/gibs/arm/tris.md2", damage, GIB_ORGANIC);
+            ThrowGib (self, "models/objects/gibs/arm/tris.md2", damage, GIB_ORGANIC);
+            ThrowGib (self, "models/objects/gibs/leg/tris.md2", damage, GIB_ORGANIC);
+            ThrowGib (self, "models/objects/gibs/leg/tris.md2", damage, GIB_ORGANIC);
+            ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
+            ThrowGib (self, "models/objects/gibs/bone2/tris.md2", damage, GIB_ORGANIC);
+        }
+
+        self->s.origin[2] -= 48;
 		ThrowClientHead(self, damage);
 		self->takedamage = DAMAGE_NO;
 	}
@@ -1493,8 +2085,29 @@ respawn(edict_t *self)
 		return;
 	}
 
+    // tpp
+    if (self->crosshair)
+        G_FreeEdict(self->crosshair);
+    self->crosshair = NULL;
+    if (self->client->oldplayer)
+        G_FreeEdict (self->client->oldplayer);
+    self->client->oldplayer = NULL;
+    if (self->client->chasecam)
+        G_FreeEdict (self->client->chasecam);
+    self->client->chasecam = NULL;
+    // end tpp
+    
 	if (deathmatch->value || coop->value)
 	{
+
+        // ACEBOT_ADD special respawning code
+        if (self->is_bot)
+        {
+            ACESP_Respawn (self);
+            return;
+        }
+        // ACEBOT_END
+        
 		/* spectator's don't leave bodies */
 		if (self->movetype != MOVETYPE_NOCLIP)
 		{
@@ -1545,7 +2158,7 @@ spectator_respawn(edict_t *ent)
 			strcmp(spectator_password->string, "none") &&
 			strcmp(spectator_password->string, value))
 		{
-			gi.cprintf(ent, PRINT_HIGH, "Spectator password incorrect.\n");
+			safe_cprintf(ent, PRINT_HIGH, "Spectator password incorrect.\n");
 			ent->client->pers.spectator = false;
 			gi.WriteByte(svc_stufftext);
 			gi.WriteString("spectator 0\n");
@@ -1564,7 +2177,7 @@ spectator_respawn(edict_t *ent)
 
 		if (numspec >= maxspectators->value)
 		{
-			gi.cprintf(ent, PRINT_HIGH, "Server spectator limit is full.");
+			safe_cprintf(ent, PRINT_HIGH, "Server spectator limit is full.");
 			ent->client->pers.spectator = false;
 
 			/* reset his spectator var */
@@ -1583,7 +2196,7 @@ spectator_respawn(edict_t *ent)
 		if (*password->string && strcmp(password->string, "none") &&
 			strcmp(password->string, value))
 		{
-			gi.cprintf(ent, PRINT_HIGH, "Password incorrect.\n");
+			safe_cprintf(ent, PRINT_HIGH, "Password incorrect.\n");
 			ent->client->pers.spectator = true;
 			gi.WriteByte(svc_stufftext);
 			gi.WriteString("spectator 1\n");
@@ -1616,12 +2229,12 @@ spectator_respawn(edict_t *ent)
 
 	if (ent->client->pers.spectator)
 	{
-		gi.bprintf(PRINT_HIGH, "%s has moved to the sidelines\n",
+		safe_cprintf(PRINT_HIGH, "%s has moved to the sidelines\n",
 				ent->client->pers.netname);
 	}
 	else
 	{
-		gi.bprintf(PRINT_HIGH, "%s joined the game\n",
+		safe_cprintf(PRINT_HIGH, "%s joined the game\n",
 				ent->client->pers.netname);
 	}
 }
@@ -1642,29 +2255,63 @@ PutClientInServer(edict_t *ent)
 		return;
 	}
 
+    extern    int            nostatus;
 	vec3_t mins = {-16, -16, -24};
 	vec3_t maxs = {16, 16, 32};
 	int index;
-	vec3_t spawn_origin, spawn_angles;
+	vec3_t spawn_origin, spawn_angles, spawn_viewangles;
 	gclient_t *client;
 	int i;
-	client_persistant_t saved;
+    // tpp
+    int                    chasetoggle;
+    gitem_t                *newweapon;
+    // end tpp
+    qboolean            spawn_landmark;
+    qboolean            spawn_levelchange;
+    int                    spawn_gunframe;
+    int                    spawn_modelframe;
+    int                    spawn_anim_end;
+    int                    spawn_pm_flags;
+    int                    spawn_style;
+    int                    spawn_health;	client_persistant_t saved;
 	client_respawn_t resp;
 
 	/* find a spawn point do it before setting
 	   health back up, so farthest ranging
 	   doesn't count this client */
-	SelectSpawnPoint(ent, spawn_origin, spawn_angles);
+    SelectSpawnPoint (ent, spawn_origin, spawn_angles, &spawn_style, &spawn_health);
 
 	index = ent - g_edicts - 1;
 	client = ent->client;
 
+    // tpp
+    chasetoggle = client->pers.chasetoggle;
+    // end tpp
+    newweapon = client->pers.newweapon;
+    spawn_landmark   = client->pers.spawn_landmark;
+    spawn_levelchange= client->pers.spawn_levelchange;
+    spawn_gunframe   = client->pers.spawn_gunframe;
+    spawn_modelframe = client->pers.spawn_modelframe;
+    spawn_anim_end   = client->pers.spawn_anim_end;
+    client->pers.spawn_landmark = false;
+    client->pers.spawn_levelchange = false;
+    
+    if(spawn_landmark)
+    {
+        spawn_origin[2] -= 9;
+        VectorAdd(spawn_origin,client->pers.spawn_offset,spawn_origin);
+        VectorCopy(client->pers.spawn_angles,spawn_angles);
+        VectorCopy(client->pers.spawn_viewangles,spawn_viewangles);
+        VectorCopy(client->pers.spawn_velocity,ent->velocity);
+        spawn_pm_flags = client->pers.spawn_pm_flags;
+    }
+    
 	/* deathmatch wipes most client data every spawn */
 	if (deathmatch->value)
 	{
 		resp = client->resp;
 		memcpy(userinfo, client->pers.userinfo, sizeof(userinfo));
-		InitClientPersistant(client);
+        InitClientPersistant (client,spawn_style);
 		ClientUserinfoChanged(ent, userinfo);
 	}
 	else if (coop->value)
@@ -1696,13 +2343,23 @@ PutClientInServer(edict_t *ent)
 
 	if (client->pers.health <= 0)
 	{
-		InitClientPersistant(client);
+        InitClientPersistant(client,spawn_style);
 	}
+    else if(spawn_style)
+        SelectStartWeapon(client,spawn_style);
 
 	client->resp = resp;
+    // tpp
+    client->pers.chasetoggle = chasetoggle;
+    // end tpp
+    client->pers.newweapon = newweapon;
 
 	/* copy some data from the client to the entity */
 	FetchClientEntData(ent);
+
+    // Lazarus: Starting health < max. Presumably player was hurt in a crash
+    if( (spawn_health > 0) && !deathmatch->value && !coop->value)
+        ent->health = min(ent->health, spawn_health);
 
 	/* clear entity values */
 	ent->groundentity = NULL;
@@ -1725,12 +2382,32 @@ PutClientInServer(edict_t *ent)
 	ent->flags &= ~FL_NO_KNOCKBACK;
 	ent->svflags = 0;
 
+    // tpp
+    ent->svflags &= ~SVF_NOCLIENT;
+    // turn on prediction
+    ent->client->ps.pmove.pm_flags &= ~PMF_NO_PREDICTION;
+    // end tpp
+    ent->client->spycam = NULL;
+    ent->client->camplayer = NULL;
+    
+    // ACEBOT_ADD
+    ent->is_bot = false;
+    ent->last_node = -1;
+    ent->is_jumping = false;
+    // ACEBOT_END
+    
+
 	VectorCopy(mins, ent->mins);
 	VectorCopy(maxs, ent->maxs);
-	VectorClear(ent->velocity);
+    
+    if(!spawn_landmark)
+        VectorClear(ent->velocity);
 
 	/* clear playerstate values */
 	memset(&ent->client->ps, 0, sizeof(client->ps));
+
+    if(spawn_landmark)
+        client->ps.pmove.pm_flags = spawn_pm_flags;
 
 	client->ps.pmove.origin[0] = spawn_origin[0] * 8;
 	client->ps.pmove.origin[1] = spawn_origin[1] * 8;
@@ -1754,12 +2431,29 @@ PutClientInServer(edict_t *ent)
 		}
 	}
 
+    // DWH
+    client->original_fov  = client->ps.fov;
+    // end DWH
+    
 	client->ps.gunindex = gi.modelindex(client->pers.weapon->view_model);
 
+    // Server-side speed control stuff
+#ifdef KMQUAKE2_ENGINE_MOD
+    client->ps.maxspeed = player_max_speed->value;
+    client->ps.duckspeed = player_crouch_speed->value;
+    client->ps.accel = player_accel->value;
+    client->ps.stopspeed = player_stopspeed->value;
+#endif
+    
 	/* clear entity state values */
 	ent->s.effects = 0;
-	ent->s.modelindex = 255; /* will use the skin specified model */
-	ent->s.modelindex2 = 255; /* custom gun model */
+    ent->s.modelindex = MAX_MODELS-1;        // will use the skin specified model
+    
+    if(ITEM_INDEX(client->pers.weapon) == noweapon_index)
+        ent->s.modelindex2 = 0;
+    else
+        ent->s.modelindex2 = MAX_MODELS-1;        // custom gun model
+    
 
 	/* sknum is player num and weapon number
 	   weapon number will be added in changeweapon */
@@ -1777,11 +2471,16 @@ PutClientInServer(edict_t *ent)
 				spawn_angles[i] - client->resp.cmd_angles[i]);
 	}
 
-	ent->s.angles[PITCH] = 0;
-	ent->s.angles[YAW] = spawn_angles[YAW];
-	ent->s.angles[ROLL] = 0;
-	VectorCopy(ent->s.angles, client->ps.viewangles);
-	VectorCopy(ent->s.angles, client->v_angle);
+    ent->s.angles[PITCH] = ent->s.angles[ROLL]  = 0;
+    ent->s.angles[YAW]   = spawn_angles[YAW];
+    if(spawn_landmark)
+    {
+        VectorCopy(spawn_viewangles, client->ps.viewangles);
+        //        client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
+    }
+    else
+        VectorCopy(ent->s.angles,    client->ps.viewangles);
+    VectorCopy (client->ps.viewangles, client->v_angle);
 
 	/* spawn a spectator */
 	if (client->pers.spectator)
@@ -1802,16 +2501,57 @@ PutClientInServer(edict_t *ent)
 		client->resp.spectator = false;
 	}
 
+    // DWH:
+    client->flashlight = false;
+    client->secs_per_frame = 0.025;        // assumed 40 fps until we know better
+    client->fps_time_start = level.time;
+    
 	if (!KillBox(ent))
 	{
 		/* could't spawn in? */
 	}
 
+    //ZOID
+    if (ctf->value && CTFStartClient(ent))
+        return;
+    //ZOID
+    
 	gi.linkentity(ent);
 
-	/* force the current weapon up */
-	client->newweapon = client->pers.weapon;
-	ChangeWeapon(ent);
+    // tpp
+    client->chasetoggle = 0;
+    // If chasetoggle set then turn on (delayed start of 5 frames - 0.5s)
+    if(client->pers.chasetoggle)
+        client->delayedstart = 5;
+    // end tpp
+    
+    if(spawn_levelchange && !client->pers.chasetoggle && !client->pers.newweapon)
+    {
+        // we already had a weapon when the level changed... no need to bring it up
+        int    i;
+        
+        client->pers.lastweapon  = client->pers.weapon;
+        client->newweapon        = NULL;
+        client->machinegun_shots = 0;
+        i = ((client->pers.weapon->weapmodel & 0xff) << 8);
+        ent->s.skinnum = (ent - g_edicts - 1) | i;
+        if (client->pers.weapon->ammo)
+            client->ammo_index = ITEM_INDEX(FindItem(client->pers.weapon->ammo));
+        else
+            client->ammo_index = 0;
+        client->weaponstate = WEAPON_READY;
+        client->ps.gunframe = 0;
+        client->ps.gunindex = gi.modelindex(client->pers.weapon->view_model);
+        client->ps.gunframe = spawn_gunframe;
+        ent->s.frame        = spawn_modelframe;
+        client->anim_end    = spawn_anim_end;
+    }
+    else
+    {
+        /* force the current weapon up */
+        client->newweapon = client->pers.weapon;
+        ChangeWeapon(ent);
+    }
 }
 
 /*
@@ -1827,10 +2567,18 @@ ClientBeginDeathmatch(edict_t *ent)
 		return;
 	}
 
+    // ACEBOT_ADD
+    //static char current_map[55];
+    // ACEBOT_END
+    
 	G_InitEdict(ent);
 
 	InitClientResp(ent->client);
 
+    // ACEBOT_ADD
+    ACEIT_PlayerAdded(ent);
+    // ACEBOT_END
+    
 	/* locate ent at a spawn point */
 	PutClientInServer(ent);
 
@@ -1847,8 +2595,24 @@ ClientBeginDeathmatch(edict_t *ent)
 		gi.multicast(ent->s.origin, MULTICAST_PVS);
 	}
 
-	gi.bprintf(PRINT_HIGH, "%s entered the game\n", ent->client->pers.netname);
+	safe_bprintf(PRINT_HIGH, "%s entered the game\n", ent->client->pers.netname);
 
+    // ACEBOT_ADD
+    safe_centerprintf(ent,"\n======================================\nACE Bot II Mod\n\n'sv addbot' to add a new bot.\n'sv removebot <name>' to remove bot.\n'sv dmpause' to pause the game.\n'sv savenodes' to save level path data.\n======================================\n\n");
+    
+    // Knightmare- moved this to g_spawn.c for bot support in dedicated servers
+    // If the map changes on us, init and reload the nodes
+    /*if(strcmp(level.mapname,current_map))
+     {
+     
+     ACEND_InitNodes();
+     ACEND_LoadNodes();
+     //ACESP_LoadBots(); // Knightmare- removed this
+     ACESP_LoadBotInfo(); // Knightmare- load bot info file
+     strcpy(current_map,level.mapname);
+     }*/
+    // ACEBOT_END
+    
 	/* make sure all view stuff is valid */
 	ClientEndServerFrame(ent);
 }
@@ -1869,11 +2633,20 @@ ClientBegin(edict_t *ent)
 
 	ent->client = game.clients + (ent - g_edicts - 1);
 
+    // Lazarus: Set the alias for our alternate attack
+    //stuffcmd(ent, "alias +attack2 attack2_on; alias -attack2 attack2_off\n");
+    
 	if (deathmatch->value)
 	{
 		ClientBeginDeathmatch(ent);
 		return;
 	}
+
+    Fog_Off();
+    
+    stuffcmd(ent,"alias +zoomin zoomin;alias -zoomin zoominstop\n");
+    stuffcmd(ent,"alias +zoomout zoomout;alias -zoomout zoomoutstop\n");
+    stuffcmd(ent,"alias +zoom zoomon;alias -zoom zoomoff\n");
 
 	/* if there is already a body waiting for us (a loadgame),
 	   just take it, otherwise spawn one from scratch */
@@ -1914,10 +2687,40 @@ ClientBegin(edict_t *ent)
 			gi.WriteByte(MZ_LOGIN);
 			gi.multicast(ent->s.origin, MULTICAST_PVS);
 
-			gi.bprintf(PRINT_HIGH, "%s entered the game\n",
+			safe_bprintf(PRINT_HIGH, "%s entered the game\n",
 					ent->client->pers.netname);
 		}
 	}
+    
+    // DWH
+    SetLazarusCrosshair(ent); //backup crosshair
+    SetSensitivities(ent,true);
+    
+    if (game.maxclients == 1)
+    {
+        // For SP games, check for monsters who were mad at player
+        // in previous level and have changed levels with the player
+        edict_t    *monster;
+        for(i=2; i<globals.num_edicts; i++)
+        {
+            monster = &g_edicts[i];
+            if(!monster->inuse)
+                continue;
+            if(!(monster->svflags & SVF_MONSTER))
+                continue;
+            if(monster->health <= 0)
+                continue;
+            if(monster->monsterinfo.aiflags & AI_RESPAWN_FINDPLAYER)
+            {
+                monster->monsterinfo.aiflags &= ~AI_RESPAWN_FINDPLAYER;
+                if(!monster->enemy)
+                {
+                    monster->enemy = ent;
+                    FoundTarget(monster);
+                }
+            }
+        }
+    }
 
 	/* make sure all view stuff is valid */
 	ClientEndServerFrame(ent);
@@ -1968,26 +2771,38 @@ ClientUserinfoChanged(edict_t *ent, char *userinfo)
 	playernum = ent - g_edicts - 1;
 
 	/* combine name and skin into a configstring */
-	gi.configstring(CS_PLAYERSKINS + playernum,
+    //ZOID
+    if (ctf->value)
+        CTFAssignSkin(ent, s);
+    else
+    //ZOID
+        gi.configstring(CS_PLAYERSKINS + playernum,
 			va("%s\\%s", ent->client->pers.netname, s));
 
+    //ZOID
+    // set player name field (used in id_state view)
+    gi.configstring (CS_GENERAL+playernum, ent->client->pers.netname);
+    //ZOID
+    
 	/* fov */
 	if (deathmatch->value && ((int)dmflags->value & DF_FIXED_FOV))
 	{
 		ent->client->ps.fov = 90;
+        ent->client->original_fov = ent->client->ps.fov;
 	}
 	else
 	{
-		ent->client->ps.fov = (int)strtol(Info_ValueForKey(userinfo, "fov"), (char **)NULL, 10);
-
-		if (ent->client->ps.fov < 1)
-		{
-			ent->client->ps.fov = 90;
-		}
-		else if (ent->client->ps.fov > 160)
-		{
-			ent->client->ps.fov = 160;
-		}
+        float    new_fov;
+        
+        new_fov = atoi(Info_ValueForKey(userinfo, "fov"));
+        if (new_fov < 1)
+            new_fov = 90;
+        else if (new_fov > 160)
+            new_fov = 160;
+        if(new_fov != ent->client->original_fov) {
+            ent->client->ps.fov = new_fov;
+            ent->client->original_fov = new_fov;
+        }
 	}
 
 	/* handedness */
@@ -2082,11 +2897,19 @@ ClientConnect(edict_t *ent, char *userinfo)
 	if (ent->inuse == false)
 	{
 		/* clear the respawning variables */
+        //ZOID -- force team join
+        if (ctf->value)
+        {
+            ent->client->resp.ctf_team = -1;
+            ent->client->resp.id_state = true;
+        }
+        //ZOID
+        
 		InitClientResp(ent->client);
 
 		if (!game.autosaved || !ent->client->pers.weapon)
 		{
-			InitClientPersistant(ent->client);
+            InitClientPersistant (ent->client,world->style);
 		}
 	}
 
@@ -2121,8 +2944,31 @@ ClientDisconnect(edict_t *ent)
 		return;
 	}
 
-	gi.bprintf(PRINT_HIGH, "%s disconnected\n", ent->client->pers.netname);
+    // tpp
+    if(ent->client->chasetoggle)
+        ChasecamRemove(ent,OPTION_OFF);
+    // end tpp
+    
+    // DWH
+    SetLazarusCrosshair(ent); //backup crosshair
+    ent->client->zooming = 0;
+    ent->client->zoomed = false;
+    SetSensitivities(ent,true);
+    // end DWH
+    
+    if (ent->client->textdisplay) Text_Close(ent);
+    
+	safe_bprintf(PRINT_HIGH, "%s disconnected\n", ent->client->pers.netname);
 
+    // ACEBOT_ADD
+    ACEIT_PlayerRemoved(ent);
+    // ACEBOT_END
+    
+    //ZOID
+    CTFDeadDropFlag(ent);
+    CTFDeadDropTech(ent);
+    //ZOID
+    
 	/* send effect */
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteShort(ent - g_edicts);
@@ -2136,6 +2982,9 @@ ClientDisconnect(edict_t *ent)
 	ent->classname = "disconnected";
 	ent->client->pers.connected = false;
 
+    if(ent->client->spycam)
+        camera_off(ent);
+    
 	playernum = ent - g_edicts - 1;
 	gi.configstring(CS_PLAYERSKINS + playernum, "");
 }
@@ -2196,6 +3045,412 @@ PrintPmove(pmove_t *pm)
 	gi.dprintf("sv %3i:%i %i\n", pm->cmd.impulse, c1, c2);
 }
 
+// DWH
+//==========================================================================
+// DWH: PM_CmdScale was ripped from Q3 source
+//==========================================================================
+float PM_CmdScale( usercmd_t *cmd ) {
+    int        max;
+    float    total;
+    float    scale;
+    
+    max = abs( cmd->forwardmove );
+    if ( abs( cmd->sidemove ) > max ) {
+        max = abs( cmd->sidemove );
+    }
+    if ( abs( cmd->upmove ) > max ) {
+        max = abs( cmd->upmove );
+    }
+    if ( !max ) {
+        return 0;
+    }
+    
+    total = sqrt( cmd->forwardmove * cmd->forwardmove
+                 + cmd->sidemove * cmd->sidemove + cmd->upmove * cmd->upmove );
+    scale = max / total;
+    
+    return scale;
+}
+
+void RemovePush(edict_t *ent)
+{
+    ent->client->push->s.sound = 0;
+    ent->client->push->activator = NULL;
+    ent->client->push = NULL;
+    ent->client->ps.pmove.pm_flags &= ~PMF_NO_PREDICTION;
+    // If tpp is NOT always on, and auto-switch for func_pushables IS on,
+    // and we're currently in third-person view, switch it off
+    // Knightmare- don't autoswitch if client-side chasecam is on
+    if (!tpp->value && tpp_auto->value && (!cl_3dcam->value || deathmatch->value || coop->value)
+        && ent->client->chasetoggle)
+        Cmd_Chasecam_Toggle(ent);
+}
+
+void ClientPushPushable(edict_t *ent)
+{
+    edict_t        *box = ent->client->push;
+    vec_t        dist;
+    vec3_t        new_origin, v, vbox;
+    
+    VectorAdd (box->absmax,box->absmin,vbox);
+    VectorScale(vbox,0.5,vbox);
+    if (point_infront(ent,vbox))
+    {
+        VectorSubtract(ent->s.origin,box->offset,new_origin);
+        VectorSubtract(new_origin,box->s.origin,v);
+        v[2] = 0;
+        dist = VectorLength(v);
+        if(dist > 8)
+        {
+            // func_pushable got hung up somehow. Break off contact
+            RemovePush(ent);
+        }
+        else if(dist > 0)
+        {
+            if(!box->speaker)
+                box->s.sound = box->noise_index;
+            box_walkmove( box, vectoyaw(v), dist );
+        }
+        else
+            box->s.sound = 0;
+    }
+    else
+        RemovePush(ent);
+}
+
+void ClientSpycam(edict_t *ent)
+{
+    gclient_t    *client = ent->client;
+    edict_t        *camera = ent->client->spycam;
+    pmove_t        pm;
+    qboolean    is_actor;
+    trace_t        tr;
+    vec3_t        forward, left, up;
+    vec3_t        dir, start;
+    float        dist;
+    int            i;
+    
+    memset (&pm, 0, sizeof(pm));
+    if(client->ucmd.sidemove && level.time > ent->last_move_time + 1)
+    {
+        camera->flags &= ~FL_ROBOT;
+        if(camera->viewer == ent)
+            camera->viewer = NULL;
+        if(client->ucmd.sidemove > 0)
+            camera = G_FindNextCamera(camera,client->monitor);
+        else
+            camera = G_FindPrevCamera(camera,client->monitor);
+        
+        if(camera)
+        {
+            if(!camera->viewer)
+                camera->viewer = ent;
+            client->spycam = camera;
+            VectorAdd(camera->s.origin,camera->move_origin,ent->s.origin);
+            if(camera->viewmessage)
+                safe_centerprintf(ent,camera->viewmessage);
+            ent->last_move_time = level.time;
+        }
+        else
+            camera = client->spycam;
+        if(camera->monsterinfo.aiflags & AI_ACTOR)
+        {
+            camera->flags |= FL_ROBOT;
+            if(camera->monsterinfo.aiflags & AI_FOLLOW_LEADER)
+            {
+                camera->monsterinfo.aiflags &= ~AI_FOLLOW_LEADER;
+                camera->monsterinfo.old_leader  = NULL;
+                camera->monsterinfo.leader      = NULL;
+                camera->movetarget = camera->goalentity = NULL;
+                camera->monsterinfo.stand(camera);
+            }
+        }
+    }
+    if((camera->svflags & SVF_MONSTER) && (camera->monsterinfo.aiflags & AI_ACTOR))
+        is_actor = true;
+    else
+        is_actor = false;
+    if(camera->enemy && (camera->enemy->deadflag || !camera->enemy->inuse))
+        camera->enemy = NULL;
+    AngleVectors(camera->s.angles,forward,left,up);
+    
+    if(is_actor && !camera->enemy)
+    {
+        if((abs(client->ucmd.forwardmove) > 199) && (camera->groundentity))
+        {
+            // walk/run
+            
+            edict_t    *thing;
+            vec3_t    end;
+            float    dist;
+            
+            thing  = camera->vehicle;
+            
+            VectorMA(camera->s.origin,8192,forward,end);
+            tr = gi.trace(camera->s.origin,camera->mins,camera->maxs,end,camera,MASK_SOLID);
+            if(client->ucmd.forwardmove < 0)
+            {
+                trace_t    back;
+                VectorMA(camera->s.origin,-8192,forward,end);
+                back = gi.trace(camera->s.origin,camera->mins,camera->maxs,end,camera,MASK_SOLID);
+                VectorSubtract(back.endpos,camera->s.origin,end);
+                dist = VectorLength(end);
+                VectorCopy(tr.endpos,end);
+            }
+            else
+            {
+                VectorSubtract(tr.endpos,camera->s.origin,end);
+                dist = VectorLength(end) - 8;
+                VectorMA(camera->s.origin,dist,forward,end);
+            }
+            if(dist > 8)
+            {
+                if(!thing || !thing->inuse || Q_stricmp(thing->classname,"thing"))
+                    thing = camera->vehicle = SpawnThing();
+                thing->touch_debounce_time = level.time + 5.0;
+                thing->target_ent = camera;
+                VectorCopy(end,thing->s.origin);
+                ED_CallSpawn(thing);
+                camera->monsterinfo.aiflags |= AI_CHASE_THING;
+                camera->monsterinfo.aiflags &= ~(AI_CHICKEN | AI_STAND_GROUND);
+                camera->monsterinfo.pausetime = 0;
+                camera->movetarget = camera->goalentity = thing;
+                camera->monsterinfo.old_leader = NULL;
+                camera->monsterinfo.leader = thing;
+                VectorSubtract (thing->s.origin, camera->s.origin, dir);
+                camera->ideal_yaw = vectoyaw(dir);
+                if(client->ucmd.forwardmove > 300)
+                    actor_run(camera);
+                else if(client->ucmd.forwardmove > 199)
+                    actor_walk(camera);
+                else if(client->ucmd.forwardmove < -300)
+                    actor_run_back(camera);
+                else
+                    actor_walk_back(camera);
+            }
+            else if(thing)
+            {
+                camera->monsterinfo.aiflags &= ~AI_CHASE_THING;
+                camera->movetarget = camera->goalentity = NULL;
+                G_FreeEdict(thing);
+                camera->vehicle = NULL;
+                actor_stand(camera);
+            }
+        }
+        if((client->ucmd.forwardmove == 0) && (camera->groundentity))
+        {
+            // stop
+            edict_t    *thing = camera->vehicle;
+            if(thing)
+            {
+                camera->monsterinfo.aiflags &= ~AI_CHASE_THING;
+                camera->movetarget = camera->goalentity = NULL;
+                G_FreeEdict(thing);
+                camera->vehicle = NULL;
+                actor_stand(camera);
+            }
+        }
+        
+        if(client->ucmd.upmove)
+        {
+            if((client->ucmd.upmove > 0) && camera->groundentity && !camera->waterlevel)
+            {
+                // jump
+                if(client->ucmd.forwardmove > 300)
+                    VectorScale(forward,400,camera->velocity);
+                else if(client->ucmd.forwardmove > 199)
+                    VectorScale(forward,200,camera->velocity);
+                else if(client->ucmd.forwardmove < -300)
+                    VectorScale(forward,-400,camera->velocity);
+                else if(client->ucmd.forwardmove < -199)
+                    VectorScale(forward,-200,camera->velocity);
+                camera->velocity[2] = 250;
+                camera->monsterinfo.savemove = camera->monsterinfo.currentmove;
+                actor_jump(camera);
+                camera->groundentity = NULL;
+            }
+            else if((client->ucmd.upmove < 0) && (camera->groundentity) && !(camera->monsterinfo.aiflags & AI_CROUCH))
+            {
+                // crouch
+                if( (camera->monsterinfo.currentmove == &actor_move_walk)   ||
+                   (camera->monsterinfo.currentmove == &actor_move_run)    ||
+                   (camera->monsterinfo.currentmove == &actor_move_run_bad)  )
+                {
+                    camera->monsterinfo.currentmove = &actor_move_crouchwalk;
+                    camera->maxs[2] -= 28;
+                    camera->viewheight -= 28;
+                    camera->move_origin[2] -= 28;
+                    camera->monsterinfo.aiflags |= AI_CROUCH;
+                }
+                else if( (camera->monsterinfo.currentmove == &actor_move_walk_back) ||
+                        (camera->monsterinfo.currentmove == &actor_move_run_back)     )
+                {
+                    camera->monsterinfo.currentmove = &actor_move_crouchwalk_back;
+                    camera->maxs[2] -= 28;
+                    camera->viewheight -= 28;
+                    camera->move_origin[2] -= 28;
+                    camera->monsterinfo.aiflags |= AI_CROUCH;
+                }
+                else if (camera->monsterinfo.currentmove == &actor_move_stand)
+                {
+                    camera->monsterinfo.currentmove = &actor_move_crouch;
+                    camera->maxs[2] -= 28;
+                    camera->viewheight -= 28;
+                    camera->move_origin[2] -= 28;
+                    camera->monsterinfo.aiflags |= AI_CROUCH;
+                }
+            }
+        }
+        if( (client->ucmd.upmove >= 0) && (camera->monsterinfo.aiflags & AI_CROUCH))
+        {
+            // come out of crouch
+            camera->maxs[2] += 28;
+            camera->viewheight += 28;
+            camera->move_origin[2] += 28;
+            camera->monsterinfo.aiflags &= ~AI_CROUCH;
+            if(camera->monsterinfo.currentmove == &actor_move_crouchwalk)
+                actor_walk(camera);
+            else if(camera->monsterinfo.currentmove == &actor_move_crouchwalk_back)
+                actor_walk_back(camera);
+            else if(camera->monsterinfo.currentmove == &actor_move_crouch)
+                actor_stand(camera);
+        }
+    }
+    
+    client->ps.pmove.pm_type = PM_FREEZE;
+    if(camera->viewer == ent) {
+        if( (client->old_owner_angles[0] != client->ucmd.angles[0]) ||
+           (client->old_owner_angles[1] != client->ucmd.angles[1])   )
+        {
+            // Give game a bit of time to catch up after player
+            // causes ucmd pitch angle to roll over... otherwise
+            // we'll hit on the above test even though player
+            // hasn't hit +lookup/+lookdown
+            float    delta;
+            delta = level.time - camera->touch_debounce_time;
+            if( delta < 0 || delta > 1.0)
+            {
+                if(is_actor)
+                {
+                    float    diff;
+                    diff = SHORT2ANGLE(client->ucmd.angles[1] - client->old_owner_angles[1]);
+                    if(diff < -180)
+                        diff += 360;
+                    if(diff > 180)
+                        diff -= 360;
+                    camera->ideal_yaw += diff;
+                    if((abs(diff) > 100) && camera->vehicle)
+                    {
+                        vec3_t    angles;
+                        vec3_t    end, f;
+                        VectorSet(angles,0,camera->ideal_yaw,0);
+                        AngleVectors(angles,f,NULL,NULL);
+                        VectorMA(camera->s.origin,8192,f,end);
+                        tr = gi.trace(camera->s.origin,camera->mins,camera->maxs,end,camera,MASK_SOLID);
+                        VectorCopy(tr.endpos,camera->vehicle->s.origin);
+                        camera->vehicle->touch_debounce_time = level.time + 5.0;
+                        gi.linkentity(camera->vehicle);
+                    }
+                    ai_turn(camera,0.);
+                    diff = SHORT2ANGLE(client->ucmd.angles[0]-client->old_owner_angles[0]);
+                    if(diff < -180)
+                        diff += 360;
+                    if(diff > 180)
+                        diff -= 360;
+                    camera->move_angles[0] += diff;
+                    client->old_owner_angles[0] = client->ucmd.angles[0];
+                    client->old_owner_angles[1] = client->ucmd.angles[1];
+                }
+            }
+        }
+        if ( client->ucmd.buttons & BUTTON_ATTACK && camera->sounds >= 0 ) {
+            if (level.time >= camera->monsterinfo.attack_finished) {
+                client->latched_buttons &= ~BUTTON_ATTACK;
+                if(!Q_stricmp(camera->classname,"turret_breach"))
+                {
+                    if(camera->sounds==5 || camera->sounds==6)
+                        camera->monsterinfo.attack_finished = level.time;
+                    else
+                        camera->monsterinfo.attack_finished = level.time + 1.0;
+                    turret_breach_fire(camera);
+                }
+                else if(is_actor)
+                {
+                    int    weapon = camera->actor_weapon[camera->actor_current_weapon];
+                    if(!camera->enemy)
+                    {
+                        edict_t    *target;
+                        target = LookingAt(ent,0,NULL,NULL);
+                        if(target && target->takedamage && (target != client->camplayer))
+                        {
+                            if(camera->vehicle)
+                            {
+                                // Currently following "thing" - turn that off
+                                camera->monsterinfo.aiflags &= ~AI_CHASE_THING;
+                                camera->movetarget = camera->goalentity = NULL;
+                                G_FreeEdict(camera->vehicle);
+                                camera->vehicle = NULL;
+                            }
+                            camera->enemy = target;
+                            actor_fire(camera);
+                            camera->enemy = NULL;
+                            if(camera->monsterinfo.aiflags & AI_HOLD_FRAME)
+                                camera->monsterinfo.attack_finished = level.time + FRAMETIME;
+                            else
+                                camera->monsterinfo.attack_finished = level.time + 1.0;
+                        }
+                    }
+                }
+            }
+        }
+        if(client->zoomed) {
+            camera->touch_debounce_time =
+            max(camera->touch_debounce_time, level.time + 1.0);
+        }
+    }
+    
+    VectorMA(camera->s.origin, camera->move_origin[0],forward,start);
+    VectorMA(start,           -camera->move_origin[1],left,   start);
+    VectorMA(start,            camera->move_origin[2],up,     start);
+    
+    tr = gi.trace(camera->s.origin, NULL, NULL, start, camera, MASK_SOLID);
+    if(tr.fraction < 1.0)
+    {
+        VectorSubtract(tr.endpos,camera->s.origin,dir);
+        dist = VectorNormalize(dir) - 2;
+        if(dist < 0) dist = 0.;
+        VectorMA(camera->s.origin,dist,dir,start);
+    }
+    VectorCopy(start,ent->s.origin);
+    VectorCopy(camera->velocity,ent->velocity);
+    
+    client->resp.cmd_angles[0] = SHORT2ANGLE(client->ucmd.angles[0]);
+    client->resp.cmd_angles[1] = SHORT2ANGLE(client->ucmd.angles[1]);
+    client->resp.cmd_angles[2] = SHORT2ANGLE(client->ucmd.angles[2]);
+    
+    memset (&pm, 0, sizeof(pm));
+    pm.s = client->ps.pmove;
+    for (i=0 ; i<3 ; i++) {
+        pm.s.origin[i] = ent->s.origin[i]*8;
+        client->ps.pmove.delta_angles[i] =
+        ANGLE2SHORT(client->ps.viewangles[i] - client->resp.cmd_angles[i]);
+    }
+    if (memcmp(&client->old_pmove, &pm.s, sizeof(pm.s)))
+        pm.snapinitial = true;
+    pm.cmd = client->ucmd;
+    pm.trace = PM_trace;    // adds default parms
+    pm.pointcontents = gi.pointcontents;
+    
+    gi.Pmove (&pm);
+    
+    gi.linkentity (ent);
+    //    client->old_owner_angles[0] = client->ucmd.angles[0];
+    //    client->old_owner_angles[1] = client->ucmd.angles[1];
+    
+    G_TouchTriggers (ent); // we'll only allow touching trigger_look with "Cam Owner" SF
+    
+}
+
 /*
  * This will be called once for each client frame, which will
  * usually be a couple times for each server frame.
@@ -2205,19 +3460,201 @@ ClientThink(edict_t *ent, usercmd_t *ucmd)
 {
 	gclient_t *client;
 	edict_t *other;
+    edict_t        *ground;
+    pmove_t        pm;
+    vec_t        t;
+    //vec3_t        view;
+    vec3_t        oldorigin, oldvelocity;
 	int i, j;
-	pmove_t pm;
+    float        ground_speed;
 
 	if (!ent || !ucmd)
 	{
 		return;
 	}
 
+    // Knightmare- dm pause
+    if (paused && deathmatch->value)
+    {
+        safe_centerprintf(ent, "PAUSED\n\n(type \"sv dmpause\" to resume)");
+        ent->client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
+        return;
+    }
+    
 	level.current_entity = ent;
 	client = ent->client;
 
+    // Lazarus: Copy latest usercmd stuff for use in other routines
+    client->ucmd = *ucmd;
+    
+    VectorCopy(ent->s.origin,oldorigin);
+    VectorCopy(ent->velocity,oldvelocity);
+    ground = ent->groundentity;
+    
+    if(ground && (ground->movetype == MOVETYPE_PUSH) && (ground != world) && ground->turn_rider)
+        ground_speed = VectorLength(ground->velocity);
+    else
+        ground_speed = 0;
+    
+    if( (ent->in_mud)               ||
+       (ent->client->push)         ||
+       (ent->vehicle)              ||
+       (ent->client->chasetoggle)  ||
+       (ent->turret)               ||
+       (ent->client->spycam)       ||
+       (ground_speed > 0)            )
+        ent->client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
+    else
+        ent->client->ps.pmove.pm_flags &= ~PMF_NO_PREDICTION;
+    
+    // Server-side speed control stuff
+#ifdef KMQUAKE2_ENGINE_MOD
+    client->ps.maxspeed = player_max_speed->value;
+    client->ps.duckspeed = player_crouch_speed->value;
+    client->ps.accel = player_accel->value;
+    client->ps.stopspeed = player_stopspeed->value;
+#endif
+    
+    if(client->startframe == 0)
+        client->startframe = level.framenum;
+    
+    client->fps_frames++;
+    if(client->fps_frames >= 100) {
+        client->secs_per_frame = (level.time-client->fps_time_start)/100;
+        client->fps_frames = 0;
+        client->fps_time_start = level.time;
+        client->frame_zoomrate = zoomrate->value * client->secs_per_frame;
+    }
+    //VectorCopy(ent->s.origin,view);
+    //view[2] += ent->viewheight;
+    Fog(ent); //view);
+    
+    // MUD - get mud level
+    if(level.mud_puddles)
+    {
+        edict_t    *mud;
+        
+        ent->in_mud = 0;
+        for(i=game.maxclients+1; i<globals.num_edicts && !ent->in_mud; i++)
+        {
+            mud = &g_edicts[i];
+            if(!mud->inuse) continue;
+            if(!(mud->svflags & SVF_MUD)) continue;
+            if(ent->absmin[0] > mud->absmax[0]) continue;
+            if(ent->absmin[1] > mud->absmax[1]) continue;
+            if(ent->absmin[2] > mud->absmax[2]) continue;
+            if(ent->absmax[0] < mud->absmin[0]) continue;
+            if(ent->absmax[1] < mud->absmin[1]) continue;
+            if(ent->absmax[2] < mud->absmin[2]) continue;
+            ent->in_mud = 1;
+            if(ent->s.origin[2] < mud->absmax[2])
+                ent->in_mud = 2;
+            if(ent->s.origin[2] + ent->viewheight < mud->absmax[2])
+                ent->in_mud = 3;
+        }
+    }
+    
+    // USE - special actions taken when +use is pressed
+    if(!client->use && (ucmd->buttons & BUTTON_USE))
+    {
+        // use key was NOT pressed, but now is
+        client->use = 1;
+        if (client->spycam)
+            camera_off(ent);
+        else
+        {
+            edict_t *viewing;
+            vec3_t    intersect;
+            float    range;
+            
+            viewing = LookingAt(ent,0,intersect,&range);
+            if(viewing && viewing->classname)
+            {
+                if(!stricmp(viewing->classname,"crane_control") && range <= 100)
+                    crane_control_action(viewing,ent,intersect);
+                if(!stricmp(viewing->classname,"target_lock_digit") && range <= 100)
+                    lock_digit_increment(viewing,ent);
+                if(!stricmp(viewing->classname,"func_trainbutton") && (viewing->spawnflags & 1) && range <= 64)
+                    trainbutton_use(viewing,ent,ent);
+                // Knightmare- different range for chasecam
+                if(!stricmp(viewing->classname,"func_monitor") && ((range <= 100) || (client->chasetoggle && range <= client->zoom + 160.00)) )
+                {
+                    use_camera(viewing,ent,ent);
+                    if(client->spycam && client->spycam->viewer == ent)
+                    {
+                        client->old_owner_angles[0] = ucmd->angles[0];
+                        client->old_owner_angles[1] = ucmd->angles[1];
+                    }
+                }
+                if(viewing->monsterinfo.aiflags & AI_ACTOR)
+                {
+                    if(viewing->monsterinfo.aiflags & AI_FOLLOW_LEADER)
+                    {
+                        viewing->monsterinfo.aiflags    &= ~AI_FOLLOW_LEADER;
+                        viewing->monsterinfo.old_leader  = NULL;
+                        viewing->monsterinfo.leader      = NULL;
+                        viewing->movetarget = viewing->goalentity = NULL;
+                        viewing->monsterinfo.stand(viewing);
+                    }
+                    else
+                    {
+                        vec3_t    dir;
+                        viewing->monsterinfo.aiflags |= AI_FOLLOW_LEADER;
+                        viewing->monsterinfo.leader   = ent;
+                        VectorSubtract(ent->s.origin,viewing->s.origin,dir);
+                        viewing->ideal_yaw = vectoyaw(dir);
+                        if(fabs(viewing->s.angles[YAW] - viewing->ideal_yaw) < 90)
+                            actor_salute(viewing);
+                    }
+                }
+            }
+        }
+    }
+    
+    if(ucmd->buttons & BUTTON_USE)
+        client->use = 1;
+    else
+        client->use = 0;
+    
+    if( client->push )
+    {
+        // currently pushing or pulling a func_pushable
+        if( !client->use )
+        {
+            // whoops - released USE key
+            RemovePush(ent);
+        }
+        else if( (!ent->groundentity) && (ent->waterlevel==0 || client->push->waterlevel == 0 ) )
+        {
+            // oops, we fall down
+            RemovePush(ent);
+        }
+        else
+        {
+            // Scale client velocity by mass of func_pushable
+            t = VectorLength(ent->velocity);
+            if( t > client->maxvelocity )
+                VectorScale(ent->velocity, client->maxvelocity/t, ent->velocity);
+            client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
+            t = 200./client->push->mass;
+            ucmd->forwardmove *= t;
+            ucmd->sidemove    *= t;
+        }
+    }
+    
+    if(ent->turret && ucmd->upmove > 10)
+        turret_disengage(ent->turret);
+    
+    // INTERMISSION
 	if (level.intermissiontime)
 	{
+        // tpp
+        if (client->chasetoggle)
+            ChasecamRemove (ent, OPTION_OFF);
+        // end tpp
+        // Lazarus spycam
+        if (client->spycam)
+            camera_off(ent);
 		client->ps.pmove.pm_type = PM_FREEZE;
 
 		/* can exit intermission after five seconds */
@@ -2230,6 +3667,101 @@ ClientThink(edict_t *ent, usercmd_t *ucmd)
 		return;
 	}
 
+    if (ent->target_ent && !Q_stricmp(ent->target_ent->classname,"target_monitor"))
+    {
+        edict_t    *monitor = ent->target_ent;
+        if(monitor->target_ent && monitor->target_ent->inuse)
+        {
+            if(monitor->spawnflags & 2)
+                VectorCopy(monitor->target_ent->s.angles,client->ps.viewangles);
+            else
+            {
+                vec3_t    dir;
+                VectorSubtract(monitor->target_ent->s.origin,monitor->s.origin,dir);
+                vectoangles(dir,client->ps.viewangles);
+            }
+        }
+        else
+            VectorCopy (monitor->s.angles, client->ps.viewangles);
+        VectorCopy(monitor->s.origin,ent->s.origin);
+        client->ps.pmove.pm_type = PM_FREEZE;
+        return;
+    }
+    
+    // THIRDPERSON VIEW in/out
+    // if NOT pushing something AND in third person AND use key is pressed,
+    // move viewpoint in/out
+    if(client->chasetoggle && !client->push)
+    {
+        // Knigthtmare- and if not about to push something or infront of func_monitor
+        edict_t *viewing;
+        vec3_t    intersect;
+        float    range;
+        
+        viewing = LookingAt(ent,0,intersect,&range);
+        if ( !(viewing && viewing->classname
+               && (stricmp(viewing->classname,"func_monitor") || stricmp(viewing->classname,"func_pushable"))
+               && range <= 100) )
+        {
+            if ((ucmd->buttons & BUTTON_USE) && (!deathmatch->value))
+            {
+                client->use = 1;
+                if ((ucmd->forwardmove < 0) && (client->zoom < 100))
+                    client->zoom++;
+                else if ((ucmd->forwardmove > 0) && (client->zoom > -40))
+                    client->zoom--;
+                ucmd->forwardmove = 0;
+                ucmd->sidemove = 0;
+            }
+            else if (client->use)
+            {
+                //client->zoom = 0;
+                if (client->oldplayer)
+                {
+                    // set angles
+                    for (i=0 ; i<3 ; i++)
+                    {
+                        ent->client->ps.pmove.delta_angles[i] = ANGLE2SHORT(ent->client->oldplayer->s.angles[i] - ent->client->resp.cmd_angles[i]);
+                    }
+                }
+                client->use = 0;
+            }
+        }
+    }
+    
+    // ZOOM
+    if (client->zooming) {
+        client->pers.hand = 2;
+        if(client->zooming > 0) {
+            if(client->ps.fov > 5) {
+                client->ps.fov -= client->frame_zoomrate;
+                if(client->ps.fov < 5)
+                    client->ps.fov = 5;
+            } else {
+                client->ps.fov = 5;
+            }
+            client->zoomed = true;
+        } else {
+            if(client->ps.fov < client->original_fov) {
+                client->ps.fov += client->frame_zoomrate;
+                if(client->ps.fov > client->original_fov) {
+                    client->ps.fov = client->original_fov;
+                    client->zoomed = false;
+                } else
+                    client->zoomed = true;
+            } else {
+                client->ps.fov = client->original_fov;
+                client->zoomed = false;
+            }
+        }
+    }
+    
+    // SPYCAM
+    if (client->spycam) {
+        ClientSpycam(ent);
+        return; // no movement while in cam
+    } // END SPYCAM
+    
 	pm_passent = ent;
 
 	if (ent->client->chase_target)
@@ -2247,7 +3779,7 @@ ClientThink(edict_t *ent, usercmd_t *ucmd)
 		{
 			client->ps.pmove.pm_type = PM_SPECTATOR;
 		}
-		else if (ent->s.modelindex != 255)
+        else if (ent->s.modelindex != MAX_MODELS-1)
 		{
 			client->ps.pmove.pm_type = PM_GIB;
 		}
@@ -2260,7 +3792,84 @@ ClientThink(edict_t *ent, usercmd_t *ucmd)
 			client->ps.pmove.pm_type = PM_NORMAL;
 		}
 
-		client->ps.pmove.gravity = sv_gravity->value;
+        if(level.time > ent->gravity_debounce_time)
+            client->ps.pmove.gravity = sv_gravity->value;
+        else
+            client->ps.pmove.gravity = 0;
+        
+#ifdef JETPACK_MOD
+        if ( client->jetpack )
+        {
+            if( (ucmd->upmove != 0) || (ucmd->forwardmove != 0) || (ucmd->sidemove != 0) )
+            {
+                if(ucmd->upmove > 0 || !ent->groundentity)
+                {
+                    if(!client->jetpack_thrusting)
+                    {
+                        gi.sound (ent, CHAN_AUTO, gi.soundindex("jetpack/rev.wav"), 1, ATTN_NORM, 0);
+                        client->jetpack_start_thrust = level.framenum;
+                    }
+                    client->jetpack_thrusting = true;
+                }
+                else
+                    client->jetpack_thrusting = false;
+            }
+            else
+                client->jetpack_thrusting = false;
+            
+            if(client->jetpack_framenum + client->pers.inventory[fuel_index] > level.framenum)
+            {
+                if(jetpack_weenie->value)
+                {
+                    Jet_ApplyJet( ent, ucmd );
+                    if(client->jetpack_framenum < level.framenum)
+                    {
+                        if(!client->jetpack_infinite)
+                            client->pers.inventory[fuel_index] -= 10;
+                        client->jetpack_framenum = level.framenum + 10;
+                    }
+                }
+                else
+                {
+                    if(client->jetpack_thrusting)
+                        Jet_ApplyJet( ent, ucmd );
+                    if(client->jetpack_framenum <= level.framenum)
+                    {
+                        if(client->jetpack_thrusting)
+                        {
+                            if(!client->jetpack_infinite)
+                                client->pers.inventory[fuel_index] -= 11;
+                            client->jetpack_framenum = level.framenum + 10;
+                        }
+                        else
+                        {
+                            if(!client->jetpack_infinite)
+                                client->pers.inventory[fuel_index]--;
+                            client->jetpack_framenum = level.framenum + 10;
+                        }
+                    }
+                    if(ucmd->upmove == 0)
+                    {
+                        // accelerate to 75% gravity in 2 seconds
+                        float    gravity;
+                        float    g_max = 0.75 * sv_gravity->value;
+                        
+                        gravity = g_max * (level.framenum - client->jetpack_last_thrust)/20;
+                        if(gravity > g_max) gravity = g_max;
+                        client->ps.pmove.gravity = (short)gravity;
+                    }
+                    else
+                        client->jetpack_last_thrust = level.framenum;
+                }
+            }
+            else
+            {
+                client->jetpack = false;
+                ent->s.frame = FRAME_jump2;    // reset from stand to avoid goofiness
+            }
+        }
+#endif    // #ifdef JETPACK_MOD
+        
 		pm.s = client->ps.pmove;
 
 		for (i = 0; i < 3; i++)
@@ -2282,6 +3891,9 @@ ClientThink(edict_t *ent, usercmd_t *ucmd)
 		pm.trace = PM_trace; /* adds default parms */
 		pm.pointcontents = gi.pointcontents;
 
+        if(ent->vehicle)
+            pm.s.pm_flags |= PMF_ON_GROUND;
+        
 		/* perform a pmove */
 		gi.Pmove(&pm);
 
@@ -2301,16 +3913,110 @@ ClientThink(edict_t *ent, usercmd_t *ucmd)
 		client->resp.cmd_angles[0] = SHORT2ANGLE(ucmd->angles[0]);
 		client->resp.cmd_angles[1] = SHORT2ANGLE(ucmd->angles[1]);
 		client->resp.cmd_angles[2] = SHORT2ANGLE(ucmd->angles[2]);
+        
+#ifdef JETPACK_MOD
+        if ( client->jetpack && jetpack_weenie->value )
+        {
+            if( pm.groundentity )        // are we on ground
+                if ( Jet_AvoidGround(ent) )    // then lift us if possible
+                    pm.groundentity = NULL;        // now we are no longer on ground
+        }
+#endif
+        
+        // MUD - "correct" Pmove physics
+        if(pm.waterlevel && ent->in_mud)
+        {
+            vec3_t    point;
+            vec3_t    end;
+            
+            vec3_t    deltapos, deltavel;
+            float    frac;
+            
+            pm.watertype |= CONTENTS_MUD;
+            ent->in_mud  = pm.waterlevel;
+            VectorSubtract(ent->s.origin,oldorigin,deltapos);
+            VectorSubtract(ent->velocity,oldvelocity,deltavel);
+            if(pm.waterlevel == 1)
+            {
+                frac = MUD1BASE + MUD1AMP*sin( (float)(level.framenum%10)/10.*2*M_PI);
+                ent->s.origin[0] = oldorigin[0]   + frac*deltapos[0];
+                ent->s.origin[1] = oldorigin[1]   + frac*deltapos[1];
+                ent->s.origin[2] = oldorigin[2]   + 0.75*deltapos[2];
+                ent->velocity[0] = oldvelocity[0] + frac*deltavel[0];
+                ent->velocity[1] = oldvelocity[1] + frac*deltavel[1];
+                ent->velocity[2] = oldvelocity[2] + 0.75*deltavel[2];
+            }
+            else if(pm.waterlevel == 2)
+            {
+                trace_t    tr;
+                float    dist;
+                
+                VectorCopy(oldorigin,point);
+                point[2] += ent->maxs[2];
+                end[0] = point[0]; end[1] = point[1]; end[2] = oldorigin[2] + ent->mins[2];
+                tr = gi.trace(point,NULL,NULL,end,ent,CONTENTS_WATER);
+                dist = point[2] - tr.endpos[2];
+                // frac = waterlevel 1 frac at dist=32 or more,
+                //      = waterlevel 3 frac at dist=10 or less
+                if(dist <= 10)
+                    frac = MUD3;
+                else
+                    frac = MUD3 + (dist-10)/22.*(MUD1BASE-MUD3);
+                ent->s.origin[0] = oldorigin[0]   + frac*deltapos[0];
+                ent->s.origin[1] = oldorigin[1]   + frac*deltapos[1];
+                ent->s.origin[2] = oldorigin[2]   + frac*deltapos[2];
+                ent->velocity[0] = oldvelocity[0] + frac*deltavel[0];
+                ent->velocity[1] = oldvelocity[1] + frac*deltavel[1];
+                ent->velocity[2] = oldvelocity[2] + frac*deltavel[2];
+                if(!ent->groundentity)
+                {
+                    // Player can't possibly move up
+                    ent->s.origin[2] = min(oldorigin[2], ent->s.origin[2]);
+                    ent->velocity[2] = min(oldvelocity[2],ent->velocity[2]);
+                    ent->velocity[2] = min(-10,ent->velocity[2]);
+                }
+            }
+            else
+            {
+                ent->s.origin[0] = oldorigin[0]   + MUD3*deltapos[0];
+                ent->s.origin[1] = oldorigin[1]   + MUD3*deltapos[1];
+                ent->velocity[0] = oldvelocity[0] + MUD3*deltavel[0];
+                ent->velocity[1] = oldvelocity[1] + MUD3*deltavel[1];
+                if(ent->groundentity)
+                {
+                    ent->s.origin[2] = oldorigin[2]   + MUD3*deltapos[2];
+                    ent->velocity[2] = oldvelocity[2] + MUD3*deltavel[2];
+                }
+                else
+                {
+                    ent->s.origin[2] = min(oldorigin[2],ent->s.origin[2]);
+                    ent->velocity[2] = min(oldvelocity[2], 0);
+                }
+            }
+        }
+        else
+            ent->in_mud = 0;
+        // end MUD
 
 		if (ent->groundentity && !pm.groundentity && (pm.cmd.upmove >= 10) &&
-			(pm.waterlevel == 0))
-		{
-			gi.sound(ent, CHAN_VOICE, gi.soundindex(
-							"*jump1.wav"), 1, ATTN_NORM, 0);
-			PlayerNoise(ent, ent->s.origin, PNOISE_SELF);
+			(pm.waterlevel == 0) && !client->jetpack)
+        {    //Knightmare- allow disabling of STUPID grunting when jumping
+            if (deathmatch->value || player_jump_sounds->value)
+            {
+                gi.sound(ent, CHAN_VOICE, gi.soundindex(
+                                "*jump1.wav"), 1, ATTN_NORM, 0);
+                PlayerNoise(ent, ent->s.origin, PNOISE_SELF);
+            }
+            // Lazarus: temporarily match velocities with entity we just
+            //          jumped from
+            VectorAdd(ent->groundentity->velocity,ent->velocity,ent->velocity);
 		}
 
-		ent->viewheight = pm.viewheight;
+        if (ent->groundentity && !pm.groundentity && (pm.cmd.upmove >= 10) && (pm.waterlevel == 0))
+            ent->client->jumping = 1;
+        
+        if (ent->deadflag != DEAD_FROZEN)
+            ent->viewheight = pm.viewheight;
 		ent->waterlevel = pm.waterlevel;
 		ent->watertype = pm.watertype;
 		ent->groundentity = pm.groundentity;
@@ -2320,11 +4026,23 @@ ClientThink(edict_t *ent, usercmd_t *ucmd)
 			ent->groundentity_linkcount = pm.groundentity->linkcount;
 		}
 
+        // Lazarus - lie about ground when driving a vehicle.
+        //           Pmove apparently doesn't think the ground
+        //           can be "owned"
+        if (ent->vehicle && !ent->groundentity)
+        {
+            ent->groundentity = ent->vehicle;
+            ent->groundentity_linkcount = ent->vehicle->linkcount;
+        }
+        
 		if (ent->deadflag)
 		{
-			client->ps.viewangles[ROLL] = 40;
-			client->ps.viewangles[PITCH] = -15;
-			client->ps.viewangles[YAW] = client->killer_yaw;
+            if (ent->deadflag != DEAD_FROZEN)
+            {
+                client->ps.viewangles[ROLL] = 40;
+                client->ps.viewangles[PITCH] = -15;
+                client->ps.viewangles[YAW] = client->killer_yaw;
+            }
 		}
 		else
 		{
@@ -2332,6 +4050,16 @@ ClientThink(edict_t *ent, usercmd_t *ucmd)
 			VectorCopy(pm.viewangles, client->ps.viewangles);
 		}
 
+#ifdef JETPACK_MOD
+        if ( client->jetpack && !(ucmd->buttons & BUTTONS_ATTACK))
+            ent->s.frame = FRAME_stand20;
+#endif
+        
+        //ZOID
+        if (client->ctf_grapple)
+            CTFGrapplePull(client->ctf_grapple);
+        //ZOID
+        
 		gi.linkentity(ent);
 
 		if (ent->movetype != MOVETYPE_NOCLIP)
@@ -2339,31 +4067,38 @@ ClientThink(edict_t *ent, usercmd_t *ucmd)
 			G_TouchTriggers(ent);
 		}
 
+        if( (world->effects & FX_WORLDSPAWN_JUMPKICK) && (ent->client->jumping) && (ent->solid != SOLID_NOT))
+            kick_attack(ent);
+        
 		/* touch other objects */
-		for (i = 0; i < pm.numtouch; i++)
-		{
-			other = pm.touchents[i];
-
-			for (j = 0; j < i; j++)
-			{
-				if (pm.touchents[j] == other)
-				{
-					break;
-				}
-			}
-
-			if (j != i)
-			{
-				continue; /* duplicated */
-			}
-
-			if (!other->touch)
-			{
-				continue;
-			}
-
-			other->touch(other, ent, NULL, NULL);
-		}
+        // Lazarus: but NOT if game is frozen
+        if(!level.freeze)
+        {
+            for (i = 0; i < pm.numtouch; i++)
+            {
+                other = pm.touchents[i];
+                
+                for (j = 0; j < i; j++)
+                {
+                    if (pm.touchents[j] == other)
+                    {
+                        break;
+                    }
+                }
+                
+                if (j != i)
+                {
+                    continue; /* duplicated */
+                }
+                
+                if (!other->touch)
+                {
+                    continue;
+                }
+                
+                other->touch(other, ent, NULL, NULL);
+            }
+        }
 	}
 
 	client->oldbuttons = client->buttons;
@@ -2374,8 +4109,18 @@ ClientThink(edict_t *ent, usercmd_t *ucmd)
 	   on for monster sighting AI */
 	ent->light_level = ucmd->lightlevel;
 
-	/* fire weapon from final position if needed */
-	if (client->latched_buttons & BUTTON_ATTACK)
+    // CDawg - add here!
+    if (ucmd->forwardmove < -1)
+        ent->client->backpedaling = true;
+    else
+        ent->client->backpedaling = false;
+    // CDawg end here!
+    
+    /* fire weapon from final position if needed */
+    if (client->latched_buttons & BUTTONS_ATTACK
+        //ZOID
+        && !(ctf->value && ent->movetype == MOVETYPE_NOCLIP) )
+        //ZOID
 	{
 		if (client->resp.spectator)
 		{
@@ -2398,6 +4143,11 @@ ClientThink(edict_t *ent, usercmd_t *ucmd)
 		}
 	}
 
+    // ACEBOT_ADD
+    if (!ent->is_bot && !ent->deadflag && !ent->client->resp.spectator)
+        ACEND_PathMap(ent);
+    // ACEBOT_END
+    
 	if (client->resp.spectator)
 	{
 		if (ucmd->upmove >= 10)
@@ -2422,6 +4172,11 @@ ClientThink(edict_t *ent, usercmd_t *ucmd)
 		}
 	}
 
+    //ZOID
+    //regen tech
+    CTFApplyRegeneration(ent);
+    //ZOID
+    
 	/* update chase cam if being followed */
 	for (i = 1; i <= maxclients->value; i++)
 	{
@@ -2432,6 +4187,15 @@ ClientThink(edict_t *ent, usercmd_t *ucmd)
 			UpdateChaseCam(other);
 		}
 	}
+
+    if(client->push != NULL)
+    {
+        if(client->use &&
+           ( (ucmd->forwardmove != 0) || (ucmd->sidemove != 0) ) )
+            ClientPushPushable(ent);
+        else
+            client->push->s.sound = 0;
+    }
 }
 
 /*
@@ -2457,6 +4221,17 @@ ClientBeginServerFrame(edict_t *ent)
 
 	client = ent->client;
 
+    // DWH
+    if(client->spycam)
+        client = client->camplayer->client;
+    
+    // tpp
+    if (client->delayedstart > 0)
+        client->delayedstart--;
+    if (client->delayedstart == 1)
+        ChasecamStart (ent);
+    // end tpp
+    
 	if (deathmatch->value &&
 		(client->pers.spectator != client->resp.spectator) &&
 		((level.time - client->respawn_time) >= 5))
@@ -2466,7 +4241,10 @@ ClientBeginServerFrame(edict_t *ent)
 	}
 
 	/* run weapon animations if it hasn't been done by a ucmd_t */
-	if (!client->weapon_thunk && !client->resp.spectator)
+    if (!client->weapon_thunk && !client->resp.spectator
+        //ZOID
+        && !(ctf->value && ent->movetype == MOVETYPE_NOCLIP) )
+        //ZOID
 	{
 		Think_Weapon(ent);
 	}
@@ -2480,10 +4258,22 @@ ClientBeginServerFrame(edict_t *ent)
 		/* wait for any button just going down */
 		if (level.time > client->respawn_time)
 		{
+            // tpp
+            if (ent->crosshair)
+                G_FreeEdict(ent->crosshair);
+            ent->crosshair = NULL;
+            if (ent->client->oldplayer)
+                G_FreeEdict (ent->client->oldplayer);
+            ent->client->oldplayer = NULL;
+            if (ent->client->chasecam)
+                G_FreeEdict (ent->client->chasecam);
+            ent->client->chasecam = NULL;
+            // end tpp
+            
 			/* in deathmatch, only wait for attack button */
 			if (deathmatch->value)
 			{
-				buttonMask = BUTTON_ATTACK;
+				buttonMask = BUTTONS_ATTACK;
 			}
 			else
 			{
@@ -2502,7 +4292,8 @@ ClientBeginServerFrame(edict_t *ent)
 	}
 
 	/* add player trail so monsters can follow */
-	if (!deathmatch->value)
+    // DWH: Don't add player trail for players in camera
+    if (!deathmatch->value && !client->spycam)
 	{
 		if (!visible(ent, PlayerTrail_LastSpot()))
 		{

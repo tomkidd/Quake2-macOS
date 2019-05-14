@@ -973,61 +973,61 @@ void MoveRiders(edict_t *platform, edict_t *ignore, vec3_t move, vec3_t amove, q
  ============
  */
 
-void RealBoundingBox(edict_t *ent, vec3_t mins, vec3_t maxs)
-{
-    vec3_t    forward, left, up, f1, l1, u1;
-    vec3_t    p[8];
-    int        i, j, k, j2, k4;
-    
-    for(k=0; k<2; k++)
-    {
-        k4 = k*4;
-        if(k)
-            p[k4][2] = ent->maxs[2];
-        else
-            p[k4][2] = ent->mins[2];
-        p[k4+1][2] = p[k4][2];
-        p[k4+2][2] = p[k4][2];
-        p[k4+3][2] = p[k4][2];
-        for(j=0; j<2; j++)
-        {
-            j2 = j*2;
-            if(j)
-                p[j2+k4][1] = ent->maxs[1];
-            else
-                p[j2+k4][1] = ent->mins[1];
-            p[j2+k4+1][1] = p[j2+k4][1];
-            for(i=0; i<2; i++)
-            {
-                if(i)
-                    p[i+j2+k4][0] = ent->maxs[0];
-                else
-                    p[i+j2+k4][0] = ent->mins[0];
-            }
-        }
-    }
-    AngleVectors(ent->s.angles,forward,left,up);
-    for(i=0; i<8; i++)
-    {
-        VectorScale(forward,p[i][0],f1);
-        VectorScale(left,-p[i][1],l1);
-        VectorScale(up,p[i][2],u1);
-        VectorAdd(ent->s.origin,f1,p[i]);
-        VectorAdd(p[i],l1,p[i]);
-        VectorAdd(p[i],u1,p[i]);
-    }
-    VectorCopy(p[0],mins);
-    VectorCopy(p[0],maxs);
-    for(i=1; i<8; i++)
-    {
-        mins[0] = min(mins[0],p[i][0]);
-        mins[1] = min(mins[1],p[i][1]);
-        mins[2] = min(mins[2],p[i][2]);
-        maxs[0] = max(maxs[0],p[i][0]);
-        maxs[1] = max(maxs[1],p[i][1]);
-        maxs[2] = max(maxs[2],p[i][2]);
-    }
-}
+//void RealBoundingBox(edict_t *ent, vec3_t mins, vec3_t maxs)
+//{
+//    vec3_t    forward, left, up, f1, l1, u1;
+//    vec3_t    p[8];
+//    int        i, j, k, j2, k4;
+//
+//    for(k=0; k<2; k++)
+//    {
+//        k4 = k*4;
+//        if(k)
+//            p[k4][2] = ent->maxs[2];
+//        else
+//            p[k4][2] = ent->mins[2];
+//        p[k4+1][2] = p[k4][2];
+//        p[k4+2][2] = p[k4][2];
+//        p[k4+3][2] = p[k4][2];
+//        for(j=0; j<2; j++)
+//        {
+//            j2 = j*2;
+//            if(j)
+//                p[j2+k4][1] = ent->maxs[1];
+//            else
+//                p[j2+k4][1] = ent->mins[1];
+//            p[j2+k4+1][1] = p[j2+k4][1];
+//            for(i=0; i<2; i++)
+//            {
+//                if(i)
+//                    p[i+j2+k4][0] = ent->maxs[0];
+//                else
+//                    p[i+j2+k4][0] = ent->mins[0];
+//            }
+//        }
+//    }
+//    AngleVectors(ent->s.angles,forward,left,up);
+//    for(i=0; i<8; i++)
+//    {
+//        VectorScale(forward,p[i][0],f1);
+//        VectorScale(left,-p[i][1],l1);
+//        VectorScale(up,p[i][2],u1);
+//        VectorAdd(ent->s.origin,f1,p[i]);
+//        VectorAdd(p[i],l1,p[i]);
+//        VectorAdd(p[i],u1,p[i]);
+//    }
+//    VectorCopy(p[0],mins);
+//    VectorCopy(p[0],maxs);
+//    for(i=1; i<8; i++)
+//    {
+//        mins[0] = min(mins[0],p[i][0]);
+//        mins[1] = min(mins[1],p[i][1]);
+//        mins[2] = min(mins[2],p[i][2]);
+//        maxs[0] = max(maxs[0],p[i][0]);
+//        maxs[1] = max(maxs[1],p[i][1]);
+//        maxs[2] = max(maxs[2],p[i][2]);
+//    }
+//}
 
 
 /*
@@ -1780,6 +1780,10 @@ SV_Physics_Toss(edict_t *ent)
  * still on the ground, but  will fall if the floor
  * is pulled out from under them.
  */
+#define    sv_stopspeed        100
+#define sv_friction            6
+#define sv_waterfriction    1
+
 void
 SV_AddRotationalFriction(edict_t *ent)
 {

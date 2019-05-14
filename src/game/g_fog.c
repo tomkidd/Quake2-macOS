@@ -19,6 +19,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+// excluding this file for now because of macos specific stuff -tkidd
+
 #include "header/local.h"
 
 //#define DISABLE_FOG
@@ -116,9 +118,16 @@ void Fog_Off (edict_t *player_ent)
 OLD FOG SYSTEM
 =================================================
 */
+#ifdef _WIN32
 #include <windows.h>
 #define __MSC__
 #include <gl/gl.h>
+#endif
+
+#if defined(__APPLE__)
+#include <OpenGL/gl.h>
+#endif
+
 
 fog_t		gfogs[MAX_FOGS];
 

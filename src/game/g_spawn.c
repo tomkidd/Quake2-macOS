@@ -81,6 +81,7 @@ void SP_target_crosslevel_trigger(edict_t *ent);
 void SP_target_crosslevel_target(edict_t *ent);
 void SP_target_laser(edict_t *self);
 void SP_target_help(edict_t *ent);
+void SP_target_actor (edict_t *ent);
 void SP_target_lightramp(edict_t *self);
 void SP_target_earthquake(edict_t *ent);
 void SP_target_character(edict_t *ent);
@@ -1073,7 +1074,7 @@ void LoadTransitionEnts()
         gi.dprintf("==== LoadTransitionEnts ====\n");
     if(game.transition_ents)
     {
-        char        t_file[_MAX_PATH];
+        char        t_file[4096];
         int            i, j;
         FILE        *f;
         vec3_t        v_spawn;
