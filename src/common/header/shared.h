@@ -47,6 +47,15 @@
  #undef false
 #endif
 
+#if defined(__APPLE__) || defined(MACOSX)
+#undef true
+#undef false
+#include <sys/stat.h>
+#include <sys/types.h>
+#define _mkdir(a)    mkdir(a, 0755)
+//#define DISABLE_FOG
+#endif // __APPLE__ || MACOSX
+
 typedef enum {false, true}  qboolean;
 typedef unsigned char byte;
 

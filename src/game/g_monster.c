@@ -1544,7 +1544,7 @@ int PatchMonsterModel (char *modelname)
         for(k=0; k<numitems && !data; k++)
         {
             fread(&pakitem,1,sizeof(pak_item_t),fpak);
-            if(!stricmp(pakitem.name,modelname))
+            if(!Q_stricmp(pakitem.name,modelname))
             {
                 fseek(fpak,pakitem.start,SEEK_SET);
                 fread(&model, sizeof(dmdl_t), 1, fpak);

@@ -51,5 +51,114 @@
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/common/shared/shared.c"
+            timestampString = "579653095.143306"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "1013"
+            endingLineNumber = "1013"
+            landmarkName = "va()"
+            landmarkType = "9">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "va"
+                  moduleName = "quake2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/tomkidd/Documents/GitHub/Quake2-macOS/src/common/shared/shared.c"
+                  timestampString = "579653256.719741"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "1016"
+                  endingLineNumber = "1016"
+                  offsetFromSymbolStart = "328">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "va"
+                  moduleName = "ref_gl1.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/tomkidd/Documents/GitHub/Quake2-macOS/src/common/shared/shared.c"
+                  timestampString = "579653256.925779"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "1016"
+                  endingLineNumber = "1016"
+                  offsetFromSymbolStart = "328">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "va"
+                  moduleName = "ref_gl3.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/tomkidd/Documents/GitHub/Quake2-macOS/src/common/shared/shared.c"
+                  timestampString = "579653256.931908"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "1016"
+                  endingLineNumber = "1016"
+                  offsetFromSymbolStart = "328">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "va"
+                  moduleName = "ref_soft.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/tomkidd/Documents/GitHub/Quake2-macOS/src/common/shared/shared.c"
+                  timestampString = "579653256.943526"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "1016"
+                  endingLineNumber = "1016"
+                  offsetFromSymbolStart = "328">
+               </Location>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "va"
+                  moduleName = "game.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/tomkidd/Documents/GitHub/Quake2-macOS/src/common/shared/shared.c"
+                  timestampString = "579653262.281739"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "1016"
+                  endingLineNumber = "1016"
+                  offsetFromSymbolStart = "328">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/game/g_spawn.c"
+            timestampString = "579653256.418119"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "771"
+            endingLineNumber = "771"
+            landmarkName = "LoadAliasData()"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
    </Breakpoints>
 </Bucket>

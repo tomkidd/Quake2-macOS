@@ -1052,7 +1052,7 @@ Cmd_Use_f(edict_t *ent)
 	index = ITEM_INDEX(it);
 
 #ifdef JETPACK_MOD
-    if(!stricmp(s,"jetpack"))
+    if(!Q_stricmp(s,"jetpack"))
     {
         // Special case - turns on/off
         if(!ent->client->jetpack)
@@ -1074,7 +1074,7 @@ Cmd_Use_f(edict_t *ent)
         return;
     }
 #endif
-    if (!stricmp(s,"stasis generator"))
+    if (!Q_stricmp(s,"stasis generator"))
     {
         // Special case - turn freeze off if already on
         if(level.freeze)
@@ -1144,6 +1144,12 @@ Cmd_Drop_f(edict_t *ent)
 	}
 
 	it->drop(ent, it);
+}
+
+void DeathmatchScoreboard (edict_t *ent)
+{
+    DeathmatchScoreboardMessage (ent, ent->enemy);
+    gi.unicast (ent, true);
 }
 
 void
@@ -1294,7 +1300,7 @@ Cmd_InvUse_f(edict_t *ent)
 	}
     
 #ifdef JETPACK_MOD
-    if(!stricmp(it->classname,"item_jetpack"))
+    if(!Q_stricmp(it->classname,"item_jetpack"))
     {
         if(!ent->client->jetpack)
         {

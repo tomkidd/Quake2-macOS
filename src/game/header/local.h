@@ -30,6 +30,16 @@
 #include "../../common/header/shared.h"
 #include "laz_misc.h"
 
+#define max(a,b) \
+({ __typeof__ (a) _a = (a); \
+__typeof__ (b) _b = (b); \
+_a > _b ? _a : _b; })
+
+#define min(a,b) \
+({ __typeof__ (a) _a = (a); \
+__typeof__ (b) _b = (b); \
+_a < _b ? _a : _b; })
+
 /* define GAME_INCLUDE so that game.h does not define the
    short, server-visible gclient_t and edict_t structures,
    because we define the full size ones in this file */
@@ -50,6 +60,7 @@
 #define svc_layout 4
 #define svc_inventory 5
 #define svc_stufftext 11
+#define    svc_fog                21
 
 /* ================================================================== */
 
