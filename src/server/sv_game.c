@@ -439,6 +439,12 @@ SV_InitGameProgs(void)
 	import.DebugGraph = SCR_DebugGraph;
 #endif
 
+    // Knightmare- support game DLL loading from pak files thru engine
+    // This can be used to load script files, etc
+    import.ListPak = FS_ListPak;
+    import.LoadFile = FS_LoadFile;
+    import.FreeFile = FS_FreeFile;
+    
 	import.SetAreaPortalState = CM_SetAreaPortalState;
 	import.AreasConnected = CM_AreasConnected;
 
