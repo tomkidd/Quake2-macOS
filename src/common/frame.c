@@ -304,11 +304,11 @@ Qcommon_Init(int argc, char **argv)
 	cl_maxfps = Cvar_Get("cl_maxfps", "60", CVAR_ARCHIVE);
 
 	developer = Cvar_Get("developer", "0", 0);
-	fixedtime = Cvar_Get("fixedtime", "0", 0);
+	fixedtime = Cvar_Get("fixedtime", "0", CVAR_CHEAT);
 
 	logfile_active = Cvar_Get("logfile", "1", CVAR_ARCHIVE);
 	modder = Cvar_Get("modder", "0", 0);
-	timescale = Cvar_Get("timescale", "1", 0);
+	timescale = Cvar_Get("timescale", "1", CVAR_CHEAT);
 
 	char *s;
 	s = va("%s %s %s %s", YQ2VERSION, YQ2ARCH, BUILD_DATE, YQ2OSTYPE);
@@ -327,7 +327,17 @@ Qcommon_Init(int argc, char **argv)
 	dedicated = Cvar_Get("dedicated", "1", CVAR_NOSET);
 #endif
 
-	// We can't use the clients "quit" command when running dedicated.
+    // Knightmare- for the game DLL to tell what engine it's running under
+#ifdef NEW_ENTITY_STATE_MEMBERS
+    sv_engine = Cvar_Get ("sv_engine", "KMQuake2", CVAR_SERVERINFO | CVAR_NOSET | CVAR_LATCH);
+#else
+    sv_engine = Cvar_Get ("sv_engine", "KMQuake2_eraser", CVAR_SERVERINFO | CVAR_NOSET | CVAR_LATCH);
+#endif
+    sv_engine_version = Cvar_Get ("sv_engine_version", va("%f",VERSION), CVAR_SERVERINFO | CVAR_NOSET | CVAR_LATCH);
+    // end Knightmare
+    
+
+    // We can't use the clients "quit" command when running dedicated.
 	if (dedicated->value)
 	{
 		Cmd_AddCommand("quit", Com_Quit);

@@ -32,6 +32,16 @@
 #include "shared.h"
 #include "crc.h"
 
+//rendered size of console font - everthing adjusts to this...
+#define    FONT_SIZE    con_font_size->value
+#define MENU_FONT_SIZE 8
+#define MENU_LINE_SIZE 10
+
+//float hud_char_size = 8.0;
+#define HUD_FONT_SCALE con_font_size->value/8.0
+#define HUD_FONT_SIZE 8.0
+
+#define    VERSION        0.20 //was 3.21
 #define YQ2VERSION "7.41pre"
 #define BASEDIRNAME "baseq2"
 
@@ -46,6 +56,14 @@
 #ifndef BUILD_DATE
 #define BUILD_DATE __DATE__
 #endif
+
+#define DEFAULTPAK            "pak"
+#define DEFAULTMODEL        "male"
+#define DEFAULTSKIN            "grunt"
+
+// Psychospaz's scaled menu stuff
+#define SCREEN_WIDTH    640.0f
+#define SCREEN_HEIGHT    480.0f
 
 #ifdef _WIN32
  #define CFGDIR "YamagiQ2"
@@ -115,6 +133,11 @@ void MSG_ReadDir(sizebuf_t *sb, vec3_t vector);
 
 void MSG_ReadData(sizebuf_t *sb, void *buffer, int size);
 
+#ifdef LARGE_MAP_SIZE // 24-bit pmove origin coordinate transmission code
+void    MSG_WritePMCoordNew (sizebuf_t *sb, int in);
+int        MSG_ReadPMCoordNew (sizebuf_t *msg_read);
+#endif
+
 /* ================================================================== */
 
 extern qboolean bigendien;
@@ -145,17 +168,20 @@ void Info_Print(char *s);
 
 /* PROTOCOL */
 
-#define PROTOCOL_VERSION 34
+#define    PROTOCOL_VERSION        35 // Knightmare changed, was 34
+#define    OLD_PROTOCOL_VERSION    34
 
 /* ========================================= */
 
 #define PORT_MASTER 27900
-#define PORT_CLIENT 27901
+//#define    PORT_CLIENT    27901
+#define PORT_CLIENT    (rand()%11000)+5000 // Knightmare- random port for protection from Q2MSGS
 #define PORT_SERVER 27910
 
 /* ========================================= */
 
-#define UPDATE_BACKUP 16    /* copies of entity_state_t to keep buffered */
+//Knightmare- increase UPDATE_BACKUP to eliminate "U_REMOVE: oldnum != newnum"
+#define UPDATE_BACKUP 64    /* copies of entity_state_t to keep buffered */
 #define UPDATE_MASK (UPDATE_BACKUP - 1)
 
 /* server to client */
@@ -221,6 +247,19 @@ enum clc_ops_e
 #define PS_WEAPONFRAME (1 << 13)
 #define PS_RDFLAGS (1 << 14)
 
+//Knightmare- bits for sending weapon skin, second weapon model
+#define    PS_WEAPONSKIN        (1<<15)
+#define    PS_WEAPONINDEX2        (1<<16)
+#define    PS_WEAPONFRAME2        (1<<17)
+#define    PS_WEAPONSKIN2        (1<<18)
+// Knightmare- bits for sending player speed
+#define    PS_MAXSPEED            (1<<19)
+#define    PS_DUCKSPEED        (1<<20)
+#define    PS_WATERSPEED        (1<<21)
+#define    PS_ACCEL            (1<<22)
+#define    PS_STOPSPEED        (1<<23)
+//end Knightmare
+
 /*============================================== */
 
 /* user_cmd_t communication */
@@ -285,6 +324,14 @@ enum clc_ops_e
 #define U_SKIN16 (1 << 25)
 #define U_SOUND (1 << 26)
 #define U_SOLID (1 << 27)
+
+//Knightmare- 1/18/2002- bits for extra model indices
+#define    U_MODEL5    (1<<28)
+#define    U_MODEL6    (1<<29)
+#define    U_MODEL7_8    (1<<30)    // Knightmare- not enough bits, so we'll fudge this
+#define    U_ALPHA        (1<<31)    // Knightmare added
+//end Knightmare
+
 
 /* CMD - Command text buffering and command execution */
 
@@ -444,6 +491,15 @@ const char *Cvar_VariableString(const char *var_name);
 
 /* returns an empty string if not defined */
 
+// Knightmare added
+float Cvar_DefaultValue (char *var_name);
+// returns 0 if not defined or non numeric
+char    *Cvar_DefaultString (char *var_name);
+// returns an empty string if not defined
+// Knightmare added
+cvar_t *Cvar_SetToDefault (char *var_name);
+// end Knightmare
+
 char *Cvar_CompleteVariable(char *partial);
 
 /* attempts to match a partial variable name for command line completion */
@@ -452,6 +508,9 @@ char *Cvar_CompleteVariable(char *partial);
 void Cvar_GetLatchedVars(void);
 
 /* any CVAR_LATCHED variables that have been set will now take effect */
+
+void Cvar_FixCheatVars (qboolean allowCheats);
+// called from CL_FixCvarCheats to lock cheat cvars in multiplayer
 
 qboolean Cvar_Command(void);
 
@@ -483,7 +542,14 @@ extern qboolean userinfo_modified;
 /* NET */
 
 #define PORT_ANY -1
+//Knightmare- increase max message size to eliminate SZ_Getspace: Overflow
+//Mark Shan is just gonna love this!!
+#ifndef NET_SERVER_BUILD
+#define    MAX_MSGLEN        44800
+#else
 #define MAX_MSGLEN 1400             /* max length of a message */
+#endif
+//end Knightmare
 #define PACKET_HEADER 10            /* two ints and a short */
 
 typedef enum
@@ -628,6 +694,12 @@ void CM_WritePortalState(FILE *f);
 
 /* PLAYER MOVEMENT CODE */
 
+#define DEFAULT_MAXSPEED    300
+#define DEFAULT_DUCKSPEED    100
+#define DEFAULT_WATERSPEED    400
+#define DEFAULT_ACCELERATE    10
+#define DEFAULT_STOPSPEED    100
+
 extern float pm_airaccelerate;
 
 void Pmove(pmove_t *pmove);
@@ -660,10 +732,19 @@ typedef enum
 } fsSearchType_t;
 
 void FS_DPrintf(const char *format, ...);
+FILE        *FS_FileForHandle (fileHandle_t f);
 int FS_FOpenFile(const char *name, fileHandle_t *f, qboolean gamedir_only);
 void FS_FCloseFile(fileHandle_t f);
 int FS_Read(void *buffer, int size, fileHandle_t f);
 int FS_FRead(void *buffer, int size, int count, fileHandle_t f);
+int            FS_Write (const void *buffer, int size, fileHandle_t f);
+void        FS_Seek (fileHandle_t f, int offset, fsOrigin_t origin);
+int            FS_FTell (fileHandle_t f);
+int            FS_Tell (fileHandle_t f);
+qboolean    FS_FileExists (char *path);
+void        FS_CopyFile (const char *srcPath, const char *dstPath);
+void        FS_RenameFile (const char *oldPath, const char *newPath);
+void        FS_DeleteFile (const char *path);
 
 // returns the filename used to open f, but (if opened from pack) in correct case
 // returns NULL if f is no valid handle
@@ -674,8 +755,12 @@ char **FS_ListFiles(char *findname, int *numfiles,
 char **FS_ListFiles2(char *findname, int *numfiles,
 		unsigned musthave, unsigned canthave);
 void FS_FreeList(char **list, int nfiles);
+int            FS_GetFileList (const char *path, const char *extension, char *buffer, int size, fsSearchType_t searchType);
 
+void        FS_Startup (void);
 void FS_InitFilesystem(void);
+void        FS_Shutdown (void);
+
 void FS_BuildGameSpecificSearchPath(char *dir);
 char *FS_Gamedir(void);
 char *FS_NextPath(char *prevpath);
@@ -684,6 +769,7 @@ char **FS_ListPak (char *find, int *num); // Knighmare- pak list function
 qboolean FS_FileInGamedir(const char *file);
 qboolean FS_AddPAKFromGamedir(const char *pak);
 const char* FS_GetNextRawPath(const char* lastRawPath);
+void        FS_SetGamedir (char *dir);
 
 /* a null buffer will just return the file length without loading */
 /* a -1 length is not present */
@@ -692,6 +778,7 @@ const char* FS_GetNextRawPath(const char* lastRawPath);
 
 void FS_FreeFile(void *buffer);
 void FS_CreatePath(char *path);
+void        FS_DeletePath (char *path);
 
 /* MISC */
 
@@ -727,8 +814,16 @@ extern cvar_t *dedicated;
 extern cvar_t *host_speeds;
 extern cvar_t *log_stats;
 
+// Knightmare- for the game DLL to tell what engine it's running under
+cvar_t *sv_engine;
+cvar_t *sv_engine_version;
+
 /* External entity files. */
 extern cvar_t *sv_entfile;
+
+// Knightmare added
+extern    cvar_t *fs_gamedirvar;
+extern    cvar_t *fs_basedir;
 
 /* Hack for portable client */
 extern qboolean is_portable;

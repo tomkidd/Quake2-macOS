@@ -57,8 +57,8 @@ static char *cmd_argv[MAX_STRING_TOKENS];
 static char *cmd_null_string = "";
 static char cmd_args[MAX_STRING_CHARS];
 sizebuf_t cmd_text;
-byte cmd_text_buf[8192];
-char defer_text_buf[8192];
+byte cmd_text_buf[32768]; // Knightmare increased, was 8192
+char defer_text_buf[32768]; // Knightmare increased, was 8192
 
 /*
  * Causes execution of the remainder of the command buffer to be delayed
@@ -379,9 +379,10 @@ Cmd_Exec_f(void)
 	Com_Printf("execing %s\n", Cmd_Argv(1));
 
 	/* the file doesn't have a trailing 0, so we need to copy it off */
-	f2 = Z_Malloc(len + 1);
+	f2 = Z_Malloc(len + 2); // Echon fix- was len+1
 	memcpy(f2, f, len);
-	f2[len] = 0;
+    f2[len] = '\n';  // Echon fix added
+    f2[len+1] = '\0'; // Echon fix- was len, = 0
 
 	Cbuf_InsertText(f2);
 
@@ -641,7 +642,10 @@ Cmd_TokenizeString(char *text, qboolean macroExpand)
 		{
 			int l;
 
-			strcpy(cmd_args, text);
+            // [SkulleR]'s fix for overflow vulnerability
+            //strcpy (cmd_args, text);
+            strncpy (cmd_args, text,sizeof(cmd_args)-1);
+            cmd_args[sizeof(cmd_args)-1] = 0;
 
 			/* strip off any trailing whitespace */
 			l = strlen(cmd_args) - 1;
@@ -762,6 +766,7 @@ qsort_strcomp(const void *s1, const void *s2)
 	return strcmp(*(char **)s1, *(char **)s2);
 }
 
+// Knightmare - added command auto-complete
 char *
 Cmd_CompleteCommand(char *partial)
 {
@@ -782,7 +787,7 @@ Cmd_CompleteCommand(char *partial)
 	/* check for exact match */
 	for (cmd = cmd_functions; cmd; cmd = cmd->next)
 	{
-		if (!strcmp(partial, cmd->name))
+		if (!Q_stricmp(partial, cmd->name))
 		{
 			return cmd->name;
 		}
@@ -790,7 +795,7 @@ Cmd_CompleteCommand(char *partial)
 
 	for (a = cmd_alias; a; a = a->next)
 	{
-		if (!strcmp(partial, a->name))
+		if (!Q_stricmp(partial, a->name))
 		{
 			return a->name;
 		}
@@ -798,7 +803,7 @@ Cmd_CompleteCommand(char *partial)
 
 	for (cvar = cvar_vars; cvar; cvar = cvar->next)
 	{
-		if (!strcmp(partial, cvar->name))
+		if (!Q_stricmp(partial, cvar->name))
 		{
 			return cvar->name;
 		}

@@ -1746,6 +1746,33 @@ CM_LoadMap(char *name, qboolean clientload, unsigned *checksum)
 	CMod_LoadVisibility(&header.lumps[LUMP_VISIBILITY]);
 	/* From kmquake2: adding an extra parameter for .ent support. */
 	CMod_LoadEntityString(&header.lumps[LUMP_ENTITIES], name);
+    
+    // Barnes- try to load entity replacement file
+    if (sv_entfile->value)
+    {
+        unsigned        *entbuf;
+        int                entlength;
+        char            entfile[MAX_QPATH];
+        qboolean        foundentfile;
+        
+        strcpy(entfile, name);
+        entfile[strlen(entfile)-4] = 0;
+        strcat(entfile, ".ent");
+        entlength = FS_LoadFile(entfile, (void **)&entbuf);
+        if (entbuf)
+        {
+            map_entitystring[0] = 0;
+            numentitychars = entlength;
+            Com_Printf ("Parsing entities from %s\n", entfile);
+            if (entlength > MAX_MAP_ENTSTRING)
+                Com_Error (ERR_DROP, ".ent file has too large entity lump - %i", entlength);
+            memcpy(map_entitystring, entbuf, numentitychars);
+            FS_FreeFile (entbuf);
+            foundentfile = true;
+        }
+        //if (!entbuf)
+        //    Com_Printf ("External entities not found. Using bsp entities\n");
+    }
 
 	FS_FreeFile(buf);
 

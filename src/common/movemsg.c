@@ -260,11 +260,113 @@ MSG_WriteString(sizebuf_t *sb, char *s)
 	}
 }
 
+
+// 24-bit coordinate transmission code
+#ifdef LARGE_MAP_SIZE
+
+#define BIT_23    0x00800000
+#define UPRBITS    0xFF000000
+qboolean LegacyProtocol (void);
+
+void MSG_WriteCoordNew (sizebuf_t *sb, float f)
+{
+    int tmp;
+    byte trans1;
+    unsigned short trans2;
+    
+    tmp = f*8;            // 1/8 granulation, leaves bounds of +/-1M in signed 24-bit form
+    trans1 = tmp >>16;    // bits 16-23
+    trans2 = tmp;        // bits 0-15
+    
+    // Don't mess with sign bits on this end to allow overflow (map wrap-around).
+    
+    MSG_WriteByte (sb, trans1);
+    MSG_WriteShort (sb, trans2);
+}
+
+float MSG_ReadCoordNew (sizebuf_t *msg_read)
+{
+    int tmp;
+    byte trans1;
+    unsigned short trans2;
+    
+    trans1 = MSG_ReadByte(msg_read);
+    trans2 = MSG_ReadShort(msg_read);
+    
+    tmp = trans1 <<16;    // bits 16-23
+    tmp += trans2;        // bits 0-15
+    
+    // Sign bit 23 means it's negative, so fill upper
+    // 8 bits with 1s for 2's complement negative.
+    if (tmp & BIT_23)
+        tmp |= UPRBITS;
+    
+    return tmp * (1.0/8);    // restore 1/8 granulation
+}
+
+// Player movement coords are already in 1/8 precision integer form
+void MSG_WritePMCoordNew (sizebuf_t *sb, int in)
+{
+    byte trans1;
+    unsigned short trans2;
+    
+    trans1 = in >>16;    // bits 16-23
+    trans2 = in;        // bits 0-15
+    
+    MSG_WriteByte (sb, trans1);
+    MSG_WriteShort (sb, trans2);
+}
+
+int MSG_ReadPMCoordNew (sizebuf_t *msg_read)
+{
+    int tmp;
+    byte trans1;
+    unsigned short trans2;
+    
+    trans1 = MSG_ReadByte(msg_read);
+    trans2 = MSG_ReadShort(msg_read);
+    
+    tmp = trans1 <<16;    // bits 16-23
+    tmp += trans2;        // bits 0-15
+    
+    // Sign bit 23 means it's negative, so fill upper
+    // 8 bits with 1s for 2's complement negative.
+    if (tmp & BIT_23)
+        tmp |= UPRBITS;
+    
+    return tmp;
+}
+
+#endif // LARGE_MAP_SIZE
+
+
+#ifdef LARGE_MAP_SIZE
+
+void MSG_WriteCoord (sizebuf_t *sb, float f)
+{
+    MSG_WriteCoordNew (sb, f);
+}
+
+#else // LARGE_MAP_SIZE
+
 void
 MSG_WriteCoord(sizebuf_t *sb, float f)
 {
 	MSG_WriteShort(sb, (int)(f * 8));
 }
+
+#endif
+
+#ifdef LARGE_MAP_SIZE
+
+void MSG_WritePos (sizebuf_t *sb, vec3_t pos)
+{
+    MSG_WriteCoordNew (sb, pos[0]);
+    MSG_WriteCoordNew (sb, pos[1]);
+    MSG_WriteCoordNew (sb, pos[2]);
+}
+
+#else // LARGE_MAP_SIZE
 
 void
 MSG_WritePos(sizebuf_t *sb, vec3_t pos)
@@ -273,6 +375,8 @@ MSG_WritePos(sizebuf_t *sb, vec3_t pos)
 	MSG_WriteShort(sb, (int)(pos[1] * 8));
 	MSG_WriteShort(sb, (int)(pos[2] * 8));
 }
+
+#endif
 
 void
 MSG_WriteAngle(sizebuf_t *sb, float f)
@@ -583,6 +687,18 @@ MSG_WriteDeltaEntity(entity_state_t *from,
 		bits |= U_MODEL4;
 	}
 
+#ifdef NEW_ENTITY_STATE_MEMBERS
+    // Knightmare- 1/18/2002- extra model indices
+    if ( to->modelindex5 != from->modelindex5 )
+        bits |= U_MODEL5;
+    if ( to->modelindex6 != from->modelindex6 )
+        bits |= U_MODEL6;
+    if ( (to->modelindex7 != from->modelindex7)
+        || (to->modelindex8 != from->modelindex8) )
+        bits |= U_MODEL7_8;
+    // end Knightmare
+#endif
+    
 	if (to->sound != from->sound)
 	{
 		bits |= U_SOUND;
@@ -593,6 +709,19 @@ MSG_WriteDeltaEntity(entity_state_t *from,
 		bits |= U_OLDORIGIN;
 	}
 
+    // Knightmare 5/11/2002- added alpha
+#ifdef NEW_ENTITY_STATE_MEMBERS
+    // cap new value to correct range
+    if (to->alpha < 0.0)
+        to->alpha = 0.0;
+    if (to->alpha > 1.0)
+        to->alpha = 1.0;
+    // Since the floating point value is never quite the same,
+    // compare the new and the old as what they will be sent as
+    if ((int)(to->alpha*255) != (int)(from->alpha*255))
+        bits |= U_ALPHA;
+#endif
+    
 	/* write the message */
 	if (!bits && !force)
 	{
@@ -644,26 +773,41 @@ MSG_WriteDeltaEntity(entity_state_t *from,
 		MSG_WriteByte(msg, to->number);
 	}
 
+    //Knightmare- 12/23/2001
+    //changed these to shorts
 	if (bits & U_MODEL)
 	{
-		MSG_WriteByte(msg, to->modelindex);
+		MSG_WriteShort(msg, to->modelindex);
 	}
 
 	if (bits & U_MODEL2)
 	{
-		MSG_WriteByte(msg, to->modelindex2);
+		MSG_WriteShort(msg, to->modelindex2);
 	}
 
 	if (bits & U_MODEL3)
 	{
-		MSG_WriteByte(msg, to->modelindex3);
+		MSG_WriteShort(msg, to->modelindex3);
 	}
 
 	if (bits & U_MODEL4)
 	{
-		MSG_WriteByte(msg, to->modelindex4);
+		MSG_WriteShort(msg, to->modelindex4);
 	}
 
+#ifdef NEW_ENTITY_STATE_MEMBERS
+    //Knightmare- 1/18/2002- extra model indices
+    if (bits & U_MODEL5)
+        MSG_WriteShort (msg, to->modelindex5);
+    if (bits & U_MODEL6)
+        MSG_WriteShort (msg, to->modelindex6);
+    if (bits & U_MODEL7_8) {
+        MSG_WriteShort (msg, to->modelindex7);
+        MSG_WriteShort (msg, to->modelindex8);
+    }
+    //end Knightmare
+#endif
+    
 	if (bits & U_FRAME8)
 	{
 		MSG_WriteByte(msg, to->frame);
@@ -756,9 +900,20 @@ MSG_WriteDeltaEntity(entity_state_t *from,
 		MSG_WriteCoord(msg, to->old_origin[2]);
 	}
 
+#ifdef NEW_ENTITY_STATE_MEMBERS
+    //Knightmare 5/11/2002- added alpha
+    if (bits & U_ALPHA)
+    {
+        //    Com_Printf("Entity alpha: %f\n", to->alpha);
+        MSG_WriteByte (msg, (byte)(to->alpha*255));
+    }
+#endif
+    
+    //Knightmare- 12/23/2001
+    //changed this to short
 	if (bits & U_SOUND)
 	{
-		MSG_WriteByte(msg, to->sound);
+		MSG_WriteShort(msg, to->sound);
 	}
 
 	if (bits & U_EVENT)
@@ -946,11 +1101,45 @@ MSG_ReadStringLine(sizebuf_t *msg_read)
 	return string;
 }
 
+#ifdef LARGE_MAP_SIZE
+
+float MSG_ReadCoord (sizebuf_t *msg_read)
+{
+    if (LegacyProtocol())
+        return MSG_ReadShort(msg_read) * (1.0/8);
+    else
+        return MSG_ReadCoordNew(msg_read);
+}
+
+#else // LARGE_MAP_SIZE
+
 float
 MSG_ReadCoord(sizebuf_t *msg_read)
 {
 	return MSG_ReadShort(msg_read) * (0.125f);
 }
+
+#endif
+
+#ifdef LARGE_MAP_SIZE
+
+void MSG_ReadPos (sizebuf_t *msg_read, vec3_t pos)
+{
+    if (LegacyProtocol())
+    {
+        pos[0] = MSG_ReadShort(msg_read) * (1.0/8);
+        pos[1] = MSG_ReadShort(msg_read) * (1.0/8);
+        pos[2] = MSG_ReadShort(msg_read) * (1.0/8);
+    }
+    else
+    {
+        pos[0] = MSG_ReadCoordNew(msg_read);
+        pos[1] = MSG_ReadCoordNew(msg_read);
+        pos[2] = MSG_ReadCoordNew(msg_read);
+    }
+}
+
+#else // LARGE_MAP_SIZE
 
 void
 MSG_ReadPos(sizebuf_t *msg_read, vec3_t pos)
@@ -959,6 +1148,8 @@ MSG_ReadPos(sizebuf_t *msg_read, vec3_t pos)
 	pos[1] = MSG_ReadShort(msg_read) * (0.125f);
 	pos[2] = MSG_ReadShort(msg_read) * (0.125f);
 }
+
+#endif
 
 float
 MSG_ReadAngle(sizebuf_t *msg_read)

@@ -81,6 +81,23 @@ CL_RegisterSounds(void)
 }
 
 /*
+ ==================
+ LegacyProtocol
+ A utility function that determines
+ if parsing of old protocol should be used.
+ ==================
+ */
+qboolean LegacyProtocol (void)
+{
+    //if (dedicated->value)    // Server always uses new protocol
+    //    return false;
+    if ( (Com_ServerState() && cls.serverProtocol < PROTOCOL_VERSION)
+        || (cls.serverProtocol == OLD_PROTOCOL_VERSION) )
+        return true;
+    return false;
+}
+
+/*
  * Returns the entity number and the header bits
  */
 int
