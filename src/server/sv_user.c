@@ -36,7 +36,7 @@ SV_BeginDemoserver(void)
 	char name[MAX_OSPATH];
 
 	Com_sprintf(name, sizeof(name), "demos/%s", sv.name);
-	FS_FOpenFile(name, &sv.demofile, false);
+	FS_FOpenFile(name, &sv.demofile, FS_READ);
 
 	if (!sv.demofile)
 	{
@@ -240,6 +240,22 @@ SV_Begin_f(void)
 	/* call the game begin function */
 	ge->ClientBegin(sv_player);
 
+    // Knightmare- set default player speeds here, if
+    // the game DLL hasn't already set them
+#ifdef NEW_PLAYER_STATE_MEMBERS
+    if (!sv_player->client->ps.maxspeed)
+        sv_player->client->ps.maxspeed = DEFAULT_MAXSPEED;
+    if (!sv_player->client->ps.duckspeed)
+        sv_player->client->ps.duckspeed = DEFAULT_DUCKSPEED;
+    if (!sv_player->client->ps.waterspeed)
+        sv_player->client->ps.waterspeed = DEFAULT_WATERSPEED;
+    if (!sv_player->client->ps.accel)
+        sv_player->client->ps.accel = DEFAULT_ACCELERATE;
+    if (!sv_player->client->ps.stopspeed)
+        sv_player->client->ps.stopspeed = DEFAULT_STOPSPEED;
+#endif
+    // end Knightmare
+
 	Cbuf_InsertFromDefer();
 }
 
@@ -297,7 +313,10 @@ SV_BeginDownload_f(void)
 	extern cvar_t *allow_download_sounds;
 	extern cvar_t *allow_download_maps;
 	extern qboolean file_from_protected_pak;
-	int offset = 0;
+    extern    int        file_from_pk3; // did file come from pk3?
+    extern    char    file_from_pk3_name[MAX_QPATH]; // name of pk3 file
+
+    int offset = 0;
 
 	name = Cmd_Argv(1);
 
@@ -314,15 +333,15 @@ SV_BeginDownload_f(void)
 		/* leading slash bad as well, must be in subdir */
 		|| (*name == '/')
 		/* next up, skin check */
-		|| ((strncmp(name, "players/", 6) == 0) && !allow_download_players->value)
+		|| ((strncmp(name, "players/", 8) == 0) && !allow_download_players->value)
 		/* now models */
-		|| ((strncmp(name, "models/", 6) == 0) && !allow_download_models->value)
+		|| ((strncmp(name, "models/", 7) == 0) && !allow_download_models->value)
 		/* now sounds */
 		|| ((strncmp(name, "sound/", 6) == 0) && !allow_download_sounds->value)
 		/* now maps (note special case for maps, must not be in pak) */
-		|| ((strncmp(name, "maps/", 6) == 0) && !allow_download_maps->value)
-		/* MUST be in a subdirectory */
-		|| !strstr(name, "/"))
+		|| ((strncmp(name, "maps/", 5) == 0) && !allow_download_maps->value)
+		/* MUST be in a subdirectory, unless a pk3 */
+        || (!strstr (name, "/") && strcmp(name+strlen(name)-4, ".pk3")) )
 	{
 		MSG_WriteByte(&sv_client->netchan.message, svc_download);
 		MSG_WriteShort(&sv_client->netchan.message, -1);

@@ -27,6 +27,7 @@
  */
 
 #include "header/server.h"
+#include "../client/vid/header/ref.h"
 
 /*
  * Specify a list of master servers
@@ -144,6 +145,10 @@ SV_SetPlayer(void)
 	return false;
 }
 
+void    R_GrabScreen (void); // Knightmare- screenshots for savegames
+void    R_ScaledScreenshot (char *name); // Knightmare- screenshots for savegames
+void    R_FreePic (char *name); // Knightmare- unregisters an image
+
 /*
  * Puts the server in demo mode on a specific map/cinematic
  */
@@ -156,6 +161,11 @@ SV_DemoMap_f(void)
 		return;
 	}
 
+    // Knightmare- force off DM, CTF mode
+    Cvar_SetValue( "ttctf", 0);
+    Cvar_SetValue( "ctf", 0);
+    Cvar_SetValue( "deathmatch", 0);
+    
 	SV_Map(true, Cmd_Argv(1), false);
 }
 
@@ -176,7 +186,7 @@ void
 SV_GameMap_f(void)
 {
 	char *map;
-	int i;
+	int i, l;
 	client_t *cl;
 	qboolean *savedInuse;
 
@@ -265,7 +275,11 @@ SV_GameMap_f(void)
 	Q_strlcpy(svs.mapcmd, map, sizeof(svs.mapcmd));
 
 	/* copy off the level to the autosave slot */
-	if (!dedicated->value)
+    // Knightmare- don't do this in deathmatch or for cinematics
+    l = strlen(map);
+    if (!dedicated->value && !Cvar_VariableValue("deathmatch")
+        && Q_strcasecmp (map+l-4, ".cin") && Q_strcasecmp (map+l-4, ".roq")
+        && Q_strcasecmp (map+l-4, ".pcx"))
 	{
 		SV_WriteServerFile(true);
 		SV_CopySaveGame("current", "save0");
@@ -498,6 +512,40 @@ SV_DumpUser_f(void)
 }
 
 /*
+ ===================
+ SV_StartMod
+ ===================
+ */
+void SV_StartMod (char *mod)
+{
+    //killserver, start mod, unbind keys, exec configs, and start demos
+    Cbuf_AddText ("killserver\n");
+    Cbuf_AddText (va("game %s\n", mod));
+    Cbuf_AddText ("unbindall\n");
+    Cbuf_AddText ("exec default.cfg\n");
+    Cbuf_AddText ("exec kmq2config.cfg\n");
+    Cbuf_AddText ("exec autoexec.cfg\n");
+    Cbuf_AddText ("d1\n");
+}
+
+/*
+ ===================
+ SV_ChangeGame_f
+ 
+ switch to a different mod
+ ===================
+ */
+void SV_ChangeGame_f (void)
+{
+    if (Cmd_Argc() < 2)
+    {
+        Com_Printf ("changegame <gamedir> : change game directory\n");
+        return;
+    }
+    SV_StartMod (Cmd_Argv(1));
+}
+
+/*
  * Begins server demo recording.  Every entity and every message will be
  * recorded, but no playerinfo will be stored.  Primarily for demo merging.
  */
@@ -651,6 +699,8 @@ SV_InitOperatorCommands(void)
 	Cmd_AddCommand("serverinfo", SV_Serverinfo_f);
 	Cmd_AddCommand("dumpuser", SV_DumpUser_f);
 
+    Cmd_AddCommand ("changegame", SV_ChangeGame_f); // Knightmare added
+    
 	Cmd_AddCommand("map", SV_Map_f);
 	Cmd_AddCommand("demomap", SV_DemoMap_f);
 	Cmd_AddCommand("gamemap", SV_GameMap_f);

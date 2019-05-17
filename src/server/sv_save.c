@@ -48,7 +48,12 @@ SV_WipeSavegame(char *savename)
 				FS_Gamedir(), savename);
 
 	Sys_Remove(name);
+    
+    // Knightmare- delete screenshot
+    Com_sprintf (name, sizeof(name), "%s/save/%s/shot.jpg", FS_Gamedir (), savename);
 
+    Sys_Remove(name);
+    
 	Com_sprintf(name, sizeof(name), "%s/save/%s/*.sav", FS_Gamedir(), savename);
 	s = Sys_FindFirst(name, 0, 0);
 
@@ -132,6 +137,14 @@ SV_CopySaveGame(char *src, char *dst)
 	Com_sprintf(name2, sizeof(name2), "%s/save/%s/game.ssv", FS_Gamedir(), dst);
 	CopyFile(name, name2);
 
+    // Knightmare- copy screenshot
+    if (strcmp(dst, "save0")) // no screenshot for start of level autosaves
+    {
+        Com_sprintf (name, sizeof(name), "%s/save/%s/shot.jpg", FS_Gamedir(), src);
+        Com_sprintf (name2, sizeof(name2), "%s/save/%s/shot.jpg", FS_Gamedir(), dst);
+        CopyFile (name, name2);
+    }
+    
 	Com_sprintf(name, sizeof(name), "%s/save/%s/", FS_Gamedir(), src);
 	len = strlen(name);
 	Com_sprintf(name, sizeof(name), "%s/save/%s/*.sav", FS_Gamedir(), src);
@@ -198,6 +211,8 @@ SV_WriteLevelFile(void)
 	Sys_SetWorkDir(workdir);
 }
 
+void    CM_ReadPortalState (fileHandle_t f);
+
 void
 SV_ReadLevelFile(void)
 {
@@ -208,7 +223,7 @@ SV_ReadLevelFile(void)
 	Com_DPrintf("SV_ReadLevelFile()\n");
 
 	Com_sprintf(name, sizeof(name), "save/current/%s.sv2", sv.name);
-	FS_FOpenFile(name, &f, true);
+	FS_FOpenFile(name, &f, FS_READ);
 
 	if (!f)
 	{
@@ -327,6 +342,20 @@ SV_WriteServerFile(qboolean autosave)
 	Sys_SetWorkDir(workdir);
 }
 
+void SV_WriteScreenshot (void)
+{
+    char    name[MAX_OSPATH];
+    
+    if (dedicated->value) // can't do this in dedicated mode
+        return;
+    
+    Com_DPrintf("SV_WriteScreenshot()\n");
+    
+    Com_sprintf (name, sizeof(name), "%s/save/current/shot.jpg", FS_Gamedir());
+    
+    R_ScaledScreenshot(name);
+}
+
 void
 SV_ReadServerFile(void)
 {
@@ -339,7 +368,7 @@ SV_ReadServerFile(void)
 	Com_DPrintf("SV_ReadServerFile()\n");
 
 	Com_sprintf(name, sizeof(name), "save/current/server.ssv");
-	FS_FOpenFile(name, &f, true);
+	FS_FOpenFile(name, &f, FS_READ);
 
 	if (!f)
 	{
@@ -411,6 +440,9 @@ SV_ReadServerFile(void)
 	Sys_SetWorkDir(workdir);
 }
 
+extern    char *load_saveshot;
+char sv_loadshotname[MAX_QPATH];
+
 void
 SV_Loadgame_f(void)
 {
@@ -446,6 +478,15 @@ SV_Loadgame_f(void)
 
 	fclose(f);
 
+    // Knightmare- set saveshot name
+    if ( !dedicated->value && (!strcmp(Cmd_Argv(1), "quick") || !strcmp(Cmd_Argv(1), "quik")) )
+    {
+        Com_sprintf(sv_loadshotname, sizeof(sv_loadshotname), "save/%s/shot.jpg", Cmd_Argv(1));
+        R_FreePic (sv_loadshotname);
+        Com_sprintf(sv_loadshotname, sizeof(sv_loadshotname), "/save/%s/shot.jpg", Cmd_Argv(1));
+        load_saveshot = sv_loadshotname;
+    }
+    
 	SV_CopySaveGame(Cmd_Argv(1), "current");
 
 	SV_ReadServerFile();
@@ -454,6 +495,8 @@ SV_Loadgame_f(void)
 	sv.state = ss_dead; /* don't save current level when changing */
 	SV_Map(false, svs.mapcmd, true);
 }
+
+extern    char fs_gamedir[MAX_OSPATH];
 
 void
 SV_Savegame_f(void)
@@ -466,6 +509,14 @@ SV_Savegame_f(void)
 		return;
 	}
 
+    // Knightmare- fs_gamedir may be getting messed up, causing it to occasinally save in the root dir,
+    // thus leading to a hang on game loads, so we reset it here.
+    if (!fs_gamedir[0])
+    {
+        if (fs_gamedirvar->string[0])
+            Com_sprintf (fs_gamedir, sizeof(fs_gamedir), "%s/%s", fs_basedir->string, fs_gamedirvar->string);
+    }
+    
 	if (Cmd_Argc() != 2)
 	{
 		Com_Printf("USAGE: savegame <directory>\n");
@@ -484,6 +535,10 @@ SV_Savegame_f(void)
 		return;
 	}
 
+    // Knightmare- grab screen for quicksave
+    if ( !dedicated->value && (!strcmp(Cmd_Argv(1), "quick") || !strcmp(Cmd_Argv(1), "quik")) )
+        R_GrabScreen();
+    
 	if ((maxclients->value == 1) &&
 		(svs.clients[0].edict->client->ps.stats[STAT_HEALTH] <= 0))
 	{
@@ -498,7 +553,7 @@ SV_Savegame_f(void)
 		Com_Printf("Bad savedir.\n");
 	}
 
-	Com_Printf("Saving game...\n");
+    Com_Printf (S_COLOR_CYAN"Saving game \"%s\"...\n", dir);
 
 	/* archive current level, including all client edicts.
 	   when the level is reloaded, they will be shells awaiting
@@ -508,9 +563,12 @@ SV_Savegame_f(void)
 	/* save server state */
 	SV_WriteServerFile(false);
 
+    // take screenshot
+    SV_WriteScreenshot ();
+    
 	/* copy it off */
 	SV_CopySaveGame("current", dir);
 
-	Com_Printf("Done.\n");
+    Com_Printf (S_COLOR_CYAN"Done.\n");
 }
 

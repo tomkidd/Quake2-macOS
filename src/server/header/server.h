@@ -192,7 +192,9 @@ extern client_t *sv_client;
 extern edict_t *sv_player;
 
 void SV_FinalMessage(char *message, qboolean reconnect);
+client_t *GetClientFromAdr (netadr_t address); //Knightmare added
 void SV_DropClient(client_t *drop);
+void SV_DropClientFromAdr (netadr_t address); // Knightmare added
 
 int SV_ModelIndex(char *name);
 int SV_SoundIndex(char *name);

@@ -52,10 +52,21 @@ SV_FindIndex(char *name, int start, int max, qboolean create)
 		return 0;
 	}
 
+    // Knightmare 12/23/2001
+    // Output a more useful error message to tell user what overflowed
+    // And don't bomb out, either- instead, return last possible index
 	if (i == max)
 	{
-		Com_Error(ERR_DROP, "*Index: overflow");
-	}
+//        Com_Error(ERR_DROP, "*Index: overflow");
+        if (start == CS_MODELS)
+            Com_Printf (S_COLOR_YELLOW"Warning: Index overflow for models\n");
+        else if (start == CS_SOUNDS)
+            Com_Printf (S_COLOR_YELLOW"Warning: Index overflow for sounds\n");
+        else if (start == CS_IMAGES)
+            Com_Printf (S_COLOR_YELLOW"Warning: Index overflow for images\n");
+        return (max-1);    // return the last possible index
+    }
+    // end Knightmare
 
 	Q_strlcpy(sv.configstrings[start + i], name, sizeof(sv.configstrings[start + i]));
 
@@ -306,6 +317,8 @@ SV_SpawnServer(char *server, char *spawnpoint, server_state_t serverstate,
 /*
  * A brand new game has been started
  */
+void PF_Configstring (int index, char *val);
+
 void
 SV_InitGame(void)
 {
@@ -471,7 +484,11 @@ SV_Map(qboolean attractloop, char *levelstring, qboolean loadgame)
 		--l;
 	}
 
+#ifdef    ROQ_SUPPORT
+    if (l > 4 && (!strcmp (level+l-4, ".cin") || !strcmp (level+l-4, ".roq")) )
+#else
 	if ((l > 4) && !strcmp(level + l - 4, ".cin"))
+#endif // ROQ_SUPPORT
 	{
 #ifndef DEDICATED_ONLY
 		SCR_BeginLoadingPlaque(); /* for local system */
