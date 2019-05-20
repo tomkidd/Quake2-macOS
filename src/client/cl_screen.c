@@ -478,6 +478,8 @@ SCR_DrawPause(void)
 	Draw_PicScaled((viddef.width - w * scale) / 2, viddef.height / 2 + 8 * scale, "pause", scale);
 }
 
+char *load_saveshot;
+
 void
 SCR_DrawLoading(void)
 {
