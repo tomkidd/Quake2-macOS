@@ -79,6 +79,8 @@ cvar_t *gl_lefthand;
 cvar_t *r_gunfov;
 cvar_t *r_farsee;
 
+cvar_t    *r_saveshotsize;//  save shot size option
+
 cvar_t *r_lightlevel;
 cvar_t *gl1_overbrightbits;
 

@@ -175,6 +175,8 @@ extern cvar_t *r_fullbright;
 extern cvar_t *r_novis;
 extern cvar_t *r_lerpmodels;
 
+extern    cvar_t    *r_saveshotsize;// Knightmare- save shot size option
+
 extern cvar_t *r_lightlevel;
 extern cvar_t *gl1_overbrightbits;
 

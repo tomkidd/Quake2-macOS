@@ -27,18 +27,25 @@
 #ifndef CL_CLIENT_H
 #define CL_CLIENT_H
 
-#define MAX_CLIENTWEAPONMODELS 20
+// 12/23/2001- increased this from 20
+#define MAX_CLIENTWEAPONMODELS 64
 #define	CMD_BACKUP 256 /* allow a lot of command backups for very fast systems */
 
 /* the cl_parse_entities must be large enough to hold UPDATE_BACKUP frames of
    entities, so that when a delta compressed message arives from the server
    it can be un-deltad from the original */
-#define	MAX_PARSE_ENTITIES	1024
+#define    MAX_PARSE_ENTITIES    4096 //was 16384
+//#define    MAX_PARSE_ENTITIES    1024
 
 #define MAX_SUSTAINS		32
 #define	PARTICLE_GRAVITY 40
 #define BLASTER_PARTICLE_COLOR 0xe0
 #define INSTANT_PARTICLE -10000.0
+#define MIN_RAIL_LENGTH        1024
+#define DEFAULT_RAIL_LENGTH    2048
+#define DEFAULT_RAIL_SPACE    1
+
+#define MIN_DECAL_LIFE 5
 
 #include <math.h>
 #include <string.h>
@@ -58,6 +65,24 @@
 #include "screen.h"
 #include "keyboard.h"
 #include "console.h"
+//#include "cinematic.h" //revisit -tkidd
+
+//Knightmare added
+#include "../../game/header/game.h"
+trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *passedict, int contentmask);
+//end Knightmare
+
+#define random()    ((rand () & 0x7fff) / ((float)0x7fff))
+#define crandom()    (2.0 * (random() - 0.5))
+
+//  added for Psychospaz's chasecam
+vec3_t clientOrg; //lerped org of client for server->client side effects
+
+
+int    color8red (int color8);
+int    color8green (int color8);
+int    color8blue (int color8);
+//end Knightmare
 
 typedef struct
 {
@@ -121,8 +146,12 @@ typedef struct
 	usercmd_t	cmd;
 	usercmd_t	cmds[CMD_BACKUP]; /* each mesage will send several old cmds */
 	int			cmd_time[CMD_BACKUP]; /* time sent, for calculating pings */
+#ifdef LARGE_MAP_SIZE // larger precision needed
+    int            predicted_origins[CMD_BACKUP][3];    // for debug comparing against server
+#else
 	short		predicted_origins[CMD_BACKUP][3]; /* for debug comparing against server */
-
+#endif
+    
 	float		predicted_step; /* for stair up smoothing */
 	unsigned	predicted_step_time;
 
@@ -210,6 +239,8 @@ typedef struct
 	connstate_t	state;
 	keydest_t	key_dest;
 
+    qboolean    consoleActive;
+    
 	int			framecount;
 	int			realtime; /* always increasing, no clamping, etc */
 	float		rframetime; /* seconds since last render frame */
@@ -257,6 +288,12 @@ typedef struct
 	char	   downloadServerRetry[512]; /* retry count. */
 	char	   downloadReferer[32]; /* referer string. */
 #endif
+
+#ifdef    ROQ_SUPPORT
+    // Cinematic information
+    //cinHandle_t        cinematicHandle; //revist -tkidd
+#endif // ROQ_SUPPORT
+    
 } client_static_t;
 
 extern client_static_t	cls;
@@ -271,6 +308,7 @@ extern	cvar_t	*gl1_stereo_separation;
 extern	cvar_t	*gl1_stereo_convergence;
 extern	cvar_t	*gl1_stereo;
 extern	cvar_t	*cl_gun;
+extern    cvar_t    *cl_weapon_shells;
 extern	cvar_t	*cl_add_blend;
 extern	cvar_t	*cl_add_lights;
 extern	cvar_t	*cl_add_particles;
@@ -278,6 +316,51 @@ extern	cvar_t	*cl_add_entities;
 extern	cvar_t	*cl_predict;
 extern	cvar_t	*cl_footsteps;
 extern	cvar_t	*cl_noskins;
+extern    cvar_t    *cl_blood;
+
+// reduction factor for particle effects
+extern    cvar_t    *cl_particle_scale;
+
+// whether to adjust fov for wide aspect rattio
+extern    cvar_t    *cl_widescreen_fov;
+
+// whether to use texsurfs.txt footstep sounds
+extern    cvar_t    *cl_footstep_override;
+
+extern    cvar_t    *con_alpha; // Psychospaz's transparent console
+
+// Psychospaz's changeable rail code
+extern    cvar_t    *cl_railred;
+extern    cvar_t    *cl_railgreen;
+extern    cvar_t    *cl_railblue;
+extern    cvar_t    *cl_railtype;
+extern    cvar_t    *cl_rail_length;
+extern    cvar_t    *cl_rail_space;
+
+extern    cvar_t    *r_decals; // decal control
+extern    cvar_t    *r_decal_life; // decal duration in seconds
+extern    cvar_t    *con_font_size;
+extern    cvar_t    *alt_text_color;
+
+// Psychospaz's chasecam
+extern    cvar_t    *cl_3dcam;
+extern    cvar_t    *cl_3dcam_angle;
+extern    cvar_t    *cl_3dcam_chase;
+extern    cvar_t    *cl_3dcam_dist;
+extern    cvar_t    *cl_3dcam_alpha;
+extern    cvar_t    *cl_3dcam_adjust;
+
+//Knightmare 12/28/2001- BramBo's FPS counter
+extern    cvar_t    *cl_drawfps;
+
+// whether to try to play OGGs instead of CD tracks
+extern    cvar_t    *cl_ogg_music;
+extern    cvar_t    *cl_rogue_music; // whether to play Rogue tracks
+extern    cvar_t    *cl_xatrix_music; // whether to play Xatrix tracks
+// end Knightmare
+
+extern    cvar_t    *cl_servertrick;
+
 extern	cvar_t	*cl_upspeed;
 extern	cvar_t	*cl_forwardspeed;
 extern	cvar_t	*cl_sidespeed;
@@ -290,6 +373,14 @@ extern	cvar_t	*cl_showmiss;
 extern	cvar_t	*cl_showclamp;
 extern	cvar_t	*lookstrafe;
 extern	cvar_t	*sensitivity;
+extern    cvar_t    *menu_sensitivity;
+extern    cvar_t    *menu_rotate;
+extern    cvar_t    *menu_alpha;
+extern    cvar_t    *hud_scale;
+extern    cvar_t    *hud_width;
+extern    cvar_t    *hud_height;
+extern    cvar_t    *hud_alpha;
+
 extern	cvar_t	*m_pitch;
 extern	cvar_t	*m_yaw;
 extern	cvar_t	*m_forward;
@@ -298,7 +389,26 @@ extern	cvar_t	*freelook;
 extern	cvar_t	*cl_lightlevel;
 extern	cvar_t	*cl_paused;
 extern	cvar_t	*cl_timedemo;
+
+// Knightmare added
+extern    cvar_t    *info_password;
+extern    cvar_t    *info_spectator;
+extern    cvar_t    *name;
+extern    cvar_t    *skin;
+extern    cvar_t    *rate;
+//extern    cvar_t    *fov;
+extern    cvar_t    *msg;
+extern    cvar_t    *hand;
+extern    cvar_t    *gender;
+extern    cvar_t    *gender_auto;
+// end Knightmare
+
 extern	cvar_t	*cl_vwep;
+
+// for the server to tell which version the client is
+extern    cvar_t *cl_engine;
+extern    cvar_t *cl_engine_version;
+
 extern	cvar_t  *horplus;
 extern	cvar_t	*cin_force43;
 
@@ -321,11 +431,33 @@ extern	entity_state_t	cl_parse_entities[MAX_PARSE_ENTITIES];
 extern	netadr_t	net_from;
 extern	sizebuf_t	net_message;
 
-void DrawString (int x, int y, char *s);
-void DrawStringScaled(int x, int y, char *s, float factor);
-void DrawAltString (int x, int y, char *s);	/* toggle high bit */
-void DrawAltStringScaled(int x, int y, char *s, float factor);
-qboolean	CL_CheckOrDownloadFile (char *filename);
+//void DrawString (int x, int y, char *s);
+//void DrawStringScaled(int x, int y, char *s, float factor);
+//void DrawAltString (int x, int y, char *s);    /* toggle high bit */
+//void DrawAltStringScaled(int x, int y, char *s, float factor);
+qboolean    CL_CheckOrDownloadFile (char *filename);
+
+static float ClampCvar( float min, float max, float value );
+
+// for use with the alt_text_color cvar
+void TextColor (int colornum, int *red, int *green, int *blue);
+qboolean StringSetParams (char modifier, int *red, int *green, int *blue, int *bold, int *shadow, int *italic, int *reset);
+void Con_DrawString (int x, int y, char *s, int alpha);
+void DrawStringGeneric (int x, int y, const char *string, int alpha, textscaletype_t scaleType, qboolean altBit);
+
+//cl_scrn.c
+typedef struct
+{
+    float x;
+    float y;
+    float avg;
+} hudscale_t;
+
+hudscale_t hudScale;
+
+float scaledHud (float param);
+float HudScale (void);
+void InitHudScale (void);
 
 void CL_AddNetgraph (void);
 
@@ -352,26 +484,85 @@ void CL_ParticleEffect2 (vec3_t org, vec3_t dir, int color, int count);
 
 void CL_ParticleEffect3 (vec3_t org, vec3_t dir, int color, int count);
 
+// Psychospaz's enhanced particle code
+void CL_ParticleEffectSplash (vec3_t org, vec3_t dir, int color, int count);
+void CL_ElectricParticles (vec3_t org, vec3_t dir, int count);
+
+// Psychospaz's mod detector
+qboolean modType (char *name);
+qboolean roguepath (void);
+// utility function for protocol version
+qboolean LegacyProtocol (void);
+
+// Psychospaz's enhanced particle code
+typedef struct
+{
+    qboolean    isactive;
+    
+    vec3_t        lightcol;
+    float        light;
+    float        lightvel;
+} cplight_t;
+
+#define P_LIGHTS_MAX 8
+//end Knightmare
+
+// Psychospaz's enhanced particle code
+void SetParticleImages (void);
 
 typedef struct particle_s
 {
-
 	struct particle_s	*next;
-
+    
+    cplight_t    lights[P_LIGHTS_MAX];
+    
+    float        start;
 	float		time;
 
 	vec3_t		org;
 	vec3_t		vel;
 	vec3_t		accel;
+    
 	float		color;
 	float		colorvel;
+    // uncomment me out later -tkidd
+//    vec3_t        color;
+//    vec3_t        colorvel;
+
 	float		alpha;
 	float		alphavel;
+    
+    float        size;
+    float        sizevel;
+    
+    vec3_t        angle;
+    
+    int            image;
+    int            flags;
+    
+    vec3_t        oldorg;
+    float        temp;
+    int            src_ent;
+    int            dst_ent;
+    
+#ifdef DECALS
+    int                decalnum;
+    decalpolys_t    *decal;
+#endif
+    struct particle_s    *link;
+    
+    void        (*think)(struct cparticle_t *p, vec3_t org, vec3_t angle, float *alpha, float *size, int *image, float *time);
+    qboolean    thinknext;
 } cparticle_t;
 
 void CL_ClearEffects (void);
+void CL_UnclipDecals (void); // Knightmare added
+void CL_ReclipDecals (void); // Knightmare added
 void CL_ClearTEnts (void);
 void CL_BlasterTrail (vec3_t start, vec3_t end);
+// uncomment out later -tkidd
+//void CL_BlasterTrail (vec3_t start, vec3_t end, int red, int green, int blue,
+//                      int reddelta, int greendelta, int bluedelta);
 void CL_QuadTrail (vec3_t start, vec3_t end);
 void CL_RailTrail (vec3_t start, vec3_t end);
 void CL_BubbleTrail (vec3_t start, vec3_t end);
@@ -432,6 +623,87 @@ void CL_Quit_f (void);
 void IN_Accumulate (void);
 
 void CL_ParseLayout (void);
+
+/*
+ ====================================================================
+ 
+ IMPORTED FUNCTIONS
+ 
+ ====================================================================
+ */
+
+// called when the renderer is loaded
+qboolean    R_Init ( void *hinstance, void *wndproc, char *reason );
+
+// called before the renderer is unloaded
+void    R_Shutdown (void);
+
+// All data that will be used in a level should be
+// registered before rendering any frames to prevent disk hits,
+// but they can still be registered at a later time
+// if necessary.
+//
+// EndRegistration will free any remaining data that wasn't registered.
+// Any model_s or skin_s pointers from before the BeginRegistration
+// are no longer valid after EndRegistration.
+//
+// Skins and images need to be differentiated, because skins
+// are flood filled to eliminate mip map edge errors, and pics have
+// an implicit "pics/" prepended to the name. (a pic name that starts with a
+// slash will not use the "pics/" prefix or the ".pcx" postfix)
+void    R_BeginRegistration (char *map);
+struct model_s *R_RegisterModel (char *name);
+struct image_s *R_RegisterSkin (char *name);
+struct image_s *R_DrawFindPic (char *name);
+
+void    R_FreePic (char *name); // Knightmare added
+void    R_SetSky (char *name, float rotate, vec3_t axis);
+void    R_EndRegistration (void);
+
+void    R_RenderFrame (refdef_t *fd);
+
+void    R_SetParticlePicture (int num, char *name); // Knightmare added
+
+void    R_DrawGetPicSize (int *w, int *h, char *name);    // will return 0 0 if not found
+void    R_DrawPic (int x, int y, char *name);
+// added alpha for Psychospaz's transparent console
+void    R_DrawStretchPic (int x, int y, int w, int h, char *name, float alpha);
+void    R_DrawScaledPic (int x, int y, float scale, float alpha, char *name);
+// added char scaling from Quake2Max
+void    R_DrawChar (float x, float y, int c, float scale, int red, int green, int blue, int alpha, qboolean italic, qboolean last);
+void    R_DrawTileClear (int x, int y, int w, int h, char *name);
+void    R_DrawFill (int x, int y, int w, int h, int c);
+void    R_DrawFill2 (int x, int y, int w, int h, int red, int green, int blue, int alpha);
+void    R_DrawFadeScreen (void);
+
+void    R_GrabScreen (void); // screenshots for savegames
+void    R_ScaledScreenshot (char *name); //  screenshots for savegames
+
+#ifdef DECALS
+int        R_MarkFragments (const vec3_t origin, const vec3_t axis[3], float radius, int maxPoints, vec3_t *points, int maxFragments, markFragment_t *fragments);
+#endif
+
+void    R_SetFogVars (qboolean enable, int model, int density, int start, int end, int red, int green, int blue);
+
+float    R_CharMapScale (void); // Knightmare added char scaling from Quake2Max
+
+// Draw images for cinematic rendering (which can have a different palette). Note that calls
+#ifdef ROQ_SUPPORT
+void    R_DrawStretchRaw (int x, int y, int w, int h, const byte *raw, int rawWidth, int rawHeight);
+#else
+void    R_DrawStretchRaw (int x, int y, int w, int h, int cols, int rows, byte *data);
+#endif // ROQ_SUPPORT
+
+/*
+ ** video mode and refresh state management entry points
+ */
+void    R_SetPalette (const unsigned char *palette);    // NULL = game palette
+void    R_BeginFrame (float camera_separation);
+void    GLimp_EndFrame (void);
+
+void    GLimp_AppActivate (qboolean activate);
+
+
 
 void CL_Init (void);
 

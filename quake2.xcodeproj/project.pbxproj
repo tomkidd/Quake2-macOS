@@ -206,6 +206,8 @@
 		A1B203C621D428E500D8D86D /* ref_soft.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3DC21111CB50048A3AD /* ref_soft.dylib */; };
 		A1B5DCA8228CCD8800C680DB /* lazarus in Resources */ = {isa = PBXBuildFile; fileRef = A1B5DCA7228CCD8800C680DB /* lazarus */; };
 		A1CE4EED2218CCB3006A66DE /* sw_polyset.c in Sources */ = {isa = PBXBuildFile; fileRef = A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		A1D529F222935870005928FF /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = A1D529F122935870005928FF /* libz.tbd */; };
+		A1D529F422935A2B005928FF /* libjpeg.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A1D529F322935A2B005928FF /* libjpeg.a */; };
 		A1E39F9C22838FB9005B2FB7 /* g_crane.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F8722838FB8005B2FB7 /* g_crane.c */; };
 		A1E39F9D22838FB9005B2FB7 /* g_ctf.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F8822838FB8005B2FB7 /* g_ctf.c */; };
 		A1E39F9E22838FB9005B2FB7 /* g_patchplayermodels.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F8922838FB8005B2FB7 /* g_patchplayermodels.c */; };
@@ -508,7 +510,12 @@
 		A15FA474211153E60048A3AD /* baseq2 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = baseq2; path = ../../../Dropbox/Files/quake2/baseq2; sourceTree = "<group>"; };
 		A15FA475211153E70048A3AD /* music */ = {isa = PBXFileReference; lastKnownFileType = folder; name = music; path = ../../../Dropbox/Files/quake2/music; sourceTree = "<group>"; };
 		A1B5DCA7228CCD8800C680DB /* lazarus */ = {isa = PBXFileReference; lastKnownFileType = folder; name = lazarus; path = ../../../Dropbox/Files/quake2/lazarus; sourceTree = "<group>"; };
+		A1B5DCA92290C14F00C680DB /* jpeglib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = jpeglib.h; sourceTree = "<group>"; };
+		A1B5DCAB2290C1BB00C680DB /* jconfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = jconfig.h; sourceTree = "<group>"; };
+		A1B5DCAC2290C1BB00C680DB /* jmorecfg.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = jmorecfg.h; sourceTree = "<group>"; };
 		A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_polyset.c; sourceTree = "<group>"; };
+		A1D529F122935870005928FF /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		A1D529F322935A2B005928FF /* libjpeg.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libjpeg.a; path = ../../../../../usr/local/Cellar/jpeg/9c/lib/libjpeg.a; sourceTree = "<group>"; };
 		A1E39F8722838FB8005B2FB7 /* g_crane.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_crane.c; sourceTree = "<group>"; };
 		A1E39F8822838FB8005B2FB7 /* g_ctf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_ctf.c; sourceTree = "<group>"; };
 		A1E39F8922838FB8005B2FB7 /* g_patchplayermodels.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_patchplayermodels.c; sourceTree = "<group>"; };
@@ -563,6 +570,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1D529F422935A2B005928FF /* libjpeg.a in Frameworks */,
+				A1D529F222935870005928FF /* libz.tbd in Frameworks */,
 				A15FA3AE211118830048A3AD /* SDL2.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1203,6 +1212,9 @@
 		A15FA2492110C5BC0048A3AD /* header */ = {
 			isa = PBXGroup;
 			children = (
+				A1B5DCAB2290C1BB00C680DB /* jconfig.h */,
+				A1B5DCAC2290C1BB00C680DB /* jmorecfg.h */,
+				A1B5DCA92290C14F00C680DB /* jpeglib.h */,
 				A15FA24C2110C5BC0048A3AD /* local.h */,
 				A15FA24B2110C5BC0048A3AD /* model.h */,
 				A15FA24A2110C5BC0048A3AD /* qgl.h */,
@@ -1391,6 +1403,8 @@
 		A15FA3532110CDDF0048A3AD /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				A1D529F322935A2B005928FF /* libjpeg.a */,
+				A1D529F122935870005928FF /* libz.tbd */,
 				A15FA35C2111095C0048A3AD /* OpenGL.framework */,
 				A15FA3582110CF4E0048A3AD /* SDL2.framework */,
 			);
@@ -1941,7 +1955,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = src/client/refresh/gl3/glad/include;
+				HEADER_SEARCH_PATHS = (
+					src/client/refresh/gl3/glad/include,
+					/usr/local/Cellar/jpeg/9c,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1999,7 +2016,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = src/client/refresh/gl3/glad/include;
+				HEADER_SEARCH_PATHS = (
+					src/client/refresh/gl3/glad/include,
+					/usr/local/Cellar/jpeg/9c,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = macosx;
@@ -2056,6 +2076,10 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/local/Cellar/jpeg/9c/lib,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
@@ -2074,6 +2098,10 @@
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
 				GCC_NO_COMMON_BLOCKS = NO;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/local/Cellar/jpeg/9c/lib,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};

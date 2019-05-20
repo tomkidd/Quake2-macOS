@@ -35,6 +35,11 @@
 #define	MAX_PARTICLES	4096
 #define	MAX_LIGHTSTYLES	256
 
+#define MAX_DECAL_VERTS            256
+#define MAX_VERTS_PER_FRAGMENT    8
+#define MAX_FRAGMENTS_PER_DECAL    32
+#define MAX_DECAL_FRAGS            8192
+
 #define POWERSUIT_SCALE		4.0F
 
 #define SHELL_RED_COLOR		0xF2
@@ -81,6 +86,27 @@ typedef struct {
 	vec3_t	color;
 	float	intensity;
 } dlight_t;
+
+#ifdef DECALS
+typedef struct
+{
+    int numPoints;
+    int    firstPoint;
+    struct mnode_s    *node;
+} markFragment_t;
+
+typedef struct decalpolys_s decalpolys_t;
+struct decalpolys_s
+{
+    decalpolys_t *next; // for allocation linked list
+    decalpolys_t *nextpoly; // for linked list
+    qboolean    clearflag;
+    int        numpolys;
+    vec3_t    polys[MAX_VERTS_PER_FRAGMENT];
+    vec2_t    coords[MAX_VERTS_PER_FRAGMENT];
+    struct mnode_s    *node;
+};
+#endif
 
 typedef struct {
 	vec3_t	origin;

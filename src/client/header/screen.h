@@ -27,6 +27,38 @@
 #ifndef CL_SCREEN_H
 #define CL_SCREEN_H
 
+typedef struct
+{
+    float x;
+    float y;
+    float avg;
+} screenscale_t;
+
+screenscale_t screenScale;
+
+typedef enum
+{
+    ALIGN_STRETCH,
+    ALIGN_CENTER,
+    ALIGN_TOP,
+    ALIGN_BOTTOM,
+    ALIGN_RIGHT,
+    ALIGN_LEFT,
+    ALIGN_TOPRIGHT,
+    ALIGN_TOPLEFT,
+    ALIGN_BOTTOMRIGHT,
+    ALIGN_BOTTOMLEFT,
+    ALIGN_BOTTOM_STRETCH
+} scralign_t;
+
+typedef enum
+{
+    SCALETYPE_CONSOLE,
+    SCALETYPE_HUD,
+    SCALETYPE_MENU
+} textscaletype_t;
+
+
 void	SCR_Init(void);
 
 void	SCR_UpdateScreen(void);
