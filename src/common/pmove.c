@@ -59,16 +59,63 @@ typedef struct
 pmove_t *pm;
 pml_t pml;
 
+// Knightmare- var for saving speed controls
+extern    player_state_t *clientstate;
+
 /* movement parameters */
-float pm_stopspeed = 100;
-float pm_maxspeed = 300;
-float pm_duckspeed = 100;
-float pm_accelerate = 10;
-float pm_airaccelerate = 0;
-float pm_wateraccelerate = 10;
-float pm_friction = 6;
-float pm_waterfriction = 1;
-float pm_waterspeed = 400;
+// Knightmare- these are the defaults when connected to a legacy server...
+float    pm_maxspeed = DEFAULT_MAXSPEED;
+float    pm_duckspeed = DEFAULT_DUCKSPEED;
+float    pm_waterspeed = DEFAULT_WATERSPEED;
+float    pm_accelerate = DEFAULT_ACCELERATE;
+float    pm_stopspeed = DEFAULT_STOPSPEED;
+
+float    pm_wateraccelerate = 10;
+float    pm_airaccelerate = 0;
+float    pm_friction = 6;
+float    pm_waterfriction = 1;
+
+// Knightmare- this function sets the max speed varibles
+void SetSpeedMax (void)
+{
+    if (!clientstate) // defaults, used if not connected
+    {
+        pm_maxspeed = DEFAULT_MAXSPEED;
+        pm_duckspeed = DEFAULT_DUCKSPEED;
+        pm_waterspeed = DEFAULT_WATERSPEED;
+        pm_accelerate = DEFAULT_ACCELERATE;
+        pm_wateraccelerate = pm_accelerate;
+        pm_stopspeed = DEFAULT_STOPSPEED;
+        return;
+    }
+    
+    if (clientstate->maxspeed)
+        pm_maxspeed = clientstate->maxspeed;
+    else
+        pm_maxspeed = DEFAULT_MAXSPEED;
+    
+    if (clientstate->duckspeed)
+        pm_duckspeed = clientstate->duckspeed;
+    else
+        pm_duckspeed = DEFAULT_DUCKSPEED;
+    
+    if (clientstate->waterspeed)
+        pm_waterspeed = clientstate->waterspeed;
+    else
+        pm_waterspeed = DEFAULT_WATERSPEED;
+    
+    if (clientstate->accel)
+        pm_accelerate = clientstate->accel;
+    else
+        pm_accelerate = DEFAULT_ACCELERATE;
+    pm_wateraccelerate = pm_accelerate;
+    
+    if (clientstate->stopspeed)
+        pm_stopspeed = clientstate->stopspeed;
+    else
+        pm_stopspeed = DEFAULT_STOPSPEED;
+}
+
 
 #define STOP_EPSILON 0.1 /* Slide off of the impacting object returns the blocked flags (1 = floor, 2 = step / wall) */
 #define MIN_STEP_NORMAL 0.7 /* can't step up onto very steep slopes */
@@ -712,6 +759,32 @@ PM_CatagorizePosition(void)
 
 		if (!trace.ent || ((trace.plane.normal[2] < 0.7) && !trace.startsolid))
 		{
+// ================= jitclipbug
+            trace_t      trace2;
+            vec3_t      mins, maxs;
+            
+            // try a slightly smaller bounding box -- this is to fix getting stuck up
+            // on angled walls and not being able to move (like you're stuck in the air)
+            mins[0] = pm->mins[0] ? pm->mins[0] + 1 : 0;
+            mins[1] = pm->mins[1] ? pm->mins[1] + 1 : 0;
+            mins[2] = pm->mins[2];
+            maxs[0] = pm->maxs[0] ? pm->maxs[0] - 1 : 0;
+            maxs[1] = pm->maxs[1] ? pm->maxs[1] - 1 : 0;
+            maxs[2] = pm->maxs[2];
+            trace2 = pm->trace(pml.origin, mins, maxs, point);
+            
+            if (!(trace2.plane.normal[2] < 0.7f && !trace2.startsolid))
+            {
+                memcpy(&trace, &trace2, sizeof(trace));
+                pml.groundplane = trace.plane;
+                pml.groundsurface = trace.surface;
+                pml.groundcontents = trace.contents;
+                pm->groundentity = trace.ent;
+            }
+        }
+        else if (!trace.ent)
+        {
+// ================= end jitclipbug
 			pm->groundentity = NULL;
 			pm->s.pm_flags &= ~PMF_ON_GROUND;
 		}
@@ -1139,7 +1212,11 @@ PM_SnapPosition(void)
 {
 	int sign[3];
 	int i, j, bits;
-	short base[3];
+#ifdef LARGE_MAP_SIZE // Knightmare- larger precision needed
+    int        base[3];
+#else
+    short    base[3];
+#endif
 	/* try all single bits first */
 	static int jitterbits[8] = {0, 4, 1, 2, 3, 5, 6, 7};
 
@@ -1198,7 +1275,11 @@ void
 PM_InitialSnapPosition(void)
 {
 	int x, y, z;
-	short base[3];
+#ifdef LARGE_MAP_SIZE // Knightmare- larger precision needed
+    int        base[3];
+#else
+    short    base[3];
+#endif
 	static int offset[3] = {0, -1, 1};
 
 	VectorCopy(pm->s.origin, base);
@@ -1332,6 +1413,9 @@ void
 Pmove(pmove_t *pmove)
 {
 	pm = pmove;
+
+    // Knightmare- set speed controls here
+    SetSpeedMax();
 
 	/* clear results */
 	pm->numtouch = 0;

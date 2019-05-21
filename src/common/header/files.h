@@ -140,6 +140,117 @@ typedef struct
 	int ofs_end;    /* end of file */
 } dmdl_t;
 
+/*
+ ========================================================================
+ 
+ .MD3 model file format
+ 
+ ========================================================================
+ */
+
+#define IDMD3HEADER        (('3'<<24)+('P'<<16)+('D'<<8)+'I')
+
+#define MD3_ALIAS_VERSION    15
+#define MD3_ALIAS_MAX_LODS    4
+
+#define    MD3_MAX_TRIANGLES    8192    // per mesh
+#define MD3_MAX_VERTS        4096    // per mesh
+#define MD3_MAX_SHADERS        256        // per mesh
+#define MD3_MAX_FRAMES        1024    // per model
+#define    MD3_MAX_MESHES        32        // per model
+#define MD3_MAX_TAGS        16        // per frame
+#define MD3_MAX_PATH        64
+
+#ifndef M_TWOPI
+#define M_TWOPI        6.28318530717958647692
+#endif
+
+// vertex scales
+#define    MD3_XYZ_SCALE        (1.0/64)
+
+typedef unsigned int index_t;
+
+typedef struct
+{
+    float            st[2];
+} dmd3coord_t;
+
+typedef struct
+{
+    short            point[3];
+    short            norm;
+} dmd3vertex_t;
+
+typedef struct
+{
+    vec3_t            mins;
+    vec3_t            maxs;
+    vec3_t            translate;
+    float            radius;
+    char            creator[16];
+} dmd3frame_t;
+
+typedef struct
+{
+    vec3_t            origin;
+    float            axis[3][3];
+} dorientation_t;
+
+typedef struct
+{
+    char            name[MD3_MAX_PATH];        // tag name
+    float            origin[3];
+    dorientation_t    orient;
+} dmd3tag_t;
+
+typedef struct
+{
+    char            name[MD3_MAX_PATH];
+    int                unused;                    // shader
+} dmd3skin_t;
+
+typedef struct
+{
+    char            id[4];
+    
+    char            name[MD3_MAX_PATH];
+    
+    int                flags;
+    
+    int                num_frames;
+    int                num_skins;
+    int                num_verts;
+    int                num_tris;
+    
+    int                ofs_tris;
+    int                ofs_skins;
+    int                ofs_tcs;
+    int                ofs_verts;
+    
+    int                meshsize;
+} dmd3mesh_t;
+
+typedef struct
+{
+    int                id;
+    int                version;
+    
+    char            filename[MD3_MAX_PATH];
+    
+    int                flags;
+    
+    int                num_frames;
+    int                num_tags;
+    int                num_meshes;
+    int                num_skins;
+    
+    int                ofs_frames;
+    int                ofs_tags;
+    int                ofs_meshes;
+    int                ofs_end;
+} dmd3_t;
+
+
 /* .SP2 sprite file format */
 
 #define IDSPRITEHEADER (('2' << 24) + ('S' << 16) + ('D' << 8) + 'I') /* little-endian "IDS2" */
@@ -182,10 +293,22 @@ typedef struct miptex_s
 /* upper design bounds: leaffaces, leafbrushes, planes, and 
  * verts are still bounded by 16 bit short limits */
 #define MAX_MAP_MODELS 1024
-#define MAX_MAP_BRUSHES 8192
+
+#ifdef LARGE_MAP_SIZE
+#define    MAX_MAP_BRUSHES        16384
+#else
+#define    MAX_MAP_BRUSHES        8192
+#endif
+
 #define MAX_MAP_ENTITIES 2048
-#define MAX_MAP_ENTSTRING 0x40000
-#define MAX_MAP_TEXINFO 8192
+
+#ifdef LARGE_MAP_SIZE
+#define    MAX_MAP_ENTSTRING    0x80000
+#else
+#define    MAX_MAP_ENTSTRING    0x40000
+#endif
+
+#define    MAX_MAP_TEXINFO        16384    // was 8192
 
 #define MAX_MAP_AREAS 256
 #define MAX_MAP_AREAPORTALS 1024
@@ -423,6 +546,211 @@ typedef struct
 	int numareaportals;
 	int firstareaportal;
 } darea_t;
+
+//Knightmare- new, enhanced Q2 BSP format
+/*
+ ==============================================================================
+ 
+ BSP39 file format
+ 
+ ==============================================================================
+ */
+
+//Knightmare- new BSP version to tell other engines not to load these maps
+#define KMQUAKE2_BSPVERSION 39
+
+// upper design bounds
+#define    BSP39_MAX_MAP_MODELS        2048
+#define    BSP39_MAX_MAP_BRUSHES        32768
+#define    BSP39_MAX_MAP_ENTITIES        8192
+#define    BSP39_MAX_MAP_ENTSTRING        0x80000
+#define    BSP39_MAX_MAP_TEXINFO        32768
+
+#define    BSP39_MAX_MAP_AREAS            256
+#define    BSP39_MAX_MAP_AREAPORTALS    1024
+#define    BSP39_MAX_MAP_FOGS            256
+#define    BSP39_MAX_MAP_PLANES        131072
+#define    BSP39_MAX_MAP_NODES            131072
+#define    BSP39_MAX_MAP_BRUSHSIDES    262144
+#define    BSP39_MAX_MAP_LEAFS            131072
+#define    BSP39_MAX_MAP_VERTS            131072
+#define    BSP39_MAX_MAP_FACES            131072
+#define    BSP39_MAX_MAP_LEAFFACES        131072
+#define    BSP39_MAX_MAP_LEAFBRUSHES    262144
+#define    BSP39_MAX_MAP_PORTALS        131072
+#define    BSP39_MAX_MAP_EDGES            262144
+#define    BSP39_MAX_MAP_SURFEDGES        524288
+#define    BSP39_MAX_MAP_LIGHTING        0x1000000
+#define    BSP39_MAX_MAP_VISIBILITY    0x400000
+
+#define BSP39_MIN_WORLD_COORD (-131072)
+#define BSP39_MAX_WORLD_COORD (131072)
+#define BSP39_WORLD_SIZE (MAX_WORLD_COORD - MIN_WORLD_COORD)
+
+//=============================================================================
+
+typedef struct
+{
+    int        fileofs, filelen;
+} bsp39_lump_t;
+
+#define    BSP39_LUMP_ENTITIES        0
+#define    BSP39_LUMP_PLANES        1
+#define    BSP39_LUMP_VERTEXES        2
+#define    BSP39_LUMP_VISIBILITY    3
+#define    BSP39_LUMP_NODES        4
+#define    BSP39_LUMP_TEXINFO        5
+#define    BSP39_LUMP_FACES        6
+#define    BSP39_LUMP_LIGHTING        7
+#define    BSP39_LUMP_LEAFS        8
+#define    BSP39_LUMP_LEAFFACES    9
+#define    BSP39_LUMP_LEAFBRUSHES    10
+#define    BSP39_LUMP_EDGES        11
+#define    BSP39_LUMP_SURFEDGES    12
+#define    BSP39_LUMP_MODELS        13
+#define    BSP39_LUMP_BRUSHES        14
+#define    BSP39_LUMP_BRUSHSIDES    15
+#define    BSP39_LUMP_POP            16
+#define    BSP39_LUMP_AREAS        17
+#define    BSP39_LUMP_AREAPORTALS    18
+#define    BSP39_LUMP_FOGS            19
+#define    BSP39_HEADER_LUMPS        20
+
+typedef struct
+{
+    int        ident;
+    int        version;
+    lump_t    lumps[HEADER_LUMPS];
+} bsp39_dheader_t;
+
+typedef struct
+{
+    float    mins[3], maxs[3];
+    float    origin[3];        // for sounds or lights
+    int        headnode;
+    int        firstface, numfaces;    // submodels just draw faces
+    // without walking the bsp tree
+} bsp39_dmodel_t;
+
+typedef struct
+{
+    float    point[3];
+    vec3_t    color; // for vertex lighting terrain
+    float    alpha; // for terrain blending
+} bsp39_dvertex_t;
+
+// planes (x&~1) and (x&~1)+1 are always opposites
+typedef struct
+{
+    float    normal[3];
+    float    dist;
+    int        type;        // PLANE_X - PLANE_ANYZ ?remove? trivial to regenerate
+} bsp39_dplane_t;
+
+typedef struct
+{
+    int        planenum;
+    int        children[2];    // negative numbers are -(leafs+1), not nodes
+    int        mins[3];        // for frustom culling
+    int        maxs[3];
+    int        firstface;
+    int        numfaces;    // counting both sides
+} bsp39_dnode_t;
+
+typedef struct bsp39_texinfo_s
+{
+    float    vecs[2][4];        // [s/t][xyz offset]
+    int        flags;            // miptex flags + overrides
+    int        value;            // light emission, etc
+    qboolean     terrain;    // terrain flag
+    char    texture[32];    // texture name (textures/*.wal)
+    char    texture2[32];    // second texture for terrain blending based on vertex alpha
+    int        nexttexinfo;    // for animations, -1 = end of chain
+} bsp39_texinfo_t;
+
+// note that edge 0 is never used, because negative edge nums are used for
+// counterclockwise use of the edge in a face
+typedef struct
+{
+    int        v[2];        // vertex numbers
+} bsp39_dedge_t;
+
+typedef struct
+{
+    int        planenum;
+    int        side;
+    
+    int        firstedge;
+    int        numedges;
+    int        texinfo;
+    
+    // lighting info
+    byte    styles[MAXLIGHTMAPS];
+    int        lightofs;        // start of [numstyles*surfsize] samples
+} bsp39_dface_t;
+
+typedef struct
+{
+    int        contents;            // OR of all brushes (not needed?)
+    
+    int        cluster;
+    int        area;
+    
+    int        mins[3];            // for frustum culling
+    int        maxs[3];
+    
+    int        firstleafface;
+    int        numleaffaces;
+    
+    int        firstleafbrush;
+    int        numleafbrushes;
+} bsp39_dleaf_t;
+
+typedef struct
+{
+    int        planenum;        // facing out of the leaf
+    int        texinfo;
+} bsp39_dbrushside_t;
+
+typedef struct
+{
+    int        firstside;
+    int        numsides;
+    int        contents;
+} bsp39_dbrush_t;
+
+// Knightmare added (ripped from the Q3 tools source)
+typedef struct
+{
+    char    shader[MAX_QPATH];
+    int        brushNum;
+    int        visibleSide;    // the brush side that ray tests need to clip against (-1 == none)
+} bsp39_dfog_t;
+
+// the visibility lump consists of a header with a count, then
+// byte offsets for the PVS and PHS of each cluster, then the raw
+// compressed bit vectors
+typedef struct
+{
+    int        numclusters;
+    int        bitofs[8][2];    // bitofs[numclusters][2]
+} bsp39_dvis_t;
+
+// each area has a list of portals that lead into other areas
+// when portals are closed, other areas may not be visible or
+// hearable even if the vis info says that it should be
+typedef struct
+{
+    int        portalnum;
+    int        otherarea;
+} bsp39_dareaportal_t;
+
+typedef struct
+{
+    int        numareaportals;
+    int        firstareaportal;
+} bsp39_darea_t;
+
 
 #endif
 

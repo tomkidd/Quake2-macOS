@@ -211,8 +211,6 @@ SV_WriteLevelFile(void)
 	Sys_SetWorkDir(workdir);
 }
 
-void    CM_ReadPortalState (fileHandle_t f);
-
 void
 SV_ReadLevelFile(void)
 {

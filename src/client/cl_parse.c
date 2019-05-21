@@ -695,6 +695,9 @@ CL_FireEntityEvents(frame_t *frame)
 	}
 }
 
+// Knightmare- var for saving speed controls
+player_state_t *clientstate;
+
 void
 CL_ParseFrame(void)
 {
