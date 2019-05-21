@@ -208,6 +208,7 @@
 		A1CE4EED2218CCB3006A66DE /* sw_polyset.c in Sources */ = {isa = PBXBuildFile; fileRef = A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A1D529F222935870005928FF /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = A1D529F122935870005928FF /* libz.tbd */; };
 		A1D529F422935A2B005928FF /* libjpeg.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A1D529F322935A2B005928FF /* libjpeg.a */; };
+		A1D529F6229364E9005928FF /* wildcard.c in Sources */ = {isa = PBXBuildFile; fileRef = A1D529F5229364E9005928FF /* wildcard.c */; };
 		A1E39F9C22838FB9005B2FB7 /* g_crane.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F8722838FB8005B2FB7 /* g_crane.c */; };
 		A1E39F9D22838FB9005B2FB7 /* g_ctf.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F8822838FB8005B2FB7 /* g_ctf.c */; };
 		A1E39F9E22838FB9005B2FB7 /* g_patchplayermodels.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F8922838FB8005B2FB7 /* g_patchplayermodels.c */; };
@@ -516,6 +517,8 @@
 		A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_polyset.c; sourceTree = "<group>"; };
 		A1D529F122935870005928FF /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		A1D529F322935A2B005928FF /* libjpeg.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libjpeg.a; path = ../../../../../usr/local/Cellar/jpeg/9c/lib/libjpeg.a; sourceTree = "<group>"; };
+		A1D529F5229364E9005928FF /* wildcard.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wildcard.c; sourceTree = "<group>"; };
+		A1D529F722936504005928FF /* wildcard.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wildcard.h; sourceTree = "<group>"; };
 		A1E39F8722838FB8005B2FB7 /* g_crane.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_crane.c; sourceTree = "<group>"; };
 		A1E39F8822838FB8005B2FB7 /* g_ctf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_ctf.c; sourceTree = "<group>"; };
 		A1E39F8922838FB8005B2FB7 /* g_patchplayermodels.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_patchplayermodels.c; sourceTree = "<group>"; };
@@ -1090,6 +1093,7 @@
 				A15FA2162110C5BC0048A3AD /* shared */,
 				A15FA21D2110C5BC0048A3AD /* szone.c */,
 				A15FA2112110C5BC0048A3AD /* unzip */,
+				A1D529F5229364E9005928FF /* wildcard.c */,
 				A15FA21B2110C5BC0048A3AD /* zone.c */,
 			);
 			path = common;
@@ -1127,6 +1131,7 @@
 				A15FA22A2110C5BC0048A3AD /* files.h */,
 				A15FA22B2110C5BC0048A3AD /* glob.h */,
 				A15FA2272110C5BC0048A3AD /* shared.h */,
+				A1D529F722936504005928FF /* wildcard.h */,
 				A15FA2262110C5BC0048A3AD /* zone.h */,
 			);
 			path = header;
@@ -1858,6 +1863,7 @@
 				A15FA43B2111516A0048A3AD /* cl_prediction.c in Sources */,
 				A15FA4312111516A0048A3AD /* cl_effects.c in Sources */,
 				A15FA44B211151D40048A3AD /* sound.c in Sources */,
+				A1D529F6229364E9005928FF /* wildcard.c in Sources */,
 				A15FA4332111516A0048A3AD /* cl_input.c in Sources */,
 				A15FA429211151570048A3AD /* main.c in Sources */,
 				A15FA43D2111516A0048A3AD /* cl_tempentities.c in Sources */,

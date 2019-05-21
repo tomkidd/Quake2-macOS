@@ -25,9 +25,11 @@
  */
 
 #include "header/common.h"
+#include "header/wildcard.h"
 
 cvar_t *cvar_vars;
 
+qboolean    cvar_allowCheats = true;
 
 typedef struct
 {
@@ -166,6 +168,39 @@ Cvar_VariableString(const char *var_name)
 }
 
 /*
+ ============
+ Cvar_DefaultValue
+ Knightmare added
+ ============
+ */
+float Cvar_DefaultValue (char *var_name)
+{
+    cvar_t    *var;
+    
+    var = Cvar_FindVar (var_name);
+    if (!var)
+        return 0;
+    return atof (var->default_string);
+}
+
+
+/*
+ ============
+ Cvar_DefaultString
+ Knightmare added
+ ============
+ */
+char *Cvar_DefaultString (char *var_name)
+{
+    cvar_t *var;
+    
+    var = Cvar_FindVar (var_name);
+    if (!var)
+        return "";
+    return var->default_string;
+}
+
+/*
  * If the variable already exists, the value will not be set
  * The flags will be or'ed in if the variable exists.
  */
@@ -189,6 +224,10 @@ Cvar_Get(char *var_name, char *var_value, int flags)
 	if (var)
 	{
 		var->flags |= flags;
+        // Knightmare- added cvar defaults
+        Z_Free(var->default_string);
+        var->default_string = CopyString (var_value);
+        
 		return var;
 	}
 
@@ -216,6 +255,8 @@ Cvar_Get(char *var_name, char *var_value, int flags)
 	var = Z_Malloc(sizeof(*var));
 	var->name = CopyString(var_name);
 	var->string = CopyString(var_value);
+    // Knightmare- added cvar defaults
+    var->default_string = CopyString (var_value);
 	var->modified = true;
 	var->value = strtod(var->string, (char **)NULL);
 
@@ -263,12 +304,18 @@ Cvar_Set2(char *var_name, char *value, qboolean force)
 
 	if (!force)
 	{
-		if (var->flags & CVAR_NOSET)
-		{
-			Com_Printf("%s is write protected.\n", var_name);
-			return var;
-		}
-
+        if (var->flags & CVAR_NOSET)
+        {
+            Com_Printf("%s is write protected.\n", var_name);
+            return var;
+        }
+        
+        if ((var->flags & CVAR_CHEAT) && !cvar_allowCheats)
+        {
+            Com_Printf ("%s is cheat protected.\n", var_name);
+            return var;
+        }
+        
 		if (var->flags & CVAR_LATCH)
 		{
 			if (var->latched_string)
@@ -347,6 +394,17 @@ cvar_t *
 Cvar_Set(char *var_name, char *value)
 {
 	return Cvar_Set2(var_name, value, false);
+}
+
+/*
+ ============
+ Cvar_SetToDefault
+ Knightmare added
+ ============
+ */
+cvar_t *Cvar_SetToDefault (char *var_name)
+{
+    return Cvar_Set2 (var_name, Cvar_DefaultString(var_name), false);
 }
 
 cvar_t *
@@ -431,6 +489,37 @@ Cvar_GetLatchedVars(void)
 }
 
 /*
+ =================
+ Cvar_FixCheatVars
+ 
+ Resets cvars that could be used for multiplayer cheating
+ Borrowed from Q2E
+ =================
+ */
+void Cvar_FixCheatVars (qboolean allowCheats)
+{
+    cvar_t    *var;
+    
+    if (cvar_allowCheats == allowCheats)
+        return;
+    cvar_allowCheats = allowCheats;
+    
+    if (cvar_allowCheats)
+        return;
+    
+    for (var = cvar_vars; var; var = var->next)
+    {
+        if (!(var->flags & CVAR_CHEAT))
+            continue;
+        
+        if (!Q_stricmp(var->string, var->default_string))
+            continue;
+        
+        Cvar_Set2 (var->name, var->default_string, true);
+    }
+}
+
+/*
  * Handles variable inspection and changing from the console
  */
 qboolean
@@ -448,8 +537,11 @@ Cvar_Command(void)
 
 	/* perform a variable print or set */
 	if (Cmd_Argc() == 1)
-	{
-		Com_Printf("\"%s\" is \"%s\"\n", v->name, v->string);
+    {    // Knightmare- show latched value if applicable
+        if ((v->flags & CVAR_LATCH) && v->latched_string)
+            Com_Printf ("\"%s\" is \"%s\" : default is \"%s\" : latched to \"%s\"\n", v->name, v->string, v->default_string, v->latched_string);
+        else
+            Com_Printf ("\"%s\" is \"%s\" : default is \"%s\"\n", v->name, v->string, v->default_string);
 		return true;
 	}
 
@@ -550,15 +642,35 @@ void
 Cvar_List_f(void)
 {
 	cvar_t *var;
-	int i;
-
+    int        i, j, c;
+    char    *wc;
+    
+    // RIOT's Quake3-sytle cvarlist
+    c = Cmd_Argc();
+    
+    if (c != 1 && c!= 2)
+    {
+        Com_Printf ("usage: cvarlist [wildcard]\n");
+        return;
+    }
+    
+    if (c == 2)
+        wc = Cmd_Argv(1);
+    else
+        wc = "*";
+    
 	i = 0;
+    j = 0;
 
 	for (var = cvar_vars; var; var = var->next, i++)
 	{
+        if (wildcardfit (wc, var->name))
+            //if (strstr (var->name, Cmd_Argv(1)))
+        {
+            j++;
 		if (var->flags & CVAR_ARCHIVE)
 		{
-			Com_Printf("*");
+			Com_Printf("A");
 		}
 
 		else
@@ -601,10 +713,20 @@ Cvar_List_f(void)
 			Com_Printf(" ");
 		}
 
-		Com_Printf(" %s \"%s\"\n", var->name, var->string);
+            if (var->flags & CVAR_CHEAT)
+                Com_Printf("C");
+            else
+                Com_Printf(" ");
+            
+            // show latched value if applicable
+            if ((var->flags & CVAR_LATCH) && var->latched_string)
+                Com_Printf (" %s \"%s\" - default: \"%s\" - latched: \"%s\"\n", var->name, var->string, var->default_string, var->latched_string);
+            else
+                Com_Printf (" %s \"%s\" - default: \"%s\"\n", var->name, var->string, var->default_string);
+        }
 	}
 
-	Com_Printf("%i cvars\n", i);
+    Com_Printf (" %i cvars, %i matching\n", i, j);
 }
 
 qboolean userinfo_modified;

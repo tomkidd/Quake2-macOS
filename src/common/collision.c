@@ -1893,7 +1893,7 @@ CM_DecompressVis(byte *in, byte *out)
 		if ((out_p - out) + c > row)
 		{
 			c = row - (out_p - out);
-			Com_DPrintf("warning: Vis decompression overrun\n");
+            Com_DPrintf (S_COLOR_YELLOW"Warning: Vis decompression overrun\n");
 		}
 
 		while (c)
