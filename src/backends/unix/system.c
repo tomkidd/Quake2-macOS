@@ -431,6 +431,14 @@ Sys_Mkdir(char *path)
 	mkdir(path, 0755);
 }
 
+//
+// added from Q2E
+//
+void Sys_Rmdir (char *path)
+{
+    rmdir(path);
+}
+
 qboolean
 Sys_IsDir(const char *path)
 {

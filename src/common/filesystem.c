@@ -34,6 +34,9 @@
 
 #define MAX_HANDLES 512
 #define MAX_PAKS 100
+#define MAX_READ                0x10000
+#define MAX_WRITE                0x10000
+#define MAX_FIND_FILES            0x04000
 
 #ifdef SYSTEMWIDE
  #ifndef SYSTEMDIR
@@ -108,12 +111,24 @@ fsPackTypes_t fs_packtypes[] = {
 
 char datadir[MAX_OSPATH];
 char fs_gamedir[MAX_OSPATH];
+static char        fs_currentGame[MAX_QPATH];
+
+static char                fs_fileInPath[MAX_OSPATH];
+static qboolean            fs_fileInPack;
+
 qboolean file_from_protected_pak;
 
+int        file_from_pak = 0;        // This is set by FS_FOpenFile
+int        file_from_pk3 = 0;        // This is set by FS_FOpenFile
+char    file_from_pk3_name[MAX_QPATH];    // This is set by FS_FOpenFile
+
+cvar_t    *fs_homepath;
 cvar_t *fs_basedir;
 cvar_t *fs_cddir;
 cvar_t *fs_gamedirvar;
 cvar_t *fs_debug;
+
+void CDAudio_Stop (void);
 
 fsHandle_t *FS_GetFileByHandle(fileHandle_t f);
 
@@ -193,6 +208,30 @@ static voidpf ZCALLBACK fopen_file_func_utf(voidpf opaque, const char *filename,
  */
 
 /*
+ =================
+ Q_strncpyz
+ 
+ Safe strncpy that ensures a trailing zero
+ =================
+ */
+void Q_strncpyz (char *dst, const char *src, int dstSize){
+    
+    if (!dst)
+        Com_Error(ERR_FATAL, "Q_strncpyz: NULL dst");
+    
+    if (!src)
+        Com_Error(ERR_FATAL, "Q_strncpyz: NULL src");
+    
+    if (dstSize < 1)
+        Com_Error(ERR_FATAL, "Q_strncpyz: dstSize < 1");
+    
+    strncpy(dst, src, dstSize-1);
+    dst[dstSize-1] = 0;
+}
+
+
+
+/*
  * Returns the path up to, but not including the last '/'.
  */
 void
@@ -268,6 +307,29 @@ FS_CreatePath(char *path)
 	}
 }
 
+//Knightmare- Psychospaz's mod detector
+qboolean modType (char *name)
+{
+    fsSearchPath_t    *search;
+    
+    for (search = fs_searchPaths ; search ; search = search->next)
+    {
+        if (strstr (search->path, name))
+            return true;
+    }
+    return (0);
+}
+
+
+//Knightmare- this enables Rogue menu options for Q2MP4
+qboolean roguepath ()
+{
+    if (modType("rogue") || modType("q2mp4"))
+        return true;
+    return false;
+}
+//end Knightmare
+
 void
 FS_DPrintf(const char *format, ...)
 {
@@ -290,6 +352,44 @@ char *
 FS_Gamedir(void)
 {
 	return fs_gamedir;
+}
+
+/*
+ =================
+ FS_DeletePath
+ 
+ TODO: delete tree contents
+ =================
+ */
+void FS_DeletePath (char *path)
+{
+    FS_DPrintf("FS_DeletePath( %s )\n", path);
+    
+    Sys_Rmdir(path);
+}
+
+/*
+ =================
+ FS_FileForHandle
+ 
+ Returns a FILE * for a fileHandle_t
+ =================
+ */
+fsHandle_t    *FS_GetFileByHandle (fileHandle_t f);
+
+FILE *FS_FileForHandle (fileHandle_t f)
+{
+    fsHandle_t    *handle;
+    
+    handle = FS_GetFileByHandle(f);
+    
+    if (handle->zip)
+        Com_Error(ERR_DROP, "FS_FileForHandle: can't get FILE on zip file");
+    
+    if (!handle->file)
+        Com_Error(ERR_DROP, "FS_FileForHandle: NULL");
+    
+    return handle->file;
 }
 
 /*
@@ -362,153 +462,357 @@ FS_FCloseFile(fileHandle_t f)
 }
 
 /*
+ =================
+ FS_FOpenFileAppend
+ 
+ Returns file size or -1 on error
+ =================
+ */
+int FS_FOpenFileAppend (fsHandle_t *handle)
+{
+    char    path[MAX_OSPATH];
+    
+    FS_CreatePath(handle->name);
+    
+    Com_sprintf(path, sizeof(path), "%s/%s", fs_gamedir, handle->name);
+    
+    handle->file = fopen(path, "ab");
+    if (handle->file)
+    {
+        if (fs_debug->value)
+            Com_Printf("FS_FOpenFileAppend: %s\n", path);
+        
+        return FS_FileLength(handle->file);
+    }
+    
+    if (fs_debug->value)
+        Com_Printf("FS_FOpenFileAppend: couldn't open %s\n", path);
+    
+    return -1;
+}
+
+
+/*
+ =================
+ FS_FOpenFileWrite
+ 
+ Always returns 0 or -1 on error
+ =================
+ */
+int FS_FOpenFileWrite (fsHandle_t *handle)
+{
+    char    path[MAX_OSPATH];
+    
+    FS_CreatePath(handle->name);
+    
+    Com_sprintf(path, sizeof(path), "%s/%s", fs_gamedir, handle->name);
+    
+    handle->file = fopen(path, "wb");
+    if (handle->file)
+    {
+        if (fs_debug->value)
+            Com_Printf("FS_FOpenFileWrite: %s\n", path);
+        return 0;
+    }
+    
+    if (fs_debug->value)
+        Com_Printf("FS_FOpenFileWrite: couldn't open %s\n", path);
+    
+    return -1;
+}
+
+
+/*
+ =================
+ FS_FOpenFileRead
+ 
+ Returns file size or -1 if not found.
+ Can open separate files as well as files inside pack files (both PAK
+ and PK3).
+ =================
+ */
+int FS_FOpenFileRead (fsHandle_t *handle)
+{
+    fsSearchPath_t    *search;
+    fsPack_t        *pack;
+    char            path[MAX_OSPATH];
+    int                i;
+    
+    // Knightmare- hack global vars for autodownloads
+    file_from_pak = 0;
+    file_from_pk3 = 0;
+    
+    // Search through the path, one element at a time
+    for (search = fs_searchPaths; search; search = search->next)
+    {
+        if (search->pack)
+        {    // Search inside a pack file
+            pack = search->pack;
+            
+            for (i = 0; i < pack->numFiles; i++)
+            {
+                if (!Q_stricmp(pack->files[i].name, handle->name))
+                {
+                    // Found it!
+                    Com_FilePath(pack->name, fs_fileInPath, sizeof(fs_fileInPath));
+                    fs_fileInPack = true;
+                    
+                    if (fs_debug->value)
+                        Com_Printf("FS_FOpenFileRead: %s (found in %s)\n", handle->name, pack->name);
+                    
+                    if (pack->pak)
+                    {    // PAK
+                        file_from_pak = 1; // Knightmare added
+                        handle->file = fopen(pack->name, "rb");
+                        if (handle->file)
+                        {
+                            fseek(handle->file, pack->files[i].offset, SEEK_SET);
+                            
+                            return pack->files[i].size;
+                        }
+                    }
+                    else if (pack->pk3)
+                    {    // PK3
+                        file_from_pk3 = 1; // Knightmare added
+                        sprintf(file_from_pk3_name, strrchr(pack->name, '/')+1); // Knightmare added
+                        handle->zip = unzOpen(pack->name);
+                        if (handle->zip)
+                        {
+                            if (unzLocateFile(handle->zip, handle->name, 2) == UNZ_OK)
+                            {
+                                if (unzOpenCurrentFile(handle->zip) == UNZ_OK)
+                                    return pack->files[i].size;
+                            }
+                            
+                            unzClose(handle->zip);
+                        }
+                    }
+                    
+                    Com_Error(ERR_FATAL, "Couldn't reopen %s", pack->name);
+                }
+            }
+        }
+        else
+        {    // Search in a directory tree
+            Com_sprintf(path, sizeof(path), "%s/%s", search->path, handle->name);
+            
+            handle->file = fopen(path, "rb");
+            if (handle->file)
+            {    // Found it!
+                Q_strncpyz(fs_fileInPath, search->path, sizeof(fs_fileInPath));
+                fs_fileInPack = false;
+                
+                if (fs_debug->value)
+                    Com_Printf("FS_FOpenFileRead: %s (found in %s)\n", handle->name, search->path);
+                
+                return FS_FileLength(handle->file);
+            }
+        }
+    }
+    
+    // Not found!
+    fs_fileInPath[0] = 0;
+    fs_fileInPack = false;
+    
+    if (fs_debug->value)
+        Com_Printf("FS_FOpenFileRead: couldn't find %s\n", handle->name);
+    
+    return -1;
+}
+
+/*
+ =================
+ FS_FOpenFile
+ 
+ Opens a file for "mode".
+ Returns file size or -1 if an error occurs/not found.
+ Can open separate files as well as files inside pack files (both PAK
+ and PK3).
+ =================
+ */
+int FS_FOpenFile (const char *name, fileHandle_t *f, fsMode_t mode)
+{
+    fsHandle_t    *handle;
+    int            size;
+    
+    handle = FS_HandleForFile(name, f);
+    
+    Q_strncpyz(handle->name, name, sizeof(handle->name));
+    handle->mode = mode;
+    
+    switch (mode)
+    {
+        case FS_READ:
+            size = FS_FOpenFileRead(handle);
+            break;
+        case FS_WRITE:
+            size = FS_FOpenFileWrite(handle);
+            break;
+        case FS_APPEND:
+            size = FS_FOpenFileAppend(handle);
+            break;
+        default:
+            Com_Error(ERR_FATAL, "FS_FOpenFile: bad mode (%i)", mode);
+    }
+    
+    if (size != -1)
+        return size;
+    
+    // Couldn't open, so free the handle
+    memset(handle, 0, sizeof(*handle));
+    
+    *f = 0;
+    return -1;
+}
+
+/*
  * Finds the file in the search path. Returns filesize and an open FILE *. Used
  * for streaming data out of either a pak file or a seperate file.
  */
-int
-FS_FOpenFile(const char *name, fileHandle_t *f, qboolean gamedir_only)
-{
-	char path[MAX_OSPATH], lwrName[MAX_OSPATH];
-	fsHandle_t *handle;
-	fsPack_t *pack;
-	fsSearchPath_t *search;
-	int i;
-
-	file_from_protected_pak = false;
-	handle = FS_HandleForFile(name, f);
-	Q_strlcpy(handle->name, name, sizeof(handle->name));
-	handle->mode = FS_READ;
-
-	/* Search through the path, one element at a time. */
-	for (search = fs_searchPaths; search; search = search->next)
-	{
-		if (gamedir_only)
-		{
-			if (strstr(search->path, FS_Gamedir()) == NULL)
-			{
-				continue;
-			}
-		}
-
-		// Evil hack for maps.lst and players/
-		// TODO: A flag to ignore paks would be better
-		if ((strcmp(fs_gamedirvar->string, "") == 0) && search->pack) {
-			if ((strcmp(name, "maps.lst") == 0)|| (strncmp(name, "players/", 8) == 0)) {
-				continue;
-			}
-		}
-
-		/* Search inside a pack file. */
-		if (search->pack)
-		{
-			pack = search->pack;
-
-			for (i = 0; i < pack->numFiles; i++)
-			{
-				if (Q_stricmp(pack->files[i].name, handle->name) == 0)
-				{
-					/* Found it! */
-					if (fs_debug->value)
-					{
-						Com_Printf("FS_FOpenFile: '%s' (found in '%s').\n",
-						           handle->name, pack->name);
-					}
-
-					// save the name with *correct case* in the handle
-					// (relevant for savegames, when starting map with wrong case but it's still found
-					//  because it's from pak, but save/bla/MAPname.sav/sv2 will have wrong case and can't be found then)
-					Q_strlcpy(handle->name, pack->files[i].name, sizeof(handle->name));
-
-					if (pack->pak)
-					{
-						/* PAK */
-						if (pack->isProtectedPak)
-						{
-							file_from_protected_pak = true;
-						}
-
-						handle->file = Q_fopen(pack->name, "rb");
-
-						if (handle->file)
-						{
-							fseek(handle->file, pack->files[i].offset, SEEK_SET);
-							return pack->files[i].size;
-						}
-					}
-					else if (pack->pk3)
-					{
-						/* PK3 */
-						if (pack->isProtectedPak)
-						{
-							file_from_protected_pak = true;
-						}
-
-#ifdef _WIN32
-						handle->zip = unzOpen2(pack->name, &zlib_file_api);
-#else
-						handle->zip = unzOpen(pack->name);
-#endif
-
-						if (handle->zip)
-						{
-							if (unzLocateFile(handle->zip, handle->name, 2) == UNZ_OK)
-							{
-								if (unzOpenCurrentFile(handle->zip) == UNZ_OK)
-								{
-									return pack->files[i].size;
-								}
-							}
-
-							unzClose(handle->zip);
-						}
-					}
-
-					Com_Error(ERR_FATAL, "Couldn't reopen '%s'", pack->name);
-				}
-			}
-		}
-		else
-		{
-			/* Search in a directory tree. */
-			Com_sprintf(path, sizeof(path), "%s/%s", search->path, handle->name);
-
-			handle->file = Q_fopen(path, "rb");
-
-			if (!handle->file)
-			{
-				Com_sprintf(lwrName, sizeof(lwrName), "%s", handle->name);
-				Q_strlwr(lwrName);
-				Com_sprintf(path, sizeof(path), "%s/%s", search->path, lwrName);
-				handle->file = Q_fopen(path, "rb");
-			}
-
-			if (!handle->file)
-			{
-				continue;
-			}
-
-			if (handle->file)
-			{
-				if (fs_debug->value)
-				{
-					Com_Printf("FS_FOpenFile: '%s' (found in '%s').\n",
-							   handle->name, search->path);
-				}
-
-				return FS_FileLength(handle->file);
-			}
-		}
-	}
-	if (fs_debug->value)
-	{
-		Com_Printf("FS_FOpenFile: couldn't find '%s'.\n", handle->name);
-	}
-
-	/* Couldn't open, so free the handle. */
-	memset(handle, 0, sizeof(*handle));
-	*f = 0;
-	return -1;
-}
+//int
+//FS_FOpenFile(const char *name, fileHandle_t *f, qboolean gamedir_only)
+//{
+//    char path[MAX_OSPATH], lwrName[MAX_OSPATH];
+//    fsHandle_t *handle;
+//    fsPack_t *pack;
+//    fsSearchPath_t *search;
+//    int i;
+//
+//    file_from_protected_pak = false;
+//    handle = FS_HandleForFile(name, f);
+//    Q_strlcpy(handle->name, name, sizeof(handle->name));
+//    handle->mode = FS_READ;
+//
+//    /* Search through the path, one element at a time. */
+//    for (search = fs_searchPaths; search; search = search->next)
+//    {
+//        if (gamedir_only)
+//        {
+//            if (strstr(search->path, FS_Gamedir()) == NULL)
+//            {
+//                continue;
+//            }
+//        }
+//
+//        // Evil hack for maps.lst and players/
+//        // TODO: A flag to ignore paks would be better
+//        if ((strcmp(fs_gamedirvar->string, "") == 0) && search->pack) {
+//            if ((strcmp(name, "maps.lst") == 0)|| (strncmp(name, "players/", 8) == 0)) {
+//                continue;
+//            }
+//        }
+//
+//        /* Search inside a pack file. */
+//        if (search->pack)
+//        {
+//            pack = search->pack;
+//
+//            for (i = 0; i < pack->numFiles; i++)
+//            {
+//                if (Q_stricmp(pack->files[i].name, handle->name) == 0)
+//                {
+//                    /* Found it! */
+//                    if (fs_debug->value)
+//                    {
+//                        Com_Printf("FS_FOpenFile: '%s' (found in '%s').\n",
+//                                   handle->name, pack->name);
+//                    }
+//
+//                    // save the name with *correct case* in the handle
+//                    // (relevant for savegames, when starting map with wrong case but it's still found
+//                    //  because it's from pak, but save/bla/MAPname.sav/sv2 will have wrong case and can't be found then)
+//                    Q_strlcpy(handle->name, pack->files[i].name, sizeof(handle->name));
+//
+//                    if (pack->pak)
+//                    {
+//                        /* PAK */
+//                        if (pack->isProtectedPak)
+//                        {
+//                            file_from_protected_pak = true;
+//                        }
+//
+//                        handle->file = Q_fopen(pack->name, "rb");
+//
+//                        if (handle->file)
+//                        {
+//                            fseek(handle->file, pack->files[i].offset, SEEK_SET);
+//                            return pack->files[i].size;
+//                        }
+//                    }
+//                    else if (pack->pk3)
+//                    {
+//                        /* PK3 */
+//                        if (pack->isProtectedPak)
+//                        {
+//                            file_from_protected_pak = true;
+//                        }
+//
+//#ifdef _WIN32
+//                        handle->zip = unzOpen2(pack->name, &zlib_file_api);
+//#else
+//                        handle->zip = unzOpen(pack->name);
+//#endif
+//
+//                        if (handle->zip)
+//                        {
+//                            if (unzLocateFile(handle->zip, handle->name, 2) == UNZ_OK)
+//                            {
+//                                if (unzOpenCurrentFile(handle->zip) == UNZ_OK)
+//                                {
+//                                    return pack->files[i].size;
+//                                }
+//                            }
+//
+//                            unzClose(handle->zip);
+//                        }
+//                    }
+//
+//                    Com_Error(ERR_FATAL, "Couldn't reopen '%s'", pack->name);
+//                }
+//            }
+//        }
+//        else
+//        {
+//            /* Search in a directory tree. */
+//            Com_sprintf(path, sizeof(path), "%s/%s", search->path, handle->name);
+//
+//            handle->file = Q_fopen(path, "rb");
+//
+//            if (!handle->file)
+//            {
+//                Com_sprintf(lwrName, sizeof(lwrName), "%s", handle->name);
+//                Q_strlwr(lwrName);
+//                Com_sprintf(path, sizeof(path), "%s/%s", search->path, lwrName);
+//                handle->file = Q_fopen(path, "rb");
+//            }
+//
+//            if (!handle->file)
+//            {
+//                continue;
+//            }
+//
+//            if (handle->file)
+//            {
+//                if (fs_debug->value)
+//                {
+//                    Com_Printf("FS_FOpenFile: '%s' (found in '%s').\n",
+//                               handle->name, search->path);
+//                }
+//
+//                return FS_FileLength(handle->file);
+//            }
+//        }
+//    }
+//    if (fs_debug->value)
+//    {
+//        Com_Printf("FS_FOpenFile: couldn't find '%s'.\n", handle->name);
+//    }
+//
+//    /* Couldn't open, so free the handle. */
+//    memset(handle, 0, sizeof(*handle));
+//    *f = 0;
+//    return -1;
+//}
 
 /*
  * Properly handles partial reads.
@@ -641,6 +945,69 @@ FS_FRead(void *buffer, int size, int count, fileHandle_t f)
 
 /*
  =================
+ FS_Write
+ 
+ Properly handles partial writes
+ =================
+ */
+int FS_Write (const void *buffer, int size, fileHandle_t f){
+    
+    fsHandle_t    *handle;
+    int            remaining, w;
+    byte        *buf;
+    
+    handle = FS_GetFileByHandle(f);
+    
+    // Write
+    remaining = size;
+    buf = (byte *)buffer;
+    
+    while (remaining)
+    {
+        if (handle->file)
+            w = fwrite(buf, 1, remaining, handle->file);
+        else if (handle->zip)
+            Com_Error(ERR_FATAL, "FS_Write: can't write to zip file %s", handle->name);
+        else
+            return 0;
+        
+        if (w == 0)
+        {
+            Com_Printf(S_COLOR_RED"FS_Write: 0 bytes written to %s\n", handle->name);
+            return size - remaining;
+        }
+        else if (w == -1)
+            Com_Error(ERR_FATAL, "FS_Write: -1 bytes written to %s", handle->name);
+        
+        remaining -= w;
+        buf += w;
+    }
+    
+    return size;
+}
+
+/*
+ =================
+ FS_FTell
+ =================
+ */
+int FS_FTell (fileHandle_t f)
+{
+    
+    fsHandle_t *handle;
+    
+    handle = FS_GetFileByHandle(f);
+    
+    if (handle->file)
+        return ftell(handle->file);
+    else if (handle->zip)
+        return unztell(handle->zip);
+    
+    return 0;
+}
+
+/*
+ =================
  FS_ListPak
  
  Generates a listing of the contents of a pak file
@@ -694,6 +1061,140 @@ char **FS_ListPak (char *find, int *num)
     
     return list;
 }
+
+/*
+ =================
+ FS_Seek
+ =================
+ */
+void FS_Seek (fileHandle_t f, int offset, fsOrigin_t origin)
+{
+    fsHandle_t        *handle;
+    unz_file_info    info;
+    int                remaining, r, len;
+    byte            dummy[0x8000];
+    
+    handle = FS_GetFileByHandle(f);
+    
+    if (handle->file)
+    {
+        switch (origin)
+        {
+            case FS_SEEK_SET:
+                fseek(handle->file, offset, SEEK_SET);
+                break;
+            case FS_SEEK_CUR:
+                fseek(handle->file, offset, SEEK_CUR);
+                break;
+            case FS_SEEK_END:
+                fseek(handle->file, offset, SEEK_END);
+                break;
+            default:
+                Com_Error(ERR_FATAL, "FS_Seek: bad origin (%i)", origin);
+        }
+    }
+    else if (handle->zip)
+    {
+        switch (origin)
+        {
+            case FS_SEEK_SET:
+                remaining = offset;
+                break;
+            case FS_SEEK_CUR:
+                remaining = offset + unztell(handle->zip);
+                break;
+            case FS_SEEK_END:
+                unzGetCurrentFileInfo(handle->zip, &info, NULL, 0, NULL, 0, NULL, 0);
+                
+                remaining = offset + info.uncompressed_size;
+                break;
+            default:
+                Com_Error(ERR_FATAL, "FS_Seek: bad origin (%i)", origin);
+        }
+        
+        // Reopen the file
+        unzCloseCurrentFile(handle->zip);
+        unzOpenCurrentFile(handle->zip);
+        
+        // Skip until the desired offset is reached
+        while (remaining)
+        {
+            len = remaining;
+            if (len > sizeof(dummy))
+                len = sizeof(dummy);
+            
+            r = unzReadCurrentFile(handle->zip, dummy, len);
+            if (r <= 0)
+                break;
+            
+            remaining -= r;
+        }
+    }
+}
+
+/*
+ =================
+ FS_Tell
+ 
+ Returns -1 if an error occurs
+ =================
+ */
+int FS_Tell (fileHandle_t f)
+{
+    fsHandle_t *handle;
+    
+    handle = FS_GetFileByHandle(f);
+    
+    if (handle->file)
+        return ftell(handle->file);
+    else if (handle->zip)
+        return unztell(handle->zip);
+}
+
+/*
+ =================
+ FS_FileExists
+ ================
+ */
+qboolean FS_FileExists (char *path)
+{
+    fileHandle_t f;
+    
+    FS_FOpenFile(path, &f, FS_READ);
+    if (f)
+    {
+        FS_FCloseFile(f);
+        return true;
+    }
+    return false;
+}
+
+/*
+ =================
+ FS_RenameFile
+ =================
+ */
+void FS_RenameFile (const char *oldPath, const char *newPath)
+{
+    FS_DPrintf("FS_RenameFile( %s, %s )\n", oldPath, newPath);
+    
+    if (rename(oldPath, newPath))
+        FS_DPrintf("FS_RenameFile: failed to rename %s to %s\n", oldPath, newPath);
+}
+
+/*
+ =================
+ FS_DeleteFile
+ =================
+ */
+void FS_DeleteFile (const char *path)
+{
+    FS_DPrintf("FS_DeleteFile( %s )\n", path);
+    
+    if (remove(path))
+        FS_DPrintf("FS_DeleteFile: failed to delete %s\n", path);
+}
+
 
 /*
  * Filename are reletive to the quake search path. A null buffer will just
@@ -890,6 +1391,141 @@ FS_LoadPK3(const char *packPath)
 }
 
 /*
+ =================
+ FS_AddGameDirectory
+ 
+ Sets fs_gameDir, adds the directory to the head of the path, then loads
+ and adds all the pack files found (in alphabetical order).
+ 
+ PK3 files are loaded later so they override PAK files.
+ 
+ NOTE: PAK files can be restricted by setting fs_pakFiles to avoid some
+ problems
+ =================
+ */
+void FS_AddGameDirectory (const char *dir)
+{
+    fsSearchPath_t    *search;
+    fsPack_t        *pack;
+    char            packPath[MAX_OSPATH];
+    int                i;
+    //VoiD -S- *.pak support
+    char *path = NULL;
+    char findname[1024];
+    char **dirnames;
+    int ndirs;
+    char *tmp;
+    //VoiD -E- *.pak support
+    
+    strcpy(fs_gamedir, dir);
+    
+    //
+    // Add the directory to the search path
+    //
+    search = Z_Malloc(sizeof(fsSearchPath_t));
+    strcpy(search->path, dir);
+    search->path[sizeof(search->path)-1] = 0;
+    search->next = fs_searchPaths;
+    fs_searchPaths = search;
+    
+    //
+    // add any pak files in the format pak0.pak pak1.pak, ...
+    //
+    for (i=0; i<100; i++)    // Pooy - paks can now go up to 100
+    {
+        Com_sprintf (packPath, sizeof(packPath), "%s/pak%i.pak", dir, i);
+        pack = FS_LoadPAK (packPath);
+        if (!pack)
+            continue;
+        search = Z_Malloc (sizeof(fsSearchPath_t));
+        search->pack = pack;
+        search->next = fs_searchPaths;
+        fs_searchPaths = search;
+    }
+    //
+    // NeVo - pak3's!
+    // add any pk3 files in the format pak0.pk3 pak1.pk3, ...
+    //
+    for (i=0; i<100; i++)    // Pooy - paks can now go up to 100
+    {
+        Com_sprintf (packPath, sizeof(packPath), "%s/pak%i.pk3", dir, i);
+        pack = FS_LoadPK3 (packPath);
+        if (!pack)
+            continue;
+        search = Z_Malloc (sizeof(fsSearchPath_t));
+        search->pack = pack;
+        search->next = fs_searchPaths;
+        fs_searchPaths = search;
+    }
+    
+    for (i=0; i<2; i++)
+    {    // NeVo - Set filetype
+        switch (i) {
+            case 0:
+                // Standard Quake II pack file '.pak'
+                Com_sprintf( findname, sizeof(findname), "%s/%s", dir, "*.pak" );
+                break;
+            case 1:
+                // Quake III pack file '.pk3'
+                Com_sprintf( findname, sizeof(findname), "%s/%s", dir, "*.pk3" );
+                break;
+            default:    // Is this reachable?
+                // Standard Quake II pack file '.pak'
+                Com_sprintf( findname, sizeof(findname), "%s/%s", dir, "*.pak" );
+                break;
+        }
+        //VoiD -S- *.pack support
+        tmp = findname;
+        while ( *tmp != 0 )
+        {
+            if ( *tmp == '\\' )
+                *tmp = '/';
+            tmp++;
+        }
+        if ( ( dirnames = FS_ListFiles( findname, &ndirs, 0, 0 ) ) != 0 )
+        {
+            int j;
+            for ( j=0; j < ndirs-1; j++ )
+            {    // don't reload numbered pak files
+                int    k;
+                char buf[16];
+                char buf2[16];
+                qboolean numberedpak = false;
+                for (k=0; k<100; k++)
+                {
+                    Com_sprintf( buf, sizeof(buf), "/pak%i.pak", k);
+                    Com_sprintf( buf2, sizeof(buf2), "/pak%i.pk3", k);
+                    if ( strstr(dirnames[j], buf) || strstr(dirnames[j], buf2)) {
+                        numberedpak = true;
+                        break;
+                    }
+                }
+                if (numberedpak)
+                    continue;
+                // end Knightmare
+                if ( strrchr( dirnames[j], '/' ) )
+                {
+                    if (i==1)
+                        pack = FS_LoadPK3 (dirnames[j]);
+                    else
+                        pack = FS_LoadPAK (dirnames[j]);
+                    if (!pack)
+                        continue;
+                    search = Z_Malloc (sizeof(fsSearchPath_t));
+                    search->pack = pack;
+                    search->next = fs_searchPaths;
+                    fs_searchPaths = search;
+                }
+                free( dirnames[j] );
+            }
+            free( dirnames );
+        }
+        //VoiD -E- *.pack support
+    }
+}
+
+
+/*
  * Allows enumerating all of the directories in the search path.
  */
 char *
@@ -969,6 +1605,173 @@ FS_Path_f(void)
 }
 
 /*
+ =================
+ FS_Startup
+ 
+ TODO: close open files for game dir
+ =================
+ */
+void FS_Startup (void)
+{
+    if (strstr(fs_gamedirvar->string, "..") || strstr(fs_gamedirvar->string, ".")
+        || strstr(fs_gamedirvar->string, "/") || strstr(fs_gamedirvar->string, "\\")
+        || strstr(fs_gamedirvar->string, ":") || !fs_gamedirvar->string[0])
+    {
+        //Com_Printf("Invalid game directory\n");
+        Cvar_ForceSet("game", BASEDIRNAME);
+    }
+    
+    // Check for game override
+    if (Q_stricmp(fs_gamedirvar->string, fs_currentGame))
+    {
+        fsSearchPath_t    *next;
+        fsPack_t        *pack;
+        
+        // Free up any current game dir info
+        while (fs_searchPaths != fs_baseSearchPaths)
+        {
+            if (fs_searchPaths->pack)
+            {
+                pack = fs_searchPaths->pack;
+                
+                if (pack->pak)
+                    fclose(pack->pak);
+                if (pack->pk3)
+                    unzClose(pack->pk3);
+                
+                Z_Free(pack->files);
+                Z_Free(pack);
+            }
+            
+            next = fs_searchPaths->next;
+            Z_Free(fs_searchPaths);
+            fs_searchPaths = next;
+        }
+        
+        if (!Q_stricmp(fs_gamedirvar->string, BASEDIRNAME))    // Don't add baseq2 again
+            strcpy(fs_gamedir, fs_basedir->string);
+        else
+        {
+            // Add the directories
+            FS_AddGameDirectory(va("%s/%s", fs_homepath->string, fs_gamedirvar->string));
+        }
+    }
+    
+    strcpy(fs_currentGame, fs_gamedirvar->string);
+    
+    FS_Path_f();
+}
+
+/*
+ =================
+ FS_Shutdown
+ =================
+ */
+void FS_Shutdown (void)
+{
+    fsHandle_t        *handle;
+    fsSearchPath_t    *next;
+    fsPack_t        *pack;
+    int                i;
+    
+    Cmd_RemoveCommand("dir");
+    //Cmd_RemoveCommand("fdir");
+    Cmd_RemoveCommand("link");
+    Cmd_RemoveCommand("path");
+    
+    // Close all files
+    for (i = 0, handle = fs_handles; i < MAX_HANDLES; i++, handle++)
+    {
+        if (handle->file)
+            fclose(handle->file);
+        if (handle->zip)
+        {
+            unzCloseCurrentFile(handle->zip);
+            unzClose(handle->zip);
+        }
+    }
+    
+    // Free the search paths
+    while (fs_searchPaths)
+    {
+        if (fs_searchPaths->pack)
+        {
+            pack = fs_searchPaths->pack;
+            
+            if (pack->pak)
+                fclose(pack->pak);
+            if (pack->pk3)
+                unzClose(pack->pk3);
+            
+            Z_Free(pack->files);
+            Z_Free(pack);
+        }
+        next = fs_searchPaths->next;
+        Z_Free(fs_searchPaths);
+        fs_searchPaths = next;
+    }
+}
+
+/*
+ ================
+ FS_SetGamedir
+ 
+ Sets the gamedir and path to a different directory.
+ ================
+ */
+void FS_SetGamedir (char *dir)
+{
+    fsSearchPath_t    *next;
+    
+    if (strstr(dir, "..") || strstr(dir, "/")
+        || strstr(dir, "\\") || strstr(dir, ":") )
+    {
+        Com_Printf ("Gamedir should be a single filename, not a path\n");
+        return;
+    }
+    
+    //
+    // free up any current game dir info
+    //
+    while (fs_searchPaths != fs_baseSearchPaths)
+    {
+        if (fs_searchPaths->pack)
+        {
+            if (fs_searchPaths->pack->pak)
+                fclose(fs_searchPaths->pack->pak);
+            if (fs_searchPaths->pack->pk3)
+                unzClose(fs_searchPaths->pack->pk3);
+            Z_Free (fs_searchPaths->pack->files);
+            Z_Free (fs_searchPaths->pack);
+        }
+        next = fs_searchPaths->next;
+        Z_Free (fs_searchPaths);
+        fs_searchPaths = next;
+    }
+    
+    //
+    // flush all data, so it will be forced to reload
+    //
+    if (dedicated && !dedicated->value)
+        Cbuf_AddText ("vid_restart\nsnd_restart\n");
+    
+    Com_sprintf (fs_gamedir, sizeof(fs_gamedir), "%s/%s", fs_basedir->string, dir);
+    
+    if (!strcmp(dir,BASEDIRNAME) || (*dir == 0))
+    {
+        Cvar_FullSet ("gamedir", "", CVAR_SERVERINFO|CVAR_NOSET);
+        Cvar_FullSet ("game", "", CVAR_LATCH|CVAR_SERVERINFO);
+    }
+    else
+    {
+        Cvar_FullSet ("gamedir", dir, CVAR_SERVERINFO|CVAR_NOSET);
+        if (fs_cddir->string[0])
+            FS_AddGameDirectory (va("%s/%s", fs_cddir->string, dir) );
+        FS_AddGameDirectory (va("%s/%s", fs_basedir->string, dir) );
+    }
+}
+
+/*
  * Creates a filelink_t.
  */
 void
@@ -1015,6 +1818,27 @@ FS_Link_f(void)
 	l->length = strlen(l->from);
 	l->to = CopyString(Cmd_Argv(2));
 }
+
+/*
+ =============
+ FS_ExecAutoexec
+ =============
+ */
+void FS_ExecAutoexec (void)
+{
+    char *dir;
+    char name [MAX_QPATH];
+    
+    dir = Cvar_VariableString("gamedir");
+    if (*dir)
+        Com_sprintf(name, sizeof(name), "%s/%s/autoexec.cfg", fs_basedir->string, dir);
+    else
+        Com_sprintf(name, sizeof(name), "%s/%s/autoexec.cfg", fs_basedir->string, BASEDIRNAME);
+    if (Sys_FindFirst(name, 0, SFF_SUBDIR | SFF_HIDDEN | SFF_SYSTEM))
+        Cbuf_AddText ("exec autoexec.cfg\n");
+    Sys_FindClose();
+}
+
 
 /*
  * Create a list of files that match a criteria.

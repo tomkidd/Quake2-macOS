@@ -733,7 +733,8 @@ typedef enum
 
 void FS_DPrintf(const char *format, ...);
 FILE        *FS_FileForHandle (fileHandle_t f);
-int FS_FOpenFile(const char *name, fileHandle_t *f, qboolean gamedir_only);
+//int FS_FOpenFile(const char *name, fileHandle_t *f, qboolean gamedir_only);
+int            FS_FOpenFile (const char *name, fileHandle_t *f, fsMode_t mode);
 void FS_FCloseFile(fileHandle_t f);
 int FS_Read(void *buffer, int size, fileHandle_t f);
 int FS_FRead(void *buffer, int size, int count, fileHandle_t f);
