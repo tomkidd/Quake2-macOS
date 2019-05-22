@@ -65,7 +65,8 @@
 #include "screen.h"
 #include "keyboard.h"
 #include "console.h"
-//#include "cinematic.h" //revisit -tkidd
+
+#include "cinematic.h"
 
 //Knightmare added
 #include "../../game/header/game.h"
@@ -291,7 +292,7 @@ typedef struct
 
 #ifdef    ROQ_SUPPORT
     // Cinematic information
-    //cinHandle_t        cinematicHandle; //revist -tkidd
+    cinHandle_t        cinematicHandle;
 #endif // ROQ_SUPPORT
     
 } client_static_t;
@@ -525,9 +526,10 @@ typedef struct particle_s
     
 	float		color;
 	float		colorvel;
-    // uncomment me out later -tkidd
-//    vec3_t        color;
-//    vec3_t        colorvel;
+    // revisit me -tkidd
+    //    vec3_t        color;
+    // revisit me -tkidd
+    //    vec3_t        colorvel;
 
 	float		alpha;
 	float		alphavel;
@@ -560,7 +562,7 @@ void CL_UnclipDecals (void); // Knightmare added
 void CL_ReclipDecals (void); // Knightmare added
 void CL_ClearTEnts (void);
 void CL_BlasterTrail (vec3_t start, vec3_t end);
-// uncomment out later -tkidd
+// revisit me -tkidd
 //void CL_BlasterTrail (vec3_t start, vec3_t end, int red, int green, int blue,
 //                      int reddelta, int greendelta, int bluedelta);
 void CL_QuadTrail (vec3_t start, vec3_t end);

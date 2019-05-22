@@ -28,9 +28,11 @@
 #include "header/client.h"
 #include "input/header/input.h"
 
-extern cvar_t *vid_renderer;
-
 cvar_t *cin_force43;
+
+#ifndef    ROQ_SUPPORT
+
+extern cvar_t *vid_renderer;
 
 typedef struct
 {
@@ -692,3 +694,4 @@ SCR_PlayCinematic(char *arg)
 	cl.cinematictime = Sys_Milliseconds();
 }
 
+#endif
