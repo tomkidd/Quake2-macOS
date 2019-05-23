@@ -539,21 +539,21 @@ SCR_DrawConsole(void)
 	if ((cls.state == ca_disconnected) || (cls.state == ca_connecting))
 	{
 		/* forced full screen console */
-		Con_DrawConsole(1.0);
+		Con_DrawConsole(1.0, false);
 		return;
 	}
 
 	if ((cls.state != ca_active) || !cl.refresh_prepped)
 	{
 		/* connected, but can't render */
-		Con_DrawConsole(0.5);
+		Con_DrawConsole(0.5, false);
 		Draw_Fill(0, viddef.height / 2, viddef.width, viddef.height / 2, 0);
 		return;
 	}
 
 	if (scr_con_current)
 	{
-		Con_DrawConsole(scr_con_current);
+		Con_DrawConsole(scr_con_current, true);
 	}
 	else
 	{

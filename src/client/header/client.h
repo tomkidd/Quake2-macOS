@@ -561,16 +561,27 @@ void CL_ClearEffects (void);
 void CL_UnclipDecals (void); // Knightmare added
 void CL_ReclipDecals (void); // Knightmare added
 void CL_ClearTEnts (void);
-void CL_BlasterTrail (vec3_t start, vec3_t end);
-// revisit me -tkidd
-//void CL_BlasterTrail (vec3_t start, vec3_t end, int red, int green, int blue,
-//                      int reddelta, int greendelta, int bluedelta);
+void CL_BlasterTrail (vec3_t start, vec3_t end, int red, int green, int blue,
+                      int reddelta, int greendelta, int bluedelta);
+
+// Hyperblaster glows
+void CL_HyperBlasterEffect (vec3_t start, vec3_t end, vec3_t angle, int red, int green, int blue,
+                            int reddelta, int greendelta, int bluedelta, float len, float size);
+void CL_HyperBlasterTrail (vec3_t start, vec3_t end, int red, int green, int blue, int reddelta, int greendelta, int bluedelta);
+void CL_BlasterTracer (vec3_t origin, vec3_t angle, int red, int green, int blue, float len, float size);
+//end Knightmare
+
 void CL_QuadTrail (vec3_t start, vec3_t end);
-void CL_RailTrail (vec3_t start, vec3_t end);
+void CL_RailTrail (vec3_t start, vec3_t end, qboolean isRed);
 void CL_BubbleTrail (vec3_t start, vec3_t end);
-void CL_FlagTrail (vec3_t start, vec3_t end, int color);
+void CL_FlagTrail (vec3_t start, vec3_t end, qboolean isred, qboolean isgreen);
 
 void CL_IonripperTrail (vec3_t start, vec3_t end);
+
+void vectoangles2 (vec3_t value1, vec3_t angles);
+
+void CL_BlasterParticles (vec3_t org, vec3_t dir, int count, int red, int green, int blue,
+                          int reddelta, int greendelta, int bluedelta);
 
 void CL_BlasterParticles2 (vec3_t org, vec3_t dir, unsigned int color);
 void CL_BlasterTrail2 (vec3_t start, vec3_t end);
@@ -581,16 +592,20 @@ void CL_ForceWall (vec3_t start, vec3_t end, int color);
 void CL_FlameEffects (centity_t *ent, vec3_t origin);
 void CL_GenericParticleEffect (vec3_t org, vec3_t dir, int color, int count, int numcolors, int dirspread, float alphavel);
 void CL_BubbleTrail2 (vec3_t start, vec3_t end, int dist);
-void CL_Heatbeam (vec3_t start, vec3_t end);
-void CL_ParticleSteamEffect (vec3_t org, vec3_t dir, int color, int count, int magnitude);
-void CL_TrackerTrail (vec3_t start, vec3_t end, int particleColor);
+void CL_HeatbeamParticles (vec3_t start, vec3_t end);
+void CL_ParticleSteamEffect (vec3_t org, vec3_t dir, int red, int green, int blue,
+                             int reddelta, int greendelta, int bluedelta, int count, int magnitude);
+// Psychospaz's enhanced particle code
+void CL_TrackerTrail (vec3_t start, vec3_t end);
 void CL_Tracker_Explode(vec3_t origin);
-void CL_TagTrail (vec3_t start, vec3_t end, int color);
+// Psychospaz's enhanced particle code
+void CL_TagTrail (vec3_t start, vec3_t end, int color8);
 void CL_ColorFlash (vec3_t pos, int ent, float intensity, float r, float g, float b);
 void CL_Tracker_Shell(vec3_t origin);
 void CL_MonsterPlasma_Shell(vec3_t origin);
 void CL_ColorExplosionParticles (vec3_t org, int color, int run);
-void CL_ParticleSmokeEffect (vec3_t org, vec3_t dir, int color, int count, int magnitude);
+// Psychospaz's enhanced particle code
+void CL_ParticleSmokeEffect (vec3_t org, vec3_t dir, float size);
 void CL_Widowbeamout (cl_sustain_t *self);
 void CL_Nukeblast (cl_sustain_t *self);
 void CL_WidowSplash (vec3_t org);
@@ -601,6 +616,7 @@ void CL_ParseFrame (void);
 
 void CL_ParseTEnt (void);
 void CL_ParseConfigString (void);
+void CL_PlayBackgroundTrack (void); // Knightmare added
 void CL_AddMuzzleFlash (void);
 void CL_AddMuzzleFlash2 (void);
 void SmokeAndFlash(vec3_t origin);
@@ -761,14 +777,35 @@ void SHOWNET(char *s);
 void CL_ParseClientinfo (int player);
 void CL_Download_f (void);
 
+//
+// cl_download.c
+//
+void CL_RequestNextDownload (void);
+qboolean CL_CheckOrDownloadFile (char *filename);
+void CL_Download_f (void);
+void CL_ParseDownload (void);
+
 extern	int			gun_frame;
 
 extern	struct model_s	*gun_model;
 
+qboolean loadingMessage;
+
+char loadingMessages[96];
+
+float loadingPercent;
+
 void V_Init (void);
 void V_RenderView( float stereo_separation );
 void V_AddEntity (entity_t *ent);
-void V_AddParticle (vec3_t org, unsigned int color, float alpha);
+// Psychospaz's enhanced particle code
+void V_AddParticle (vec3_t org, vec3_t angle, vec3_t color, float alpha,
+                    int alpha_src, int alpha_dst, float size, int image, int flags);
+#ifdef DECALS
+void V_AddDecal (vec3_t org, vec3_t angle, vec3_t color, float alpha,
+                 int alpha_src, int alpha_dst, float size, int image, int flags, decalpolys_t *decal);
+#endif
+
 void V_AddLight (vec3_t org, float intensity, float r, float g, float b);
 void V_AddLightStyle (int style, float r, float g, float b);
 
@@ -780,6 +817,11 @@ void CL_SmokeAndFlash(vec3_t origin);
 void CL_InitPrediction (void);
 void CL_PredictMove (void);
 void CL_CheckPredictionError (void);
+//Knightmare added
+trace_t CL_Trace (vec3_t start, vec3_t end, float size,  int contentmask);
+trace_t CL_BrushTrace (vec3_t start, vec3_t end, float size,  int contentmask);
+trace_t CL_PMTrace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
+trace_t CL_PMSurfaceTrace (int playernum, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int contentmask);
 
 cdlight_t *CL_AllocDlight (int key);
 void CL_BigTeleportParticles (vec3_t org);
@@ -791,12 +833,12 @@ void CL_AddParticles (void);
 void CL_EntityEvent (entity_state_t *ent);
 void CL_TrapParticles (entity_t *ent);
 
-void M_Init (void);
-void M_Keydown (int key);
-void M_Draw (void);
+void UI_Init (void);
+void UI_Keydown (int key);
+void UI_Draw (void);
+void UI_ForceMenuOff (void);
+void UI_AddToServerList (netadr_t adr, char *info);
 void M_Menu_Main_f (void);
-void M_ForceMenuOff (void);
-void M_AddToServerList (netadr_t adr, char *info);
 
 void CL_ParseInventory (void);
 void CL_KeyInventory (int key);
