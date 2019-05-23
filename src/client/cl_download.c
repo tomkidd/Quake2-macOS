@@ -24,6 +24,8 @@
  * =======================================================================
  */
 
+// NOTE: Skipping in the KMQuake2 -> YQuake2 graft for now -tkidd
+
 #include "header/client.h"
 
 extern cvar_t *allow_download;
@@ -31,6 +33,8 @@ extern cvar_t *allow_download_players;
 extern cvar_t *allow_download_models;
 extern cvar_t *allow_download_sounds;
 extern cvar_t *allow_download_maps;
+// Knightmare- whether to allow downloading 24-bit textures
+extern	cvar_t *allow_download_enh_textures;
 
 extern int precache_check;
 extern int precache_spawncount;
@@ -63,6 +67,11 @@ static const char *env_suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
 #define ENV_CNT (CS_PLAYERSKINS + MAX_CLIENTS * PLAYER_MULT)
 #define TEXTURE_CNT (ENV_CNT + 13)
 
+// Knightmare- old configstrings for version 34 client compatibility
+#define OLD_ENV_CNT (OLD_CS_PLAYERSKINS + MAX_CLIENTS * PLAYER_MULT)
+#define OLD_TEXTURE_CNT (OLD_ENV_CNT+13)
+
+void CL_InitFailedDownloadList (void);
 void
 CL_RequestNextDownload(void)
 {

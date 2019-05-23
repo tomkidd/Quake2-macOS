@@ -40,7 +40,13 @@ S_RegisterSexedModel(entity_state_t *ent, char *base)
 
 	/* determine what model the client is using */
 	model[0] = 0;
-	n = CS_PLAYERSKINS + ent->number - 1;
+
+    // Knightmare- BIG UGLY HACK for old connected to server using old protocol
+    // Changed config strings require different parsing
+    if ( LegacyProtocol() )
+        n = OLD_CS_PLAYERSKINS + ent->number - 1;
+    else
+        n = CS_PLAYERSKINS + ent->number - 1;
 
 	if (cl.configstrings[n][0])
 	{
@@ -93,6 +99,10 @@ S_RegisterSexedModel(entity_state_t *ent, char *base)
 	return md2;
 }
 
+// Knightmare- save off current player weapon model for player config menu
+extern    char    *currentweaponmodel;
+extern    char    cl_weaponmodels[MAX_CLIENTWEAPONMODELS][MAX_QPATH];
+
 void
 CL_AddPacketEntities(frame_t *frame)
 {
@@ -115,8 +125,17 @@ CL_AddPacketEntities(frame_t *frame)
 	/* brush models can auto animate their frames */
 	autoanim = 2 * cl.time / 1000;
 
+    // Knightmare added
+    VectorCopy( vec3_origin, clientOrg);
+    
+    // Knightmare- reset current weapon model
+    currentweaponmodel = NULL;
+    
 	for (pnum = 0; pnum < frame->num_entities; pnum++)
 	{
+        qboolean isclientviewer = false;
+        qboolean drawEnt = true; //Knightmare added
+        
 		s1 = &cl_parse_entities[(frame->parse_entities +
 				pnum) & (MAX_PARSE_ENTITIES - 1)];
 
@@ -125,6 +144,11 @@ CL_AddPacketEntities(frame_t *frame)
 		effects = s1->effects;
 		renderfx = s1->renderfx;
 
+        // if i want to multiply alpha, then id better do this...
+        ent.alpha = 1.0F;
+        // reset this
+        ent.renderfx = 0;
+        
 		/* set frame */
 		if (effects & EF_ANIM01)
 		{
@@ -150,6 +174,10 @@ CL_AddPacketEntities(frame_t *frame)
 		{
 			ent.frame = s1->frame;
 		}
+
+        // Knightmare- ents that cast light don't give off shadows
+        if (effects & (EF_BLASTER|EF_HYPERBLASTER|EF_BLUEHYPERBLASTER|EF_TRACKER|EF_ROCKET|EF_PLASMA|EF_IONRIPPER))
+            renderfx |= RF_NOSHADOW;
 
 		/* quad and pent can do different things on client */
 		if (effects & EF_PENT)
@@ -211,7 +239,9 @@ CL_AddPacketEntities(frame_t *frame)
 		else
 		{
 			/* set skin */
-			if (s1->modelindex == 255)
+            if ( s1->modelindex == MAX_MODELS-1 //was 255
+                //Knightmare- GROSS HACK for old demos, use modelindex 255
+                || ( LegacyProtocol() && s1->modelindex == OLD_MAX_MODELS-1 ) )
 			{
 				/* use custom player skin */
 				ent.skinnum = 0;
@@ -255,6 +285,42 @@ CL_AddPacketEntities(frame_t *frame)
 			}
 		}
 
+        //Knightmare added
+        //**** MODEL / EFFECT SWAPPING ETC *** - per gametype...
+        if (ent.model)
+        {
+            if (!Q_strcasecmp((char *)ent.model, "models/objects/laser/tris.md2")
+                && !(effects & EF_BLASTER))
+            {    // give the bolt an orange particle glow
+                CL_HyperBlasterEffect (cent->lerp_origin, ent.origin, s1->angles,
+                                       255, 150, 50, 0, -90, -30, 10, 2);
+                drawEnt = false;
+            }
+            if ( (!Q_strcasecmp((char *)ent.model, "models/proj/laser2/tris.md2")
+                  || !Q_strcasecmp((char *)ent.model, "models/objects/laser2/tris.md2")
+                  || !Q_strcasecmp((char *)ent.model, "models/objects/glaser/tris.md2") )
+                && !(effects & EF_BLASTER))
+            {    // give the bolt a green particle glow
+                CL_HyperBlasterEffect (cent->lerp_origin, ent.origin, s1->angles,
+                                       50, 235, 50, -10, 0, -10, 10, 2);
+                drawEnt = false;
+            }
+            if (!Q_strcasecmp((char *)ent.model, "models/objects/blaser/tris.md2")
+                && !(effects & EF_BLASTER))
+            {    // give the bolt a blue particle glow
+                CL_HyperBlasterEffect (cent->lerp_origin, ent.origin, s1->angles,
+                                       50, 50, 235, 0, -10, 0, -10, 2);
+                drawEnt = false;
+            }
+            if (!Q_strcasecmp((char *)ent.model, "models/objects/rlaser/tris.md2")
+                && !(effects & EF_BLASTER))
+            {    // give the bolt a red particle glow
+                CL_HyperBlasterEffect (cent->lerp_origin, ent.origin, s1->angles,
+                                       235, 50, 50, 0, -90, -30, -10, 2);
+                drawEnt = false;
+            }
+        }
+        
 		/* only used for black hole model right now */
 		if (renderfx & RF_TRANSLUCENT && !(renderfx & RF_BEAM))
 		{
@@ -309,10 +375,14 @@ CL_AddPacketEntities(frame_t *frame)
 		if (s1->number == cl.playernum + 1)
 		{
 			ent.flags |= RF_VIEWERMODEL;
+            isclientviewer = true;
 
 			if (effects & EF_FLAG1)
 			{
-				V_AddLight(ent.origin, 225, 1.0f, 0.1f, 0.1f);
+                if (effects & EF_FLAG2)
+                    V_AddLight (ent.origin, 255, 0.1, 1.0, 0.1);
+                else
+                    V_AddLight(ent.origin, 225, 1.0f, 0.1f, 0.1f);
 			}
 
 			else if (effects & EF_FLAG2)
@@ -330,7 +400,19 @@ CL_AddPacketEntities(frame_t *frame)
 				V_AddLight(ent.origin, 225, -1.0f, -1.0f, -1.0f);
 			}
 
-			continue;
+            // Knightmare- save off current player weapon model for player config menu
+            if (s1->modelindex2 == MAX_MODELS-1
+                || ( LegacyProtocol() && s1->modelindex2 == OLD_MAX_MODELS-1 ) )
+            {
+                ci = &cl.clientinfo[s1->skinnum & 0xff];
+                i = (s1->skinnum >> 8); // 0 is default weapon model
+                if (!cl_vwep->value || i > MAX_CLIENTWEAPONMODELS - 1)
+                    i = 0;
+                currentweaponmodel = cl_weaponmodels[i];
+            }
+            
+            if (!cl_3dcam->value)
+                continue;
 		}
 
 		/* if set to invisible, skip */
@@ -366,62 +448,89 @@ CL_AddPacketEntities(frame_t *frame)
 			}
 		}
 
+        // Knightmare- read server-assigned alpha, overriding effects flags
+#ifdef NEW_ENTITY_STATE_MEMBERS
+        if (s1->alpha > 0.0F && s1->alpha < 1.0F)
+        {
+            //ent.alpha = s1->alpha;
+            // lerp alpha :p
+            ent.alpha = cent->prev.alpha + cl.lerpfrac * (cent->current.alpha - cent->prev.alpha);
+            ent.flags |= RF_TRANSLUCENT;
+        }
+#endif
+        // Knightmare added for mirroring
+        if (renderfx & RF_MIRRORMODEL)
+            ent.flags |= RF_MIRRORMODEL;
+        
+        // if set to invisible, skip
+        if (!s1->modelindex)
+            continue;
+        
 		/* add to refresh list */
-		V_AddEntity(&ent);
+        if (drawEnt) //Knightmare added
+            V_AddEntity(&ent);
 
 		/* color shells generate a seperate entity for the main model */
-		if (effects & EF_COLOR_SHELL)
+        if (effects & EF_COLOR_SHELL && (!isclientviewer || (cl_3dcam->value
+                                                             && !(cl.attractloop && !(cl.cinematictime > 0 && cls.realtime - cl.cinematictime > 1000)))))
 		{
-			/* all of the solo colors are fine.  we need to catch any of
-			   the combinations that look bad (double & half) and turn
-			   them into the appropriate color, and make double/quad
-			   something special */
-			if (renderfx & RF_SHELL_HALF_DAM)
-			{
-				if (strcmp(game->string, "rogue") == 0)
-				{
-					/* ditch the half damage shell if any of red, blue, or double are on */
-					if (renderfx & (RF_SHELL_RED | RF_SHELL_BLUE | RF_SHELL_DOUBLE))
-					{
-						renderfx &= ~RF_SHELL_HALF_DAM;
-					}
-				}
-			}
-
-			if (renderfx & RF_SHELL_DOUBLE)
-			{
-				if (strcmp(game->string, "rogue") == 0)
-				{
-					/* lose the yellow shell if we have a red, blue, or green shell */
-					if (renderfx & (RF_SHELL_RED | RF_SHELL_BLUE | RF_SHELL_GREEN))
-					{
-						renderfx &= ~RF_SHELL_DOUBLE;
-					}
-
-					/* if we have a red shell, turn it to purple by adding blue */
-					if (renderfx & RF_SHELL_RED)
-					{
-						renderfx |= RF_SHELL_BLUE;
-					}
-
-					/* if we have a blue shell (and not a red shell),
-					   turn it to cyan by adding green */
-					else if (renderfx & RF_SHELL_BLUE)
-					{
-						/* go to green if it's on already,
-						   otherwise do cyan (flash green) */
-						if (renderfx & RF_SHELL_GREEN)
-						{
-							renderfx &= ~RF_SHELL_BLUE;
-						}
-
-						else
-						{
-							renderfx |= RF_SHELL_GREEN;
-						}
-					}
-				}
-			}
+            // PMM - at this point, all of the shells have been handled
+            // if we're in the rogue pack, set up the custom mixing, otherwise just
+            // keep going
+            // Knightmare 6/06/2002
+            if (roguepath())
+            {
+                /* all of the solo colors are fine.  we need to catch any of
+                 the combinations that look bad (double & half) and turn
+                 them into the appropriate color, and make double/quad
+                 something special */
+                if (renderfx & RF_SHELL_HALF_DAM)
+                {
+                    if (strcmp(game->string, "rogue") == 0)
+                    {
+                        /* ditch the half damage shell if any of red, blue, or double are on */
+                        if (renderfx & (RF_SHELL_RED | RF_SHELL_BLUE | RF_SHELL_DOUBLE))
+                        {
+                            renderfx &= ~RF_SHELL_HALF_DAM;
+                        }
+                    }
+                }
+                
+                if (renderfx & RF_SHELL_DOUBLE)
+                {
+                    if (strcmp(game->string, "rogue") == 0)
+                    {
+                        /* lose the yellow shell if we have a red, blue, or green shell */
+                        if (renderfx & (RF_SHELL_RED | RF_SHELL_BLUE | RF_SHELL_GREEN))
+                        {
+                            renderfx &= ~RF_SHELL_DOUBLE;
+                        }
+                        
+                        /* if we have a red shell, turn it to purple by adding blue */
+                        if (renderfx & RF_SHELL_RED)
+                        {
+                            renderfx |= RF_SHELL_BLUE;
+                        }
+                        
+                        /* if we have a blue shell (and not a red shell),
+                         turn it to cyan by adding green */
+                        else if (renderfx & RF_SHELL_BLUE)
+                        {
+                            /* go to green if it's on already,
+                             otherwise do cyan (flash green) */
+                            if (renderfx & RF_SHELL_GREEN)
+                            {
+                                renderfx &= ~RF_SHELL_BLUE;
+                            }
+                            
+                            else
+                            {
+                                renderfx |= RF_SHELL_GREEN;
+                            }
+                        }
+                    }
+                }
+            }
 
 			ent.flags = renderfx | RF_TRANSLUCENT;
 			ent.alpha = 0.30f;
@@ -431,12 +540,14 @@ CL_AddPacketEntities(frame_t *frame)
 		ent.skin = NULL; /* never use a custom skin on others */
 		ent.skinnum = 0;
 		ent.flags = 0;
-		ent.alpha = 0;
+        ent.alpha = 1.0F;
 
 		/* duplicate for linked models */
 		if (s1->modelindex2)
 		{
-			if (s1->modelindex2 == 255)
+            if (s1->modelindex2 == MAX_MODELS-1
+                //Knightmare- GROSS HACK for old demos, use modelindex 255
+                || ( LegacyProtocol() && s1->modelindex2 == OLD_MAX_MODELS-1 ) )
 			{
 				/* custom weapon */
 				ci = &cl.clientinfo[s1->skinnum & 0xff];
@@ -475,235 +586,624 @@ CL_AddPacketEntities(frame_t *frame)
 				ent.flags = RF_TRANSLUCENT;
 			}
 
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
 			V_AddEntity(&ent);
 
 			ent.flags = 0;
-			ent.alpha = 0;
-		}
+            ent.alpha = 1.0F;
+        }
 
 		if (s1->modelindex3)
 		{
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
 			ent.model = cl.model_draw[s1->modelindex3];
 			V_AddEntity(&ent);
 		}
 
 		if (s1->modelindex4)
 		{
-			ent.model = cl.model_draw[s1->modelindex4];
-			V_AddEntity(&ent);
-		}
-
-		if (effects & EF_POWERSCREEN)
-		{
-			ent.model = cl_mod_powerscreen;
-			ent.oldframe = 0;
-			ent.frame = 0;
-			ent.flags |= (RF_TRANSLUCENT | RF_SHELL_GREEN);
-			ent.alpha = 0.30f;
-			V_AddEntity(&ent);
-		}
-
-		/* add automatic particle trails */
-		if ((effects & ~EF_ROTATE))
-		{
-			if (effects & EF_ROCKET)
-			{
-				CL_RocketTrail(cent->lerp_origin, ent.origin, cent);
-				V_AddLight(ent.origin, 200, 1, 0.25f, 0);
-			}
-
-			/* Do not reorder EF_BLASTER and EF_HYPERBLASTER.
-			   EF_BLASTER | EF_TRACKER is a special case for
-			   EF_BLASTER2 */
-			else if (effects & EF_BLASTER)
-			{
-				if (effects & EF_TRACKER)
-				{
-					CL_BlasterTrail2(cent->lerp_origin, ent.origin);
-					V_AddLight(ent.origin, 200, 0, 1, 0);
-				}
-				else
-				{
-					CL_BlasterTrail(cent->lerp_origin, ent.origin);
-					V_AddLight(ent.origin, 200, 1, 1, 0);
-				}
-			}
-			else if (effects & EF_HYPERBLASTER)
-			{
-				if (effects & EF_TRACKER)
-				{
-					V_AddLight(ent.origin, 200, 0, 1, 0);
-				}
-
-				else
-				{
-					V_AddLight(ent.origin, 200, 1, 1, 0);
-				}
-			}
-			else if (effects & EF_GIB)
-			{
-				CL_DiminishingTrail(cent->lerp_origin, ent.origin,
-						cent, effects);
-			}
-			else if (effects & EF_GRENADE)
-			{
-				CL_DiminishingTrail(cent->lerp_origin, ent.origin,
-						cent, effects);
-			}
-			else if (effects & EF_FLIES)
-			{
-				CL_FlyEffect(cent, ent.origin);
-			}
-			else if (effects & EF_BFG)
-			{
-				static int bfg_lightramp[6] = {300, 400, 600, 300, 150, 75};
-
-				if (effects & EF_ANIM_ALLFAST)
-				{
-					CL_BfgParticles(&ent);
-					i = 200;
-				}
-				else
-				{
-					i = bfg_lightramp[s1->frame];
-				}
-
-				V_AddLight(ent.origin, i, 0, 1, 0);
-			}
-			else if (effects & EF_TRAP)
-			{
-				ent.origin[2] += 32;
-				CL_TrapParticles(&ent);
-				i = (randk() % 100) + 100;
-				V_AddLight(ent.origin, i, 1, 0.8f, 0.1f);
-			}
-			else if (effects & EF_FLAG1)
-			{
-				CL_FlagTrail(cent->lerp_origin, ent.origin, 242);
-				V_AddLight(ent.origin, 225, 1, 0.1f, 0.1f);
-			}
-			else if (effects & EF_FLAG2)
-			{
-				CL_FlagTrail(cent->lerp_origin, ent.origin, 115);
-				V_AddLight(ent.origin, 225, 0.1f, 0.1f, 1);
-			}
-			else if (effects & EF_TAGTRAIL)
-			{
-				CL_TagTrail(cent->lerp_origin, ent.origin, 220);
-				V_AddLight(ent.origin, 225, 1.0, 1.0, 0.0);
-			}
-			else if (effects & EF_TRACKERTRAIL)
-			{
-				if (effects & EF_TRACKER)
-				{
-					float intensity;
-
-					intensity = 50 + (500 * ((float)sin(cl.time / 500.0f) + 1.0f));
-					V_AddLight(ent.origin, intensity, -1.0, -1.0, -1.0);
-				}
-				else
-				{
-					CL_Tracker_Shell(cent->lerp_origin);
-					V_AddLight(ent.origin, 155, -1.0, -1.0, -1.0);
-				}
-			}
-			else if (effects & EF_TRACKER)
-			{
-				CL_TrackerTrail(cent->lerp_origin, ent.origin, 0);
-				V_AddLight(ent.origin, 200, -1, -1, -1);
-			}
-			else if (effects & EF_IONRIPPER)
-			{
-				CL_IonripperTrail(cent->lerp_origin, ent.origin);
-				V_AddLight(ent.origin, 100, 1, 0.5, 0.5);
-			}
-			else if (effects & EF_BLUEHYPERBLASTER)
-			{
-				V_AddLight(ent.origin, 200, 0, 0, 1);
-			}
-			else if (effects & EF_PLASMA)
-			{
-				if (effects & EF_ANIM_ALLFAST)
-				{
-					CL_BlasterTrail(cent->lerp_origin, ent.origin);
-				}
-
-				V_AddLight(ent.origin, 130, 1, 0.5, 0.5);
-			}
-		}
-
-		VectorCopy(ent.origin, cent->lerp_origin);
-	}
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
+            ent.model = cl.model_draw[s1->modelindex4];
+            V_AddEntity(&ent);
+        }
+        
+#ifdef NEW_ENTITY_STATE_MEMBERS
+        //Knightmare- 1/18/2002- extra model indices
+        if (s1->modelindex5)
+        {
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
+            ent.model = cl.model_draw[s1->modelindex5];
+            V_AddEntity (&ent);
+        }
+        if (s1->modelindex6)
+        {
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
+            ent.model = cl.model_draw[s1->modelindex6];
+            V_AddEntity (&ent);
+        }
+        if (s1->modelindex7)
+        {
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
+            ent.model = cl.model_draw[s1->modelindex7];
+            V_AddEntity (&ent);
+        }
+        if (s1->modelindex8)
+        {
+            // Knightmare added for Psychospaz's chasecam
+            if (isclientviewer)
+                ent.flags |= RF_VIEWERMODEL;
+            
+            // Knightmare added for mirroring
+            if (renderfx & RF_MIRRORMODEL)
+                ent.flags |= RF_MIRRORMODEL;
+            
+            ent.model = cl.model_draw[s1->modelindex8];
+            V_AddEntity (&ent);
+        }
+        //end Knightmare
+#endif
+        
+        if (effects & EF_POWERSCREEN)
+        {
+            ent.model = cl_mod_powerscreen;
+            ent.oldframe = 0;
+            ent.frame = 0;
+            ent.flags |= (RF_TRANSLUCENT | RF_SHELL_GREEN);
+            ent.alpha = 0.30f;
+            V_AddEntity(&ent);
+        }
+        
+        /* add automatic particle trails */
+        if ((effects & ~EF_ROTATE))
+        {
+            if (effects & EF_ROCKET)
+            {
+                CL_RocketTrail(cent->lerp_origin, ent.origin, cent);
+                V_AddLight(ent.origin, 200, 1, 0.25f, 0);
+            }
+            
+            /* Do not reorder EF_BLASTER and EF_HYPERBLASTER.
+             EF_BLASTER | EF_TRACKER is a special case for
+             EF_BLASTER2 */
+            else if (effects & EF_BLASTER)
+            {
+                if (effects & EF_TRACKER)
+                {
+                    CL_BlasterTrail (cent->lerp_origin, ent.origin, 50, 235, 50, -10, 0, -10);
+                    V_AddLight (ent.origin, 200, 0.15, 1, 0.15);
+                }
+                //Knightmare- behold, the power of cheese!!
+                else if (effects & EF_BLUEHYPERBLASTER) // EF_BLUEBLASTER
+                {
+                    CL_BlasterTrail (cent->lerp_origin, ent.origin, 50, 50, 235, -10, 0, -10);
+                    V_AddLight (ent.origin, 200, 0.15, 0.15, 1);
+                }
+                //Knightmare- behold, the power of cheese!!
+                else if (effects & EF_IONRIPPER) // EF_REDBLASTER
+                {
+                    CL_BlasterTrail (cent->lerp_origin, ent.origin, 235, 50, 50, 0, -90, -30);
+                    V_AddLight (ent.origin, 200, 1, 0.15, 0.15);
+                }
+                else
+                {
+                    if ((effects & EF_GREENGIB) && cl_blood->value >= 1) // EF_BLASTER|EF_GREENGIB effect
+                        CL_DiminishingTrail (cent->lerp_origin, ent.origin, cent, effects);
+                    else
+                        CL_BlasterTrail (cent->lerp_origin, ent.origin, 255, 150, 50, 0, -90, -30);
+                    V_AddLight (ent.origin, 200, 1, 1, 0.15);
+                }
+            }
+            else if (effects & EF_HYPERBLASTER)
+            {
+                if (effects & EF_TRACKER)
+                {
+                    V_AddLight (ent.origin, 200, 0.15, 1, 0.15);// PGM
+                }
+                else if (effects & EF_IONRIPPER) // Knightmare- overloaded for EF_REDHYPERBLASTER
+                {
+                    V_AddLight (ent.origin, 200, 1, 0.15, 0.15);
+                }
+                else                                            // PGM
+                {
+                    V_AddLight (ent.origin, 200, 1, 1, 0.15);
+                }
+            }
+            else if (effects & EF_GIB)
+            {
+                if (cl_blood->value >= 1)
+                    CL_DiminishingTrail(cent->lerp_origin, ent.origin,
+                                        cent, effects);
+            }
+            else if (effects & EF_GRENADE)
+            {
+                CL_DiminishingTrail(cent->lerp_origin, ent.origin,
+                                    cent, effects);
+            }
+            else if (effects & EF_FLIES)
+            {
+                CL_FlyEffect(cent, ent.origin);
+            }
+            else if (effects & EF_BFG)
+            {
+                static int bfg_lightramp[6] = {300, 400, 600, 300, 150, 75};
+                
+                if (effects & EF_ANIM_ALLFAST)
+                {
+                    CL_BfgParticles(&ent);
+                    i = 200;
+                }
+                else
+                {
+                    i = bfg_lightramp[s1->frame];
+                }
+                
+                V_AddLight(ent.origin, i, 0, 1, 0);
+            }
+            else if (effects & EF_TRAP)
+            {
+                ent.origin[2] += 32;
+                CL_TrapParticles(&ent);
+                i = (randk() % 100) + 100;
+                V_AddLight(ent.origin, i, 1, 0.8f, 0.1f);
+            }
+            else if (effects & EF_FLAG1)
+            {
+                // EF_FLAG1|EF_FLAG2 is a special case for EF_FLAG3...  More cheese!
+                if (effects & EF_FLAG2)
+                {    //Knightmare- Psychospaz's enhanced particle code
+                    CL_FlagTrail (cent->lerp_origin, ent.origin, false, true);
+                    V_AddLight (ent.origin, 255, 0.1, 1, 0.1);
+                }
+                else
+                {    //Knightmare- Psychospaz's enhanced particle code
+                    CL_FlagTrail (cent->lerp_origin, ent.origin, true, false);
+                    V_AddLight (ent.origin, 225, 1, 0.1, 0.1);
+                }
+                //end Knightmare
+            }
+            else if (effects & EF_FLAG2)
+            {
+                CL_FlagTrail (cent->lerp_origin, ent.origin, false, false);
+                V_AddLight(ent.origin, 225, 0.1f, 0.1f, 1);
+            }
+            else if (effects & EF_TAGTRAIL)
+            {
+                CL_TagTrail(cent->lerp_origin, ent.origin, 220);
+                V_AddLight(ent.origin, 225, 1.0, 1.0, 0.0);
+            }
+            else if (effects & EF_TRACKERTRAIL)
+            {
+                if (effects & EF_TRACKER)
+                {
+                    float intensity;
+                    
+                    intensity = 50 + (500 * ((float)sin(cl.time / 500.0f) + 1.0f));
+                    V_AddLight(ent.origin, intensity, -1.0, -1.0, -1.0);
+                }
+                else
+                {
+                    CL_Tracker_Shell(cent->lerp_origin);
+                    V_AddLight(ent.origin, 155, -1.0, -1.0, -1.0);
+                }
+            }
+            else if (effects & EF_TRACKER)
+            {    //Knightmare- this is replaced for Psychospaz's enhanced particle code
+                CL_TrackerTrail (cent->lerp_origin, ent.origin);
+                V_AddLight(ent.origin, 200, -1, -1, -1);
+            }
+            else if (effects & EF_IONRIPPER)
+            {
+                CL_IonripperTrail(cent->lerp_origin, ent.origin);
+                V_AddLight(ent.origin, 100, 1, 0.5, 0.5);
+            }
+            else if (effects & EF_BLUEHYPERBLASTER)
+            {
+                V_AddLight(ent.origin, 200, 0, 0, 1);
+            }
+            else if (effects & EF_PLASMA)
+            {
+                if (effects & EF_ANIM_ALLFAST)
+                {
+                    CL_BlasterTrail (cent->lerp_origin, ent.origin, 255, 150, 50, 0, -90, -30);
+                }
+                
+                V_AddLight(ent.origin, 130, 1, 0.5, 0.5);
+            }
+        }
+        
+        VectorCopy(ent.origin, cent->lerp_origin);
+    }
 }
 
 void
 CL_AddViewWeapon(player_state_t *ps, player_state_t *ops)
 {
-	entity_t gun = {0}; /* view model */
-	int i;
+    entity_t gun = {0}; /* view model */
+    int i;
+    
+#ifdef NEW_PLAYER_STATE_MEMBERS //Knightmare- second gun model
+    entity_t    gun2;        // view model
+#endif
+    
+    //dont draw if outside body...
+    if (cl_3dcam->value
+        && !(cl.attractloop && !(cl.cinematictime > 0 && cls.realtime - cl.cinematictime > 1000)))
+        return;
+    
+    /* allow the gun to be completely removed */
+    if (!cl_gun->value)
+    {
+        return;
+    }
+    
+    /* don't draw gun if in wide angle view and drawing not forced */
+    if (ps->fov > 180) //Knightmare 1/4/2002 - was 90
+    {
+        if (cl_gun->value < 2)
+        {
+            return;
+        }
+    }
+    
+#ifdef NEW_PLAYER_STATE_MEMBERS //Knightmare- second gun model
+    memset (&gun2, 0, sizeof(gun2));
+#endif
+    
+    if (gun_model)
+    {
+        gun.model = gun_model;
+    }
+    else
+    {
+        gun.model = cl.model_draw[ps->gunindex];
+    }
+    
+#ifdef NEW_PLAYER_STATE_MEMBERS //Knightmare- second gun model
+    gun2.model = cl.model_draw[ps->gunindex2];
+    if (!gun.model && !gun2.model)
+        return;
+#else
+    if (!gun.model)
+    {
+        return;
+    }
+#endif
+    
+    if (gun.model)
+    {
+        
+        /* set up gun position */
+        for (i = 0; i < 3; i++)
+        {
+            gun.origin[i] = cl.refdef.vieworg[i] + ops->gunoffset[i]
+            + cl.lerpfrac * (ps->gunoffset[i] - ops->gunoffset[i]);
+            gun.angles[i] = cl.refdef.viewangles[i] + LerpAngle(ops->gunangles[i],
+                                                                ps->gunangles[i], cl.lerpfrac);
+        }
+        
+        if (gun_frame)
+        {
+            gun.frame = gun_frame;
+            gun.oldframe = gun_frame;
+        }
+        else
+        {
+            gun.frame = ps->gunframe;
+            
+            if (gun.frame == 0)
+            {
+                gun.oldframe = 0; /* just changed weapons, don't lerp from old */
+            }
+            else
+            {
+                gun.oldframe = ops->gunframe;
+            }
+        }
+        
+        //Knightmare- added changeable skin
+#ifdef NEW_PLAYER_STATE_MEMBERS
+        if (ps->gunskin)
+            gun.skinnum = ops->gunskin;
+#endif
+        
+        gun.flags = RF_MINLIGHT | RF_DEPTHHACK | RF_WEAPONMODEL;
+        gun.backlerp = 1.0f - cl.lerpfrac;
+        VectorCopy(gun.origin, gun.oldorigin); /* don't lerp at all */
+        V_AddEntity(&gun);
+        
+        //add shells for viewweaps (all of em!)
+        if (cl_weapon_shells->value)
+        {
+            int oldeffects = gun.flags, pnum;
+            entity_state_t    *s1;
+            
+            for (pnum = 0 ; pnum<cl.frame.num_entities ; pnum++)
+                if ((s1=&cl_parse_entities[(cl.frame.parse_entities+pnum)&(MAX_PARSE_ENTITIES-1)])->number == cl.playernum+1)
+                {
+                    int effects = s1->renderfx;
+                    
+                    //if (effects & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_GREEN) || s1->effects&(EF_PENT|EF_QUAD))
+                    if (s1->effects&(EF_PENT|EF_QUAD|EF_DOUBLE|EF_HALF_DAMAGE))
+                    {
+                        gun.flags = 0;
+                        if (s1->effects & EF_QUAD)
+                            gun.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_BLUE;
+                        if (s1->effects & EF_PENT)
+                            gun.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_RED;
+                        if (s1->effects & EF_DOUBLE && !(s1->effects&(EF_PENT|EF_QUAD)) )
+                            gun.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_DOUBLE;
+                        if (s1->effects & EF_HALF_DAMAGE && !(s1->effects&(EF_PENT|EF_QUAD|EF_DOUBLE)) )
+                            gun.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_HALF_DAM;
+                        
+                        gun.flags |= RF_TRANSLUCENT;
+                        gun.alpha = 0.30;
+                        
+                        V_AddEntity (&gun);
+                        /*if (s1->effects & EF_COLOR_SHELL && gun.flags & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_GREEN))
+                         {
+                         gun.skin = R_RegisterSkin ("gfx/shell_generic.pcx");
+                         
+                         V_AddEntity (&gun);
+                         }
+                         if (s1->effects & EF_PENT)
+                         {
+                         gun.skin = R_RegisterSkin ("gfx/shell_generic.pcx");
+                         gun.flags = oldeffects | RF_TRANSLUCENT | RF_SHELL_RED;
+                         V_AddLight (gun.origin, 130, 1, 0.25, 0.25);
+                         V_AddLight (gun.origin, 100, 1, 0, 0);
+                         
+                         V_AddEntity (&gun);
+                         }
+                         if (s1->effects & EF_QUAD)
+                         {
+                         gun.skin = R_RegisterSkin ("gfx/shell_generic.pcx");
+                         gun.flags = oldeffects | RF_TRANSLUCENT | RF_SHELL_BLUE;
+                         V_AddLight (gun.origin, 130, 0.25, 0.5, 1);
+                         V_AddLight (gun.origin, 100, 0, 0.25, 1);
+                         
+                         V_AddEntity (&gun);
+                         }*/
+                    }
+                    break; // early termination
+                }
+            gun.flags = oldeffects;
+        }
+    }
+    //Knightmare- second gun model
+#ifdef NEW_PLAYER_STATE_MEMBERS
+    if (gun2.model)
+    {
+        // set up gun2 position
+        for (i=0 ; i<3 ; i++)
+        {
+            gun2.origin[i] = cl.refdef.vieworg[i] + ops->gunoffset[i]
+            + cl.lerpfrac * (ps->gunoffset[i] - ops->gunoffset[i]);
+            gun2.angles[i] = cl.refdef.viewangles[i] + LerpAngle (ops->gunangles[i],
+                                                                  ps->gunangles[i], cl.lerpfrac);
+        }
+        
+        gun2.frame = ps->gunframe2;
+        if (gun2.frame == 0)
+            gun2.oldframe = 0;    // just changed weapons, don't lerp from old
+        else
+            gun2.oldframe = ops->gunframe2;
+        
+        if (ps->gunskin2)
+            gun2.skinnum = ops->gunskin2;
+        
+        gun2.flags = RF_MINLIGHT | RF_DEPTHHACK | RF_WEAPONMODEL;
+        gun2.backlerp = 1.0 - cl.lerpfrac;
+        VectorCopy (gun2.origin, gun2.oldorigin);    // don't lerp at all
+        V_AddEntity (&gun2);
+        
+        //add shells for viewweaps (all of em!)
+        if (cl_weapon_shells->value)
+        {
+            int oldeffects = gun2.flags, pnum;
+            entity_state_t    *s1;
+            
+            for (pnum = 0 ; pnum<cl.frame.num_entities ; pnum++)
+                if ((s1=&cl_parse_entities[(cl.frame.parse_entities+pnum)&(MAX_PARSE_ENTITIES-1)])->number == cl.playernum+1)
+                {
+                    int effects = s1->renderfx;
+                    
+                    //if (effects & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_GREEN) || s1->effects&(EF_PENT|EF_QUAD))
+                    if (s1->effects&(EF_PENT|EF_QUAD|EF_DOUBLE|EF_HALF_DAMAGE))
+                    {
+                        gun2.flags = 0;
+                        if (s1->effects & EF_QUAD)
+                            gun2.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_BLUE;
+                        if (s1->effects & EF_PENT)
+                            gun2.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_RED;
+                        if (s1->effects & EF_DOUBLE && !(s1->effects&(EF_PENT|EF_QUAD)) )
+                            gun2.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_DOUBLE;
+                        if (s1->effects & EF_HALF_DAMAGE && !(s1->effects&(EF_PENT|EF_QUAD|EF_DOUBLE)) )
+                            gun2.flags |= oldeffects | RF_TRANSLUCENT | RF_SHELL_HALF_DAM;
+                        
+                        gun2.flags |= RF_TRANSLUCENT;
+                        gun2.alpha = 0.30;
+                        
+                        V_AddEntity (&gun2);
+                        /*if (s1->effects & EF_COLOR_SHELL && gun2.flags & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_GREEN))
+                         {
+                         gun2.skin = R_RegisterSkin ("gfx/shell_generic.pcx");
+                         
+                         V_AddEntity (&gun2);
+                         }
+                         
+                         if (s1->effects & EF_PENT)
+                         {
+                         gun2.skin = R_RegisterSkin ("gfx/shell_generic.pcx");
+                         gun2.flags = oldeffects | RF_TRANSLUCENT | RF_SHELL_RED;
+                         V_AddLight (gun2.origin, 130, 1, 0.25, 0.25);
+                         V_AddLight (gun2.origin, 100, 1, 0, 0);
+                         
+                         V_AddEntity (&gun2);
+                         }
+                         if (s1->effects & EF_QUAD)
+                         {
+                         gun2.skin = R_RegisterSkin ("gfx/shell_generic.pcx");
+                         gun2.flags = oldeffects | RF_TRANSLUCENT | RF_SHELL_BLUE;
+                         V_AddLight (gun2.origin, 130, 0.25, 0.5, 1);
+                         V_AddLight (gun2.origin, 100, 0, 0.25, 1);
+                         
+                         V_AddEntity (&gun2);
+                         }*/
+                    }
+                    break; // early termination
+                }
+            gun2.flags = oldeffects;
+        }
+    }
+#endif
+}
 
-	/* allow the gun to be completely removed */
-	if (!cl_gun->value)
-	{
-		return;
-	}
+/*
+ ===============
+ SetUpCamera
+ 
+ ===============
+ */
 
-	/* don't draw gun if in wide angle view and drawing not forced */
-	if (ps->fov > 90)
-	{
-		if (cl_gun->value < 2)
-		{
-			return;
-		}
-	}
+void CalcViewerCamTrans(float dist);
+void ClipCam (vec3_t start, vec3_t end, vec3_t newpos);
+// Knightmare- backup of client angles
+vec3_t old_viewangles;
 
-	if (gun_model)
-	{
-		gun.model = gun_model;
-	}
-
-	else
-	{
-		gun.model = cl.model_draw[ps->gunindex];
-	}
-
-	if (!gun.model)
-	{
-		return;
-	}
-
-	/* set up gun position */
-	for (i = 0; i < 3; i++)
-	{
-		gun.origin[i] = cl.refdef.vieworg[i] + ops->gunoffset[i]
-			+ cl.lerpfrac * (ps->gunoffset[i] - ops->gunoffset[i]);
-		gun.angles[i] = cl.refdef.viewangles[i] + LerpAngle(ops->gunangles[i],
-			ps->gunangles[i], cl.lerpfrac);
-	}
-
-	if (gun_frame)
-	{
-		gun.frame = gun_frame;
-		gun.oldframe = gun_frame;
-	}
-	else
-	{
-		gun.frame = ps->gunframe;
-
-		if (gun.frame == 0)
-		{
-			gun.oldframe = 0; /* just changed weapons, don't lerp from old */
-		}
-		else
-		{
-			gun.oldframe = ops->gunframe;
-		}
-	}
-
-	gun.flags = RF_MINLIGHT | RF_DEPTHHACK | RF_WEAPONMODEL;
-	gun.backlerp = 1.0f - cl.lerpfrac;
-	VectorCopy(gun.origin, gun.oldorigin); /* don't lerp at all */
-	V_AddEntity(&gun);
+void SetUpCamera (void)
+{
+    if (cl_3dcam->value && !(cl.attractloop && !(cl.cinematictime > 0 && cls.realtime - cl.cinematictime > 1000)))
+    {
+        vec3_t end, oldorg, _3dcamposition, _3dcamforward;
+        float dist_up, dist_back, angle;
+        
+        if (cl_3dcam_dist->value < 0)
+            Cvar_SetValue( "cl_3dcam_dist", 0 );
+        
+        // Knightmare- backup old viewangles
+        VectorCopy(cl.refdef.viewangles, old_viewangles);
+        
+        //and who said trig was pointless?
+        angle = M_PI * cl_3dcam_angle->value/180.0f;
+        dist_up = cl_3dcam_dist->value * sin( angle  );
+        dist_back =  cl_3dcam_dist->value * cos ( angle );
+        //finish polar vector
+        
+        VectorCopy(cl.refdef.vieworg, oldorg);
+        if (cl_3dcam_chase->value)
+        {
+            VectorMA(cl.refdef.vieworg, -dist_back, cl.v_forward, end);
+            VectorMA(end, dist_up, cl.v_up, end);
+            
+            //move back so looking straight down want make us look towards ourself
+            {
+                vec3_t temp, temp2;
+                
+                vectoangles2(cl.v_forward, temp);
+                temp[PITCH]=0;
+                temp[ROLL]=0;
+                AngleVectors(temp, temp2, NULL, NULL);
+                VectorMA(end, -(dist_back/1.8f), temp2, end);
+            }
+            
+            ClipCam (cl.refdef.vieworg, end, _3dcamposition);
+        }
+        else
+        {
+            vec3_t temp, viewForward, viewUp;
+            
+            vectoangles2(cl.v_forward, temp);
+            temp[PITCH]=0;
+            temp[ROLL]=0;
+            AngleVectors(temp, viewForward, NULL, viewUp);
+            
+            VectorScale(viewForward, dist_up*0.5f, _3dcamforward);
+            
+            VectorMA(cl.refdef.vieworg, -dist_back, viewForward, end);
+            VectorMA(end, dist_up, viewUp, end);
+            
+            ClipCam (cl.refdef.vieworg, end, _3dcamposition);
+        }
+        
+        
+        VectorSubtract(_3dcamposition, oldorg, end);
+        
+        CalcViewerCamTrans(VectorLength(end));
+        
+        if (!cl_3dcam_chase->value)
+        {
+            vec3_t newDir[2], newPos;
+            
+            VectorSubtract(cl.predicted_origin, _3dcamposition, newDir[0]);
+            VectorNormalize(newDir[0]);
+            vectoangles2(newDir[0],newDir[1]);
+            VectorCopy(newDir[1], cl.refdef.viewangles);
+            
+            VectorAdd(_3dcamforward, cl.refdef.vieworg, newPos);
+            ClipCam (cl.refdef.vieworg, newPos, cl.refdef.vieworg);
+        }
+        else //now aim at where ever client is...
+        {
+            vec3_t newDir, dir;
+            
+            if (cl_3dcam_adjust->value)
+            {
+                VectorMA(cl.refdef.vieworg, 8000, cl.v_forward, dir);
+                ClipCam (cl.refdef.vieworg, dir, newDir);
+                
+                VectorSubtract(newDir, _3dcamposition, dir);
+                VectorNormalize(dir);
+                vectoangles2(dir, newDir);
+                
+                AngleVectors(newDir, cl.v_forward, cl.v_right, cl.v_up);
+                VectorCopy(newDir, cl.refdef.viewangles);
+            }
+            
+            VectorCopy(_3dcamposition, cl.refdef.vieworg);
+        }
+    }
 }
 
 /*
@@ -780,6 +1280,8 @@ CL_CalcViewValues(void)
 			cl.refdef.vieworg[i] = cl.predicted_origin[i] + ops->viewoffset[i]
 				+ cl.lerpfrac * (ps->viewoffset[i] - ops->viewoffset[i])
 				- backlerp * cl.prediction_error[i];
+            // this smooths out platform riding
+            cl.predicted_origin[i] -= backlerp * cl.prediction_error[i];
 		}
 
 		/* smooth out stair climbing */
@@ -788,6 +1290,7 @@ CL_CalcViewValues(void)
 		if (delta < 100)
 		{
 			cl.refdef.vieworg[2] -= cl.predicted_step * (100 - delta) * 0.01;
+            cl.predicted_origin[2] -= cl.predicted_step * (100 - delta) * 0.01;
 		}
 	}
 	else
@@ -799,6 +1302,10 @@ CL_CalcViewValues(void)
 				ops->viewoffset[i] + lerp * (ps->pmove.origin[i] * 0.125 +
 						ps->viewoffset[i] - (ops->pmove.origin[i] * 0.125 +
 							ops->viewoffset[i]));
+
+            // Knightmare- set predicted origin anyway, it's needed for the chasecam
+            VectorCopy(cl.refdef.vieworg, cl.predicted_origin);
+            cl.predicted_origin[2] -= ops->viewoffset[2];
 		}
 	}
 
@@ -848,6 +1355,9 @@ CL_CalcViewValues(void)
 
 	/* add the weapon */
 	CL_AddViewWeapon(ps, ops);
+
+    // set up chase cam
+    SetUpCamera();
 }
 
 /*

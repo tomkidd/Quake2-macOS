@@ -30,10 +30,31 @@
 
 console_t con;
 cvar_t *con_notifytime;
+cvar_t		*con_alpha;		// Knightare- Psychospaz's transparent console
+qboolean	halfconback = false;	// whether to draw Q3-style console
 
-extern char key_lines[NUM_KEY_LINES][MAXCMDLINE];
+#define		MAXCMDLINE	256
+#define CON_FONT_SCALE con_font_size->value/8
+extern	char	key_lines[32][MAXCMDLINE];
 extern int edit_line;
 extern int key_linepos;
+
+int stringLengthExtra (const char *string);
+int stringLen (const char *string)
+{
+	return strlen(string) - stringLengthExtra(string);
+}
+
+
+/*
+================
+Con_DrawString
+================
+*/
+void Con_DrawString (int x, int y, char *string, int alpha)
+{
+	DrawStringGeneric (x, y, string, alpha, SCALETYPE_CONSOLE, false);
+}
 
 void
 DrawStringScaled(int x, int y, char *s, float factor)
@@ -62,12 +83,13 @@ Key_ClearTyping(void)
 {
 	key_lines[edit_line][1] = 0; /* clear any typing */
 	key_linepos = 1;
+	con.backedit = 0;
 }
 
 void
 Con_ToggleConsole_f(void)
 {
-	SCR_EndLoadingPlaque(); /* get rid of loading plaque */
+//	SCR_EndLoadingPlaque ();	// get rid of loading plaque
 
 	if (cl.attractloop)
 	{
@@ -75,7 +97,7 @@ Con_ToggleConsole_f(void)
 		return;
 	}
 
-	if (cls.state == ca_disconnected)
+	if (cls.state == ca_disconnected && cls.key_dest != key_menu)
 	{
 		/* start the demo loop again */
 		Cbuf_AddText("d1\n");
@@ -92,18 +114,23 @@ Con_ToggleConsole_f(void)
 	}
 #endif
 
-	if (cls.key_dest == key_console)
+	if (cls.consoleActive) // Knightmare changed
 	{
-		M_ForceMenuOff();
-		Cvar_Set("paused", "0");
+		cls.consoleActive = false; // Knightmare added
+
+		//M_ForceMenuOff();
+		if (Cvar_VariableValue ("maxclients") == 1 
+			&& Com_ServerState () && cls.key_dest != key_menu)
+				Cvar_Set ("paused", "0");
 	}
 	else
 	{
-		M_ForceMenuOff();
-		cls.key_dest = key_console;
+		cls.consoleActive = true; // Knightmare added
+		//M_ForceMenuOff();
+		//cls.key_dest = key_console;
 
-		if ((Cvar_VariableValue("maxclients") == 1) &&
-			Com_ServerState())
+		if (Cvar_VariableValue ("maxclients") == 1 
+			&& Com_ServerState () && cls.key_dest != key_menu)
 		{
 			Cvar_Set("paused", "1");
 		}
@@ -115,19 +142,22 @@ Con_ToggleChat_f(void)
 {
 	Key_ClearTyping();
 
-	if (cls.key_dest == key_console)
+	if (cls.consoleActive) // Knightmare added
+	//if (cls.key_dest == key_console)
 	{
 		if (cls.state == ca_active)
 		{
-			M_ForceMenuOff();
+			UI_ForceMenuOff ();
+			cls.consoleActive = false; // Knightmare added
 			cls.key_dest = key_game;
 		}
 	}
 	else
 	{
-		cls.key_dest = key_console;
-	}
-
+		//cls.key_dest = key_console;
+		cls.consoleActive = true; // Knightmare added
+    }
+    
 	Con_ClearNotify();
 }
 
@@ -240,6 +270,7 @@ Con_MessageMode_f(void)
 {
 	chat_team = false;
 	cls.key_dest = key_message;
+	cls.consoleActive = false; // Knightmare added
 }
 
 void
@@ -247,6 +278,7 @@ Con_MessageMode2_f(void)
 {
 	chat_team = true;
 	cls.key_dest = key_message;
+	cls.consoleActive = false; // Knightmare added
 }
 
 /*
@@ -257,16 +289,17 @@ Con_CheckResize(void)
 {
 	int i, j, width, oldwidth, oldtotallines, numlines, numchars;
 	char tbuf[CON_TEXTSIZE];
-	float scale = SCR_GetConsoleScale();
 
+	if (con_font_size)
 	/* We need to clamp the line width to MAXCMDLINE - 2,
 	   otherwise we may overflow the text buffer if the
 	   vertical resultion / 8 (one char == 8 pixels) is
 	   bigger then MAXCMDLINE.
 	   MAXCMDLINE - 2 because 1 for the prompt and 1 for
 	   the terminating \0. */
-	width = ((int)(viddef.width / scale) / 8) - 2;
-	width = width > MAXCMDLINE - 2 ? MAXCMDLINE - 2 : width;
+		width = viddef.width/con_font_size->value - 2;
+	else	 // (viddef.width / 8)
+		width = (viddef.width >> 3) - 2;
 
 	if (width == con.linewidth)
 	{
@@ -276,8 +309,9 @@ Con_CheckResize(void)
 	/* video hasn't been initialized yet */
 	if (width < 1)
 	{
-		width = 38;
+		width = 78; // was 38
 		con.linewidth = width;
+		con.backedit = 0;
 		con.totallines = CON_TEXTSIZE / con.linewidth;
 		memset(con.text, ' ', CON_TEXTSIZE);
 	}
@@ -285,6 +319,7 @@ Con_CheckResize(void)
 	{
 		oldwidth = con.linewidth;
 		con.linewidth = width;
+		con.backedit = 0;
 		oldtotallines = con.totallines;
 		con.totallines = CON_TEXTSIZE / con.linewidth;
 		numlines = oldtotallines;
@@ -325,13 +360,24 @@ void
 Con_Init(void)
 {
 	con.linewidth = -1;
+	con.backedit = 0;
 
 	Con_CheckResize();
 
 	Com_Printf("Console initialized.\n");
 
 	/* register our commands */
-	con_notifytime = Cvar_Get("con_notifytime", "3", 0);
+	con_notifytime = Cvar_Get ("con_notifytime", "4", 0); // Knightmare- increased for fade
+	// Knightmare- Psychospaz's transparent console
+	con_alpha = Cvar_Get ("con_alpha", "0.5", CVAR_ARCHIVE);
+	// Knightmare- how far the console drops down
+	//con_height = Cvar_Get ("con_height", "0.5", CVAR_ARCHIVE);
+
+	// whether to use new-style console background
+	halfconback = false;
+	if ( (FS_LoadFile("pics/halfconback.tga", NULL) != -1)
+		|| (FS_LoadFile("pics/halfconback.jpg", NULL) != -1) )
+		halfconback = true;
 
 	Cmd_AddCommand("toggleconsole", Con_ToggleConsole_f);
 	Cmd_AddCommand("togglechat", Con_ToggleChat_f);
@@ -448,17 +494,37 @@ Con_Print(char *txt)
 }
 
 /*
+==============
+Con_CenteredPrint
+==============
+*/
+void Con_CenteredPrint (char *text)
+{
+	int		l;
+	char	buffer[1024];
+
+	l = strlen(text);
+	l = (con.linewidth-l)/2;
+	if (l < 0)
+		l = 0;
+	memset (buffer, ' ', l);
+	strcpy (buffer+l, text);
+	strcat (buffer, "\n");
+	Con_Print (buffer);
+}
+
+/*
  * The input line scrolls horizontally if
  * typing goes beyond the right edge
  */
 void
 Con_DrawInput(void)
 {
+	int		y;
 	int i;
-	float scale;
-	char *text;
+	char	*text, output[2048];
 
-	if (cls.key_dest == key_menu)
+	if (!cls.consoleActive && cls.state == ca_active)
 	{
 		return;
 	}
@@ -469,11 +535,14 @@ Con_DrawInput(void)
 		return;
 	}
 
-	scale = SCR_GetConsoleScale();
+
 	text = key_lines[edit_line];
 
 	/* add the cursor frame */
-	text[key_linepos] = 10 + ((int)(cls.realtime >> 8) & 1);
+	if (con.backedit)
+		text[key_linepos] = ' ';
+	else
+		text[key_linepos] = 10+((int)(cls.realtime>>8)&1);
 
 	/* fill out remainder with spaces */
 	for (i = key_linepos + 1; i < con.linewidth; i++)
@@ -487,10 +556,17 @@ Con_DrawInput(void)
 		text += 1 + key_linepos - con.linewidth;
 	}
 
+	y = con.vislines-FONT_SIZE*2; // was 16
+
+	Com_sprintf (output, sizeof(output), "");
 	for (i = 0; i < con.linewidth; i++)
 	{
-		Draw_CharScaled(((i + 1) << 3) * scale, con.vislines - 22 * scale, text[i], scale);
+		if (con.backedit == key_linepos-i && ((int)(cls.realtime>>8)&1))
+			Com_sprintf (output, sizeof(output), "%s%c", output, 11 );
+		else
+			Com_sprintf (output, sizeof(output), "%s%c", output, text[i]);
 	}
+	Con_DrawString ( FONT_SIZE/2, con.vislines - (int)(2.75*FONT_SIZE), output, 255);
 
 	/* remove cursor */
 	key_lines[edit_line][key_linepos] = 0;
@@ -502,17 +578,49 @@ Con_DrawInput(void)
 void
 Con_DrawNotify(void)
 {
-	int x, v;
-	char *text;
-	int i;
-	int time;
+	int		x;
+	char	*text, output[2048];
+	int		i, j;
+	//int		time;
 	char *s;
-	int skip;
-	float scale;
+	int		alpha, lines;
+	float	v, time;
 
+	lines = 0;
 	v = 0;
-	scale = SCR_GetConsoleScale();
 
+	Com_sprintf (output, sizeof(output), "");
+
+	// this is the say msg while typeing...
+	if (cls.key_dest == key_message)
+	{
+		if (chat_team)
+			Com_sprintf (output, sizeof(output), "%s", " say_team: ");
+		else
+			Com_sprintf (output, sizeof(output), "%s", " say: ");
+
+		s = chat_buffer;
+		x = 0;
+		if (chat_bufferlen > (viddef.width/FONT_SIZE)-(strlen(output)+1))
+			x += chat_bufferlen - (int)((viddef.width/FONT_SIZE)-(strlen(output)+1));
+
+		while(s[x])
+		{
+			if (chat_backedit && chat_backedit == chat_bufferlen-x && ((int)(cls.realtime>>8)&1))
+				Com_sprintf (output, sizeof(output), "%s%c", output, 11 );
+			else
+				Com_sprintf (output, sizeof(output), "%s%c", output, (char)s[x]);
+
+			x++;
+		}
+
+		if (!chat_backedit)
+			Com_sprintf (output, sizeof(output), "%s%c", output, 10+((int)(cls.realtime>>8)&1) );		
+
+		Con_DrawString (0, v, output, 255);
+
+		v += FONT_SIZE*2; //make extra space so we have room
+	}
 	for (i = con.current - NUM_CON_TIMES + 1; i <= con.current; i++)
 	{
 		if (i < 0)
@@ -523,11 +631,24 @@ Con_DrawNotify(void)
 		time = con.times[i % NUM_CON_TIMES];
 
 		if (time == 0)
-		{
 			continue;
+		time = cls.realtime - time;
+		if (time > con_notifytime->value*1000)
+			continue;
+
+		//vertical offset set by closest to dissapearing
+		lines++;
 		}
 
-		time = cls.realtime - time;
+	if (lines)
+		for (j=0, i= con.current-NUM_CON_TIMES+1; i<=con.current; i++, j++)
+		{
+			if (i < 0)
+				continue;
+			time = con.times[i % NUM_CON_TIMES];
+			if (time == 0)
+				continue;
+			time = cls.realtime - time;
 
 		if (time > con_notifytime->value * 1000)
 		{
@@ -535,47 +656,19 @@ Con_DrawNotify(void)
 		}
 
 		text = con.text + (i % con.totallines) * con.linewidth;
+			alpha = 255 * sqrt( (1.0-time/(con_notifytime->value*1000.0+1.0)) * (((float)v+8.0)) / (8.0*lines) );
+			if (alpha < 0) alpha=0;
+			if (alpha > 255) alpha=255;
 
+			Com_sprintf (output, sizeof(output), "");
 		for (x = 0; x < con.linewidth; x++)
-		{
-			Draw_CharScaled(((x + 1) << 3) * scale, v * scale, text[x], scale);
+				Com_sprintf (output, sizeof(output), "%s%c", output, (char)text[x]);
+
+			Con_DrawString (FONT_SIZE/2, v, output, alpha);
+
+			v += FONT_SIZE;
 		}
-
-		v += 8;
-	}
-
-	if (cls.key_dest == key_message)
-	{
-		if (chat_team)
-		{
-			DrawStringScaled(8 * scale, v * scale, "say_team:", scale);
-			skip = 11;
-		}
-		else
-		{
-			DrawStringScaled(8 * scale, v * scale, "say:", scale);
-			skip = 5;
-		}
-
-		s = chat_buffer;
-
-		if (chat_bufferlen > (viddef.width >> 3) - (skip + 1))
-		{
-			s += chat_bufferlen - ((viddef.width >> 3) - (skip + 1));
-		}
-
-		x = 0;
-
-		while (s[x])
-		{
-			Draw_CharScaled(((x + skip) << 3) * scale, v * scale, s[x], scale);
-			x++;
-		}
-
-		Draw_CharScaled(((x + skip) << 3) * scale, v * scale, 10 + ((cls.realtime >> 8) & 1), scale);
-		v += 8;
-	}
-
+	
 	if (v)
 	{
 		SCR_AddDirtyPoint(0, 0);
@@ -587,24 +680,23 @@ Con_DrawNotify(void)
  * Draws the console with the solid background
  */
 void
-Con_DrawConsole(float frac)
+Con_DrawConsole(float frac, qboolean trans)
 {
-	int i, j, x, y, n;
+	int				i, j, x, y, len;
 	int rows;
-	int verLen;
-	char *text;
+	char			*text, output[1024];
 	int row;
 	int lines;
-	float scale;
-	char version[48];
+	char			version[64];
 	char dlbar[1024];
-	char timebuf[48];
-	char tmpbuf[48];
+	float			alpha, barwidth, barheight; //Knightmare added
+	// changeable download bar color
+	int				red, green, blue;
 
-	time_t t;
-	struct tm *today;
+	TextColor((int)alt_text_color->value, &red, &green, &blue);
+	barwidth = SCREEN_WIDTH;	barheight = 2;
+	SCR_AdjustFrom640 (NULL, NULL, &barwidth, &barheight, ALIGN_STRETCH);
 
-	scale = SCR_GetConsoleScale();
 	lines = viddef.height * frac;
 
 	if (lines <= 0)
@@ -616,55 +708,56 @@ Con_DrawConsole(float frac)
 	{
 		lines = viddef.height;
 	}
+	// Psychospaz's transparent console
+	//alpha = (trans) ? ((frac/ (halfconback?0.5:con_height->value) )*con_alpha->value) : 1;
+	alpha = (trans) ? ((frac/ (0.5) )*con_alpha->value) : 1;
 
 	/* draw the background */
-	Draw_StretchPic(0, -viddef.height + lines, viddef.width,
-			viddef.height, "conback");
+	y = lines - barheight;
+	if (y < 1)	y = 0;
+	else if (halfconback)
+		R_DrawStretchPic (0, 0, viddef.width, lines-barheight, "halfconback", alpha);
+	else
+		R_DrawStretchPic (0, lines-viddef.height-(int)barheight, viddef.width, viddef.height, "conback", alpha);
 	SCR_AddDirtyPoint(0, 0);
 	SCR_AddDirtyPoint(viddef.width - 1, lines - 1);
 
-	Com_sprintf(version, sizeof(version), "Yamagi Quake II v%s", YQ2VERSION);
+#ifdef ERASER_COMPAT_BUILD
+#ifdef NET_SERVER_BUILD
+	Com_sprintf (version, sizeof(version), S_COLOR_BOLD S_COLOR_SHADOW S_COLOR_ALT"KMQuake2 v%4.2f (Eraser net server)", VERSION);
+#else // NET_SERVER_BUILD
+	Com_sprintf (version, sizeof(version), S_COLOR_BOLD S_COLOR_SHADOW S_COLOR_ALT"KMQuake2 v%4.2f (Eraser compatible)", VERSION);
+#endif // NET_SERVER_BUILD
+#else // ERASER_COMPAT_BUILD
+#ifdef NET_SERVER_BUILD
+	Com_sprintf (version, sizeof(version), S_COLOR_BOLD S_COLOR_SHADOW S_COLOR_ALT"KMQuake2 v%4.2f (net server)", VERSION);
+#else
+	Com_sprintf (version, sizeof(version), S_COLOR_BOLD S_COLOR_SHADOW S_COLOR_ALT"KMQuake2 v%4.2f", VERSION);
+#endif // ERASER_COMPAT_BUILD
+#endif // NEW_ENTITY_STATE_MEMBERS
 
-	verLen = strlen(version);
-
-	for (x = 0; x < verLen; x++)
-	{
-		Draw_CharScaled(viddef.width - ((verLen*8+5) * scale) + x * 8 * scale, lines - 35 * scale, 128 + version[x], scale);
-	}
-
-	t = time(NULL);
-	today = localtime(&t);
-	strftime(timebuf, sizeof(timebuf), "%H:%M:%S - %m/%d/%Y", today);
-
-	Com_sprintf(tmpbuf, sizeof(tmpbuf), "%s", timebuf);
-
-	for (x = 0; x < 21; x++)
-	{
-		Draw_CharScaled(viddef.width - (173 * scale) + x * 8 * scale, lines - 25 * scale, 128 + tmpbuf[x], scale);
-	}
+	Con_DrawString (viddef.width-FONT_SIZE*(stringLen((const char *)&version))-3, y-(int)(1.25*FONT_SIZE), version, 255);
+	R_DrawFill2 (0, y, barwidth, barheight, red, green, blue, 255); // bottom line
 
 	/* draw the text */
 	con.vislines = lines;
-
-	rows = (lines - 22) >> 3; /* rows of text to draw */
-	y = (lines - 30 * scale) / scale;
+	rows = (lines-(int)(2.75*FONT_SIZE))/FONT_SIZE;		// rows of text to draw
+	y = lines - (int)(3.75*FONT_SIZE);
 
 	/* draw from the bottom up */
 	if (con.display != con.current)
 	{
 		/* draw arrows to show the buffer is backscrolled */
 		for (x = 0; x < con.linewidth; x += 4)
-		{
-			Draw_CharScaled(((x + 1) << 3) * scale, y * scale, '^', scale);
-		}
-
-		y -= 8;
+			R_DrawChar( (x+1)*FONT_SIZE, y, '^', CON_FONT_SCALE, 255, 0, 0, 255, false, ((x+4)>=con.linewidth) );
+	
+		y -= FONT_SIZE;
 		rows--;
 	}
 
 	row = con.display;
 
-	for (i = 0; i < rows; i++, y -= 8, row--)
+	for (i=0; i<rows; i++, y-=FONT_SIZE, row--)
 	{
 		if (row < 0)
 		{
@@ -678,10 +771,12 @@ Con_DrawConsole(float frac)
 
 		text = con.text + (row % con.totallines) * con.linewidth;
 
+		Com_sprintf (output, sizeof(output), "");
 		for (x = 0; x < con.linewidth; x++)
 		{
-			Draw_CharScaled(((x + 1) << 3) * scale, y * scale, text[x], scale);
+			Com_sprintf (output, sizeof(output), "%s%c", output, text[x]);
 		}
+		Con_DrawString (4, y, output, 255);
 	}
 
 	/* draw the download bar, figure out width */
@@ -691,6 +786,8 @@ Con_DrawConsole(float frac)
 	if (cls.download)
 #endif
 	{
+		int graph_x, graph_y, graph_h, graph_w;
+
 		if ((text = strrchr(cls.downloadname, '/')) != NULL)
 		{
 			text++;
@@ -700,8 +797,9 @@ Con_DrawConsole(float frac)
 		{
 			text = cls.downloadname;
 		}
+		memset (dlbar, 0, sizeof(dlbar)); // clear dlbar
 
-		x = con.linewidth - ((con.linewidth * 7) / 40);
+		x = con.linewidth - ((con.linewidth * 7) / 40) - (stringLen((const char *)&version)-14);
 		y = x - strlen(text) - 8;
 		i = con.linewidth / 3;
 
@@ -719,44 +817,30 @@ Con_DrawConsole(float frac)
 
 		strcat(dlbar, ": ");
 		i = strlen(dlbar);
-		dlbar[i++] = '\x80';
-
-		/* where's the dot gone? */
-		if (cls.downloadpercent == 0)
-		{
-			n = 0;
-		}
-
-		else
-		{
-			n = y * cls.downloadpercent / 100;
-		}
+		
+		// init solid color download bar
+		graph_x = (i+1)*FONT_SIZE;
+		graph_y = con.vislines - (int)(FONT_SIZE*1.5) - (int)barheight; // was -12
+		graph_w = y*FONT_SIZE;
+		graph_h = FONT_SIZE;
 
 		for (j = 0; j < y; j++)
-		{
-			if (j == n)
-			{
-				dlbar[i++] = '\x83';
-			}
-
-			else
-			{
-				dlbar[i++] = '\x81';
-			}
-		}
-
-		dlbar[i++] = '\x82';
-		dlbar[i] = 0;
-
-		sprintf(dlbar + strlen(dlbar), " %02d%%", cls.downloadpercent);
+			sprintf(dlbar + strlen(dlbar), " ");
+		sprintf(dlbar + strlen(dlbar), " %2d%%", cls.downloadpercent);
 
 		/* draw it */
-		y = con.vislines - 12;
+		//y = graph_y;
+		len = strlen(dlbar);
+		for (i = 0; i < len; i++)
+			if (dlbar[i] != ' ')
+				R_DrawChar( (i+1)*FONT_SIZE, graph_y, dlbar[i], CON_FONT_SCALE, 255, 255, 255, 255, false, (i==(len-1)) );
 
-		for (i = 0; i < strlen(dlbar); i++)
-		{
-			Draw_CharScaled(((i + 1) << 3) * scale, y * scale, dlbar[i], scale);
-		}
+		// new solid color download bar
+		graph_x--; graph_y--; graph_w+=2; graph_h +=2;
+		R_DrawFill2 (graph_x, graph_y, graph_w, graph_h, 255, 255, 255, 90);
+		R_DrawFill2 ((int)(graph_x+graph_h*0.2), (int)(graph_y+graph_h*0.2),
+			(int)((graph_w-graph_h*0.4)*cls.downloadpercent*0.01), (int)(graph_h*0.6),
+			red, green, blue, 255);
 	}
 
 	/* draw the input prompt, user text, and cursor if desired */

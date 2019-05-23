@@ -27,7 +27,7 @@
 #ifndef CL_HEADER_CONSOLE_H
 #define CL_HEADER_CONSOLE_H
 
-#define	NUM_CON_TIMES 4
+#define    NUM_CON_TIMES 8    // was 4
 #define	CON_TEXTSIZE	32768
 
 typedef struct {
@@ -42,6 +42,7 @@ typedef struct {
 
 	int 	linewidth; /* characters across screen */
 	int		totallines; /* total lines in console scrollback */
+    int        backedit;
 
 	float	cursorspeed;
 
@@ -52,10 +53,14 @@ typedef struct {
 
 extern	console_t	con;
 
+extern    qboolean    halfconback;    // whether to draw Q3-style console
+
 void Con_DrawCharacter (int cx, int line, int num);
 void Con_CheckResize (void);
 void Con_Init (void);
-void Con_DrawConsole (float frac);
+//Knightmare changed
+//void Con_DrawConsole (float frac);
+void Con_DrawConsole (float frac, qboolean ingame);
 void Con_Print (char *txt);
 void Con_CenteredPrint (char *text);
 void Con_Clear_f (void);

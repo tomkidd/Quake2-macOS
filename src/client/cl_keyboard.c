@@ -480,6 +480,7 @@ Key_Console(int key)
 qboolean chat_team;
 char chat_buffer[MAXCMDLINE];
 int chat_bufferlen = 0;
+int chat_backedit = 0;
 int chat_cursorpos = 0;
 
 void

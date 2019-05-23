@@ -209,6 +209,7 @@ extern int		key_repeats[K_LAST];
 extern int		anykeydown;
 extern char		chat_buffer[];
 extern int		chat_bufferlen;
+extern    int chat_backedit;
 extern int		chat_cursorpos;
 extern qboolean	chat_team;
 
