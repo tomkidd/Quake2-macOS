@@ -27,6 +27,8 @@
 
 #include "header/client.h"
 #include "input/header/input.h"
+// revisit me -tkidd
+//#include "../ui/ui_local.h"
 
 void CL_ForwardToServer_f(void);
 void CL_Changing_f(void);
@@ -45,7 +47,48 @@ cvar_t *cl_footsteps;
 cvar_t *cl_timeout;
 cvar_t *cl_predict;
 cvar_t *cl_showfps;
+cvar_t    *cl_sleep;
+// whether to trick version 34 servers that this is a version 34 client
+cvar_t    *cl_servertrick;
 cvar_t *cl_gun;
+cvar_t    *cl_weapon_shells;
+cvar_t    *cl_blood;
+
+// reduction factor for particle effects
+cvar_t    *cl_particle_scale;
+
+// whether to adjust fov for wide aspect rattio
+cvar_t    *cl_widescreen_fov;
+
+// whether to use texsurfs.txt footstep sounds
+cvar_t    *cl_footstep_override;
+
+// Psychospaz's rail code
+cvar_t    *cl_railred;
+cvar_t    *cl_railgreen;
+cvar_t    *cl_railblue;
+cvar_t    *cl_railtype;
+cvar_t    *cl_rail_length;
+cvar_t    *cl_rail_space;
+
+cvar_t    *r_decals;        // decal quantity
+cvar_t    *r_decal_life;  // decal duration in seconds
+cvar_t    *con_font_size;
+cvar_t    *alt_text_color;
+
+// Psychospaz's chasecam
+cvar_t    *cl_3dcam;
+cvar_t    *cl_3dcam_angle;
+cvar_t    *cl_3dcam_chase;
+cvar_t    *cl_3dcam_dist;
+cvar_t    *cl_3dcam_alpha;
+cvar_t    *cl_3dcam_adjust;
+
+// whether to try to play OGGs instead of CD tracks
+cvar_t    *cl_ogg_music;
+cvar_t    *cl_rogue_music; // whether to play Rogue tracks
+cvar_t    *cl_xatrix_music; // whether to play Xatrix tracks
+
 cvar_t *cl_add_particles;
 cvar_t *cl_add_lights;
 cvar_t *cl_add_entities;
@@ -59,6 +102,9 @@ cvar_t *cl_paused;
 
 cvar_t *lookstrafe;
 cvar_t *sensitivity;
+cvar_t    *menu_sensitivity;
+cvar_t    *menu_rotate;
+cvar_t    *menu_alpha;
 
 cvar_t *m_pitch;
 cvar_t *m_yaw;
@@ -85,6 +131,10 @@ cvar_t	*gl1_stereo_convergence;
 
 cvar_t *cl_vwep;
 
+// for the server to tell which version the client is
+cvar_t *cl_engine;
+cvar_t *cl_engine_version;
+
 client_static_t cls;
 client_state_t cl;
 
@@ -102,6 +152,16 @@ extern cvar_t *allow_download_players;
 extern cvar_t *allow_download_models;
 extern cvar_t *allow_download_sounds;
 extern cvar_t *allow_download_maps;
+// whether to allow downloading 24-bit textures
+extern    cvar_t *allow_download_enh_textures;
+
+
+float ClampCvar( float min, float max, float value )
+{
+    if ( value < min ) return min;
+    if ( value > max ) return max;
+    return value;
+}
 
 /*
  * Dumps the current net message, prefixed by the length
@@ -324,7 +384,8 @@ CL_ClearState(void)
 	S_StopAllSounds();
 	CL_ClearEffects();
 	CL_ClearTEnts();
-
+    R_SetFogVars (false, 0, 0, 0, 0, 0, 0, 0); // clear fog effets
+    
 	/* wipe the entire cl structure */
 	memset(&cl, 0, sizeof(cl));
 	memset(&cl_entities, 0, sizeof(cl_entities));
@@ -343,7 +404,7 @@ CL_ParseStatusMessage(void)
 	s = MSG_ReadString(&net_message);
 
 	Com_Printf("%s\n", s);
-	M_AddToServerList(net_from, s);
+	UI_AddToServerList(net_from, s);
 }
 
 /*
@@ -356,12 +417,23 @@ CL_Skins_f(void)
 
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
-		if (!cl.configstrings[CS_PLAYERSKINS + i][0])
-		{
-			continue;
-		}
-
-		Com_Printf("client %i: %s\n", i, cl.configstrings[CS_PLAYERSKINS + i]);
+        // BIG UGLY HACK for old connected to server using old protocol
+        // Changed config strings require different parsing
+        if ( LegacyProtocol() )
+        {
+            if (!cl.configstrings[OLD_CS_PLAYERSKINS+i][0])
+                continue;
+            Com_Printf ("client %i: %s\n", i, cl.configstrings[OLD_CS_PLAYERSKINS+i]);
+            
+        } else {
+            
+            if (!cl.configstrings[CS_PLAYERSKINS + i][0])
+            {
+                continue;
+            }
+            
+            Com_Printf("client %i: %s\n", i, cl.configstrings[CS_PLAYERSKINS + i]);
+        }
 
 		SCR_UpdateScreen();
 
@@ -369,6 +441,22 @@ CL_Skins_f(void)
 
 		CL_ParseClientinfo(i);
 	}
+}
+
+// added Psychospaz's command for toggling chasecam
+/*
+ =================
+ CL_ToggleCam_f
+ 
+ toggle thirdperson camera
+ =================
+ */
+void CL_ToggleCam_f (void)
+{
+    if (cl_3dcam->value)
+        Cvar_SetValue ("cl_3dcam", 0 );
+    else
+        Cvar_SetValue ("cl_3dcam", 1 );
 }
 
 /* This fixes some problems with wrong tagged models and skins */
@@ -497,11 +585,57 @@ CL_InitLocal(void)
 	cl_add_particles = Cvar_Get("cl_particles", "1", 0);
 	cl_add_entities = Cvar_Get("cl_entities", "1", 0);
 	cl_gun = Cvar_Get("cl_gun", "2", CVAR_ARCHIVE);
+    cl_weapon_shells = Cvar_Get ("cl_weapon_shells", "1", CVAR_ARCHIVE);
 	cl_footsteps = Cvar_Get("cl_footsteps", "1", 0);
+    cl_blood = Cvar_Get ("cl_blood", "2", CVAR_ARCHIVE);
+    
+    // reduction factor for particle effects
+    cl_particle_scale = Cvar_Get ("cl_particle_scale", "1", CVAR_ARCHIVE);
+    
+    // whether to adjust fov for wide aspect rattio
+    cl_widescreen_fov = Cvar_Get ("cl_widescreen_fov", "1", CVAR_ARCHIVE);
+    
 	cl_noskins = Cvar_Get("cl_noskins", "0", 0);
 	cl_predict = Cvar_Get("cl_predict", "1", 0);
 	cl_showfps = Cvar_Get("cl_showfps", "0", CVAR_ARCHIVE);
 
+    cl_sleep = Cvar_Get ("cl_sleep", "1", 0);
+    
+    // whether to trick version 34 servers that this is a version 34 client
+    cl_servertrick = Cvar_Get ("cl_servertrick", "0", 0);
+    
+    // whether to use texsurfs.txt footstep sounds
+    cl_footstep_override = Cvar_Get ("cl_footstep_override", "1", CVAR_ARCHIVE);
+    
+    // Psychospaz's changeable rail code
+    cl_railred = Cvar_Get ("cl_railred", "20", CVAR_ARCHIVE);
+    cl_railgreen = Cvar_Get ("cl_railgreen", "50", CVAR_ARCHIVE);
+    cl_railblue = Cvar_Get ("cl_railblue", "175", CVAR_ARCHIVE);
+    cl_railtype = Cvar_Get ("cl_railtype", "0", CVAR_ARCHIVE);
+    cl_rail_length = Cvar_Get ("cl_rail_length", va("%i", DEFAULT_RAIL_LENGTH), CVAR_ARCHIVE);
+    cl_rail_space = Cvar_Get ("cl_rail_space", va("%i", DEFAULT_RAIL_SPACE), CVAR_ARCHIVE);
+    
+    // decal control
+    r_decals = Cvar_Get ("r_decals", "500", CVAR_ARCHIVE);
+    r_decal_life = Cvar_Get ("r_decal_life", "1000", CVAR_ARCHIVE);
+    
+    con_font_size = Cvar_Get ("con_font_size", "12", CVAR_ARCHIVE);
+    
+    alt_text_color = Cvar_Get ("alt_text_color", "2", CVAR_ARCHIVE);
+    
+    // Psychospaz's chasecam
+    cl_3dcam = Cvar_Get ("cl_3dcam", "0", CVAR_ARCHIVE);
+    cl_3dcam_angle = Cvar_Get ("cl_3dcam_angle", "10", CVAR_ARCHIVE);
+    cl_3dcam_dist = Cvar_Get ("cl_3dcam_dist", "50", CVAR_ARCHIVE);
+    cl_3dcam_alpha = Cvar_Get ("cl_3dcam_alpha", "0", CVAR_ARCHIVE);
+    cl_3dcam_chase = Cvar_Get ("cl_3dcam_chase", "1", CVAR_ARCHIVE);
+    cl_3dcam_adjust = Cvar_Get ("cl_3dcam_adjust", "1", CVAR_ARCHIVE);
+    
+    // whether to try to play OGGs instead of CD tracks
+    cl_ogg_music = Cvar_Get ("cl_ogg_music", "1", CVAR_ARCHIVE);
+    cl_rogue_music = Cvar_Get ("cl_rogue_music", "0", CVAR_ARCHIVE);
+    cl_xatrix_music = Cvar_Get ("cl_xatrix_music", "0", CVAR_ARCHIVE);
+    
 	cl_upspeed = Cvar_Get("cl_upspeed", "200", 0);
 	cl_forwardspeed = Cvar_Get("cl_forwardspeed", "200", 0);
 	cl_sidespeed = Cvar_Get("cl_sidespeed", "200", 0);
@@ -513,6 +647,9 @@ CL_InitLocal(void)
 	freelook = Cvar_Get("freelook", "1", CVAR_ARCHIVE);
 	lookstrafe = Cvar_Get("lookstrafe", "0", CVAR_ARCHIVE);
 	sensitivity = Cvar_Get("sensitivity", "3", CVAR_ARCHIVE);
+    menu_sensitivity = Cvar_Get ("menu_sensitivity", "1", CVAR_ARCHIVE);
+    menu_rotate = Cvar_Get ("menu_rotate", "0", CVAR_ARCHIVE);
+    menu_alpha = Cvar_Get ("menu_alpha", "0.6", CVAR_ARCHIVE);
 
 	m_pitch = Cvar_Get("m_pitch", "0.022", CVAR_ARCHIVE);
 	m_yaw = Cvar_Get("m_yaw", "0.022", 0);
@@ -522,8 +659,8 @@ CL_InitLocal(void)
 	cl_shownet = Cvar_Get("cl_shownet", "0", 0);
 	cl_showmiss = Cvar_Get("cl_showmiss", "0", 0);
 	cl_showclamp = Cvar_Get("showclamp", "0", 0);
-	cl_timeout = Cvar_Get("cl_timeout", "120", 0);
-	cl_paused = Cvar_Get("paused", "0", 0);
+    cl_paused = Cvar_Get ("paused", "0", CVAR_CHEAT);
+    cl_timedemo = Cvar_Get ("timedemo", "0", CVAR_CHEAT);
 
 	gl1_stereo = Cvar_Get( "gl1_stereo", "0", CVAR_ARCHIVE );
 	gl1_stereo_separation = Cvar_Get( "gl1_stereo_separation", "1", CVAR_ARCHIVE );
@@ -560,6 +697,10 @@ CL_InitLocal(void)
 	cl_http_max_connections = Cvar_Get("cl_http_max_connections", "4", 0);
 #endif
 
+    // for the server to tell which version the client is
+    cl_engine = Cvar_Get ("cl_engine", "KMQuake2", CVAR_USERINFO | CVAR_NOSET | CVAR_LATCH);
+    cl_engine_version = Cvar_Get ("cl_engine_version", va("%f",VERSION), CVAR_USERINFO | CVAR_NOSET | CVAR_LATCH);
+    
 	/* register our commands */
 	Cmd_AddCommand("cmd", CL_ForwardToServer_f);
 	Cmd_AddCommand("pause", CL_Pause_f);
@@ -586,6 +727,9 @@ CL_InitLocal(void)
 	Cmd_AddCommand("precache", CL_Precache_f);
 
 	Cmd_AddCommand("download", CL_Download_f);
+
+    // added Psychospaz's command for toggling chasecam
+    Cmd_AddCommand ("togglecam", CL_ToggleCam_f);
 
 	Cmd_AddCommand("currentmap", CL_CurrentMap_f);
 
@@ -681,28 +825,33 @@ CL_FixCvarCheats(void)
 	if (!strcmp(cl.configstrings[CS_MAXCLIENTS], "1") ||
 		!cl.configstrings[CS_MAXCLIENTS][0])
 	{
+        Cvar_FixCheatVars(true);
 		return; /* single player can cheat  */
 	}
 
-	/* find all the cvars if we haven't done it yet */
-	if (!numcheatvars)
-	{
-		while (cheatvars[numcheatvars].name)
-		{
-			cheatvars[numcheatvars].var = Cvar_Get(cheatvars[numcheatvars].name,
-					cheatvars[numcheatvars].value, 0);
-			numcheatvars++;
-		}
-	}
+//    /* find all the cvars if we haven't done it yet */
+//    if (!numcheatvars)
+//    {
+//        while (cheatvars[numcheatvars].name)
+//        {
+//            cheatvars[numcheatvars].var = Cvar_Get(cheatvars[numcheatvars].name,
+//                    cheatvars[numcheatvars].value, 0);
+//            numcheatvars++;
+//        }
+//    }
 
-	/* make sure they are all set to the proper values */
-	for (i = 0, var = cheatvars; i < numcheatvars; i++, var++)
-	{
-		if (strcmp(var->var->string, var->value))
-		{
-			Cvar_Set(var->name, var->value);
-		}
-	}
+//    /* make sure they are all set to the proper values */
+//    for (i = 0, var = cheatvars; i < numcheatvars; i++, var++)
+//    {
+//        if (strcmp(var->var->string, var->value))
+//        {
+//            Cvar_Set(var->name, var->value);
+//        }
+//    }
+    
+    // don't allow cheats in multiplayer
+    Cvar_FixCheatVars(false);
+
 }
 
 void
@@ -819,6 +968,20 @@ CL_Frame(int packetdelta, int renderdelta, int timedelta, qboolean packetframe, 
 		CL_RunHTTPDownloads();
 #endif
 	}
+    
+    // not sure if this should be here or in the bracket below -tkidd
+    
+    // clamp this to acceptable values (don't allow infinite particles)
+    if (cl_particle_scale->value < 1.0f)
+        Cvar_SetValue( "cl_particle_scale", 1);
+    
+    // clamp this to acceptable minimum length
+    if (cl_rail_length->value < MIN_RAIL_LENGTH)
+        Cvar_SetValue( "cl_rail_length", MIN_RAIL_LENGTH);
+    
+    // clamp this to acceptable minimum duration
+    if (r_decal_life->value < MIN_DECAL_LIFE)
+        Cvar_SetValue( "r_decal_life", MIN_DECAL_LIFE);
 
 	if (renderframe)
 	{
@@ -910,7 +1073,7 @@ CL_Init(void)
 
 	net_message.maxsize = sizeof(net_message_buffer);
 
-	M_Init();
+	UI_Init();
 
 #ifdef USE_CURL
 	CL_InitHTTPDownloads();
@@ -929,6 +1092,7 @@ void
 CL_Shutdown(void)
 {
 	static qboolean isdown = false;
+    int sec, base;     // zaphster's delay variables
 
 	if (isdown)
 	{
@@ -947,8 +1111,21 @@ CL_Shutdown(void)
 	Key_WriteConsoleHistory();
 
 	OGG_Stop();
+    
+    // added delay
+    sec = base = Sys_Milliseconds();
+    while ((sec - base) < 200)
+        sec = Sys_Milliseconds();
+    // end delay
 
 	S_Shutdown();
+
+    // added delay
+    sec = base = Sys_Milliseconds();
+    while ((sec - base) < 200)
+        sec = Sys_Milliseconds();
+    // end delay
+    
 	IN_Shutdown();
 	VID_Shutdown();
 }

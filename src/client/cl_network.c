@@ -92,18 +92,23 @@ CL_Drop(void)
 		return;
 	}
 
+    // if an error occurs during initial load
+    // or during game start, drop loading plaque
+    if ( (cls.disable_servercount != -1) || (cls.key_dest == key_game) )
+        SCR_EndLoadingPlaque ();    // get rid of loading plaque
+    
 	if (cls.state == ca_disconnected)
 	{
 		return;
 	}
 
 	CL_Disconnect();
-
-	/* drop loading plaque unless this is the initial game start */
-	if (cls.disable_servercount != -1)
-	{
-		SCR_EndLoadingPlaque();  /* get rid of loading plaque */
-	}
+//
+//    /* drop loading plaque unless this is the initial game start */
+//    if (cls.disable_servercount != -1)
+//    {
+//        SCR_EndLoadingPlaque();  /* get rid of loading plaque */
+//    }
 }
 
 /*
@@ -134,7 +139,13 @@ CL_SendConnectPacket(void)
 
 	userinfo_modified = false;
 
-	Netchan_OutOfBandPrint(NS_CLIENT, adr, "connect %i %i %i \"%s\"\n",
+    // if in compatibility mode, lie to server about this
+    // client's protocol, but exclude localhost for this.
+    if (cl_servertrick->value && strcmp(cls.servername, "localhost"))
+        Netchan_OutOfBandPrint (NS_CLIENT, adr, "connect %i %i %i \"%s\"\n",
+                                OLD_PROTOCOL_VERSION, port, cls.challenge, Cvar_Userinfo() );
+    else
+        Netchan_OutOfBandPrint(NS_CLIENT, adr, "connect %i %i %i \"%s\"\n",
 			PROTOCOL_VERSION, port, cls.challenge, Cvar_Userinfo());
 }
 
@@ -287,6 +298,7 @@ void CL_WriteConfiguration(void);
  * the server This is also called on Com_Error, so
  * it shouldn't cause any errors
  */
+extern    char    *currentweaponmodel;
 void
 CL_Disconnect(void)
 {
@@ -313,9 +325,9 @@ CL_Disconnect(void)
 
 	VectorClear(cl.refdef.blend);
 
-	R_SetPalette(NULL);
+//    R_SetPalette(NULL);
 
-	M_ForceMenuOff();
+	UI_ForceMenuOff();
 
 	cls.connect_time = 0;
 
@@ -354,6 +366,9 @@ CL_Disconnect(void)
 #endif
 
 	cls.state = ca_disconnected;
+
+    // reset current weapon model
+    currentweaponmodel = NULL;
 
 	snd_is_underwater = false;
 
@@ -438,12 +453,14 @@ CL_Changing_f(void)
 {
 	/* if we are downloading, we don't change!
 	   This so we don't suddenly stop downloading a map */
-	if (cls.download)
+    SCR_BeginLoadingPlaque (); // Knightmare moved here
+
+    if (cls.download)
 	{
 		return;
 	}
 
-	SCR_BeginLoadingPlaque();
+//    SCR_BeginLoadingPlaque();
 	cls.state = ca_connected; /* not active anymore, but not disconnected */
 	Com_Printf("\nChanging map...\n");
 
@@ -498,70 +515,83 @@ CL_Reconnect_f(void)
 	}
 }
 
-void
-CL_PingServers_f(void)
+extern int      global_udp_server_time;
+extern int      global_ipx_server_time;
+extern int      global_adr_server_time[16];
+extern netadr_t global_adr_server_netadr[16];
+
+void CL_PingServers_f (void)
 {
-	int i;
-	netadr_t adr;
-	char name[32];
-	const char *adrstring;
-	cvar_t *noudp;
-	cvar_t *noipx;
-
-	NET_Config(true);  /* allow remote but do we even need lokal pings? */
-
-	/* send a broadcast packet */
-	Com_Printf("pinging broadcast...\n");
-
-	noudp = Cvar_Get("noudp", "0", CVAR_NOSET);
-
-	if (!noudp->value)
-	{
-		adr.type = NA_BROADCAST;
-		adr.port = BigShort(PORT_SERVER);
-		Netchan_OutOfBandPrint(NS_CLIENT, adr, va("info %i", PROTOCOL_VERSION));
-
-		Com_Printf("pinging multicast...\n");
-		adr.type = NA_MULTICAST6;
-		adr.port = BigShort(PORT_SERVER);
-		Netchan_OutOfBandPrint(NS_CLIENT, adr, va("info %i", PROTOCOL_VERSION));
-	}
-
-	noipx = Cvar_Get("noipx", "0", CVAR_NOSET);
-
-	if (!noipx->value)
-	{
-		adr.type = NA_BROADCAST_IPX;
-		adr.port = BigShort(PORT_SERVER);
-		Netchan_OutOfBandPrint(NS_CLIENT, adr, va("info %i", PROTOCOL_VERSION));
-	}
-
-	/* send a packet to each address book entry */
-	for (i = 0; i < 16; i++)
-	{
-		Com_sprintf(name, sizeof(name), "adr%i", i);
-		adrstring = Cvar_VariableString(name);
-
-		if (!adrstring || !adrstring[0])
-		{
-			continue;
-		}
-
-		Com_Printf("pinging %s...\n", adrstring);
-
-		if (!NET_StringToAdr(adrstring, &adr))
-		{
-			Com_Printf("Bad address: %s\n", adrstring);
-			continue;
-		}
-
-		if (!adr.port)
-		{
-			adr.port = BigShort(PORT_SERVER);
-		}
-
-		Netchan_OutOfBandPrint(NS_CLIENT, adr, va("info %i", PROTOCOL_VERSION));
-	}
+    int            i;
+    netadr_t    adr;
+    char        name[32];
+    char        *adrstring;
+    cvar_t        *noudp;
+    cvar_t        *noipx;
+    
+    NET_Config (true);        // allow remote
+    
+    // send a broadcast packet
+    Com_Printf ("pinging broadcast...\n");
+    
+    // send a packet to each address book entry
+    for (i=0 ; i<16 ; i++)
+    {
+        memset(&global_adr_server_netadr[i], 0, sizeof(global_adr_server_netadr[0]));
+        global_adr_server_time[i] = Sys_Milliseconds() ;
+        
+        Com_sprintf (name, sizeof(name), "adr%i", i);
+        adrstring = Cvar_VariableString (name);
+        if (!adrstring || !adrstring[0])
+            continue;
+        
+        Com_Printf ("pinging %s...\n", adrstring);
+        if (!NET_StringToAdr (adrstring, &adr))
+        {
+            Com_Printf ("Bad address: %s\n", adrstring);
+            continue;
+        }
+        if (!adr.port)
+            adr.port = BigShort(PORT_SERVER);
+        
+        memcpy(&global_adr_server_netadr[i], &adr, sizeof(global_adr_server_netadr));
+        
+        // if the server is using the old protocol,
+        // lie to it about this client's protocol
+        if (cl_servertrick->value)
+            Netchan_OutOfBandPrint (NS_CLIENT, adr, va("info %i", OLD_PROTOCOL_VERSION));
+        else
+            Netchan_OutOfBandPrint (NS_CLIENT, adr, va("info %i", PROTOCOL_VERSION));
+    }
+    
+    noudp = Cvar_Get ("noudp", "0", CVAR_NOSET);
+    if (!noudp->value)
+    {
+        global_udp_server_time = Sys_Milliseconds() ;
+        adr.type = NA_BROADCAST;
+        adr.port = BigShort(PORT_SERVER);
+        
+        // if the server is using the old protocol,
+        // lie to it about this client's protocol
+        if (cl_servertrick->value)
+            Netchan_OutOfBandPrint (NS_CLIENT, adr, va("info %i", OLD_PROTOCOL_VERSION));
+        else
+            Netchan_OutOfBandPrint (NS_CLIENT, adr, va("info %i", PROTOCOL_VERSION));
+    }
+    
+    noipx = Cvar_Get ("noipx", "0", CVAR_NOSET);
+    if (!noipx->value)
+    {
+        global_ipx_server_time = Sys_Milliseconds() ;
+        adr.type = NA_BROADCAST_IPX;
+        adr.port = BigShort(PORT_SERVER);
+        // if the server is using the old protocol,
+        // lie to it about this client's protocol
+        if (cl_servertrick->value)
+            Netchan_OutOfBandPrint (NS_CLIENT, adr, va("info %i", OLD_PROTOCOL_VERSION));
+        else
+            Netchan_OutOfBandPrint (NS_CLIENT, adr, va("info %i", PROTOCOL_VERSION));
+    }
 }
 
 /*
