@@ -37,15 +37,12 @@ CL_ParseInventory(void)
 	}
 }
 
+void Hud_DrawString (int x, int y, const char *string, int alpha);
+
 static void
 Inv_DrawStringScaled(int x, int y, char *string, float factor)
 {
-	while (*string)
-	{
-		Draw_CharScaled(x, y, *string, factor);
-		x += factor*8;
-		string++;
-	}
+    Hud_DrawString(x, y, string, 255);
 }
 
 static void
@@ -106,28 +103,35 @@ CL_DrawInventory(void)
 		top = 0;
 	}
 
-	x = (viddef.width - scale*256) / 2;
-	y = (viddef.height - scale*240) / 2;
+    x = viddef.width/2 - scaledHud(128);
+    y = viddef.height/2 - scaledHud(120);
+//    x = (viddef.width - scale*256) / 2;
+//    y = (viddef.height - scale*240) / 2;
 
 	/* repaint everything next frame */
 	SCR_DirtyScreen();
 
-	Draw_PicScaled(x, y + scale*8, "inventory", scale);
-
-	y += scale*24;
-	x += scale*24;
-
-	Inv_DrawStringScaled(x, y, "hotkey ### item", scale);
-	Inv_DrawStringScaled(x, y + scale*8, "------ --- ----", scale);
-
-	y += scale*16;
+    R_DrawScaledPic (x, y+scaledHud(8), HudScale(), hud_alpha->value, "inventory");
+    
+    y += scaledHud(24);
+    x += scaledHud(24);
+    Inv_DrawString (x, y, S_COLOR_BOLD"hotkey ### item");
+    Inv_DrawString (x, y+scaledHud(8), S_COLOR_BOLD"------ --- ----");
+    y += scaledHud(16);
 
 	for (i = top; i < num && i < top + DISPLAY_ITEMS; i++)
 	{
 		item = index[i];
 		/* search for a binding */
-		Com_sprintf(binding, sizeof(binding), "use %s",
+
+        // Knightmare- BIG UGLY HACK for connected to server using old protocol
+        // Changed config strings require different parsing
+        if ( LegacyProtocol() )
+            Com_sprintf (binding, sizeof(binding), "use %s", cl.configstrings[OLD_CS_ITEMS+item]);
+        else
+            Com_sprintf(binding, sizeof(binding), "use %s",
 				cl.configstrings[CS_ITEMS + item]);
+        
 		bind = "";
 
 		for (j = 0; j < 256; j++)
@@ -139,25 +143,38 @@ CL_DrawInventory(void)
 			}
 		}
 
-		Com_sprintf(string, sizeof(string), "%6s %3i %s", bind,
-				cl.inventory[item], cl.configstrings[CS_ITEMS + item]);
-
-		if (item != selected)
-		{
-			SetStringHighBit(string);
-		}
-		else
-		{
-			/* draw a blinky cursor by the selected item */
-			if ((int)(cls.realtime * 10) & 1)
-			{
-				Draw_CharScaled(x - scale*8, y, 15, scale);
-			}
-		}
+        // Knightmare- BIG UGLY HACK for connected to server using old protocol
+        // Changed config strings require different parsing
+        if ( LegacyProtocol() )
+        {
+            if (item != selected)
+            {
+                Com_sprintf (string, sizeof(string), " "S_COLOR_BOLD S_COLOR_ALT"%3s %3i %7s", bind, cl.inventory[item],
+                             cl.configstrings[OLD_CS_ITEMS+item] );
+            }
+            else    // draw a blinky cursor by the selected item
+            {
+                Com_sprintf (string, sizeof(string), S_COLOR_BOLD">"S_COLOR_ITALIC"%3s %3i %7s", bind, cl.inventory[item],
+                             cl.configstrings[OLD_CS_ITEMS+item] );
+            }
+        }
+        else
+        {
+            if (item != selected)
+            {
+                Com_sprintf (string, sizeof(string), " "S_COLOR_BOLD S_COLOR_ALT"%3s %3i %7s", bind, cl.inventory[item],
+                             cl.configstrings[CS_ITEMS+item] );
+            }
+            else    // draw a blinky cursor by the selected item
+            {
+                Com_sprintf (string, sizeof(string), S_COLOR_BOLD">"S_COLOR_ITALIC"%3s %3i %7s", bind, cl.inventory[item],
+                             cl.configstrings[CS_ITEMS+item] );
+            }
+        }
 
 		Inv_DrawStringScaled(x, y, string, scale);
 
-		y += scale*8;
+        y += scaledHud(8);
 	}
 }
 

@@ -27,6 +27,8 @@
  * =======================================================================
  */
 
+// skipping this file for now, yquake2 and kmquake2 have very different ideas on this file -tkidd
+
 #include "header/client.h"
 
 static cvar_t *cfg_unbindall;

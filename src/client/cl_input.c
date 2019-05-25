@@ -58,7 +58,7 @@ unsigned old_sys_frame_time;
 kbutton_t in_klook;
 kbutton_t in_left, in_right, in_forward, in_back;
 kbutton_t in_lookup, in_lookdown, in_moveleft, in_moveright;
-kbutton_t in_strafe, in_speed, in_use, in_attack;
+kbutton_t in_strafe, in_speed, in_use, in_attack, in_attack2;
 kbutton_t in_up, in_down;
 
 int in_impulse;
@@ -352,6 +352,11 @@ IN_AttackUp(void)
 	KeyUp(&in_attack);
 }
 
+//Knightmare added
+void IN_Attack2Down(void) {KeyDown(&in_attack2);}
+void IN_Attack2Up(void) {KeyUp(&in_attack2);}
+// end Knightmare
+
 void
 IN_UseDown(void)
 {
@@ -539,6 +544,12 @@ CL_FinishMove(usercmd_t *cmd)
 
 	in_attack.state &= ~2;
 
+    // Knightmare added
+    if ( in_attack2.state & 3 )
+        cmd->buttons |= BUTTON_ATTACK2;
+    in_attack2.state &= ~2;
+    // end Knightamre
+    
 	if (in_use.state & 3)
 	{
 		cmd->buttons |= BUTTON_USE;
@@ -622,6 +633,12 @@ CL_InitInput(void)
 	Cmd_AddCommand("-speed", IN_SpeedUp);
 	Cmd_AddCommand("+attack", IN_AttackDown);
 	Cmd_AddCommand("-attack", IN_AttackUp);
+    
+    // Knightmare added
+    Cmd_AddCommand ("+attack2", IN_Attack2Down);
+    Cmd_AddCommand ("-attack2", IN_Attack2Up);
+    // end Knightmare
+    
 	Cmd_AddCommand("+use", IN_UseDown);
 	Cmd_AddCommand("-use", IN_UseUp);
 	Cmd_AddCommand("impulse", IN_Impulse);
