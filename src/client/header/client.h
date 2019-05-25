@@ -524,12 +524,10 @@ typedef struct particle_s
 	vec3_t		vel;
 	vec3_t		accel;
     
-	float		color;
-	float		colorvel;
-    // revisit me -tkidd
-    //    vec3_t        color;
-    // revisit me -tkidd
-    //    vec3_t        colorvel;
+//    float        color;
+//    float        colorvel;
+    vec3_t        color;
+    vec3_t        colorvel;
 
 	float		alpha;
 	float		alphavel;

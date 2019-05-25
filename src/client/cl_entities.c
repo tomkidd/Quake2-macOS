@@ -1454,3 +1454,13 @@ CL_GetViewVelocity(vec3_t vel)
 	vel[1] = (float)cl.frame.playerstate.pmove.velocity[1] * scale_factor;
 	vel[2] = (float)cl.frame.playerstate.pmove.velocity[2] * scale_factor;
 }
+
+void CL_HyperBlasterEffect (vec3_t start, vec3_t end, vec3_t angle, int red, int green, int blue,
+                            int reddelta, int greendelta, int bluedelta, float len, float size)
+{
+    if (cl_particle_scale->value >= 2)
+        CL_BlasterTracer (end, angle, red, green, blue, len, size);
+    else
+        CL_HyperBlasterTrail (start, end, red, green, blue, reddelta, greendelta, bluedelta);
+}
+

@@ -522,6 +522,7 @@
 		A1D529F722936504005928FF /* wildcard.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wildcard.h; sourceTree = "<group>"; };
 		A1D529F82294B347005928FF /* cinematic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cinematic.h; sourceTree = "<group>"; };
 		A1D529F92294B381005928FF /* cl_cinematic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_cinematic.c; sourceTree = "<group>"; };
+		A1D52A02229756A1005928FF /* particles.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = particles.h; sourceTree = "<group>"; };
 		A1E39F8722838FB8005B2FB7 /* g_crane.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_crane.c; sourceTree = "<group>"; };
 		A1E39F8822838FB8005B2FB7 /* g_ctf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_ctf.c; sourceTree = "<group>"; };
 		A1E39F8922838FB8005B2FB7 /* g_patchplayermodels.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_patchplayermodels.c; sourceTree = "<group>"; };
@@ -1405,6 +1406,7 @@
 				A15FA29F2110C5BC0048A3AD /* client.h */,
 				A15FA29E2110C5BC0048A3AD /* console.h */,
 				A15FA2A02110C5BC0048A3AD /* keyboard.h */,
+				A1D52A02229756A1005928FF /* particles.h */,
 				A15FA2A12110C5BC0048A3AD /* screen.h */,
 			);
 			path = header;
