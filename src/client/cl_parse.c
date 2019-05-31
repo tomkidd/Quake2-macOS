@@ -66,17 +66,34 @@ CL_RegisterSounds(void)
 	S_BeginRegistration();
 	CL_RegisterTEntSounds();
 
-	for (i = 1; i < MAX_SOUNDS; i++)
-	{
-		if (!cl.configstrings[CS_SOUNDS + i][0])
-		{
-			break;
-		}
-
-		cl.sound_precache[i] = S_RegisterSound(cl.configstrings[CS_SOUNDS + i]);
-		IN_Update();
-	}
-
+    // Knightmare- 1/2/2002- ULTRA-CHEESY HACK for old demos or
+    // connected to server using old protocol
+    // Changed config strings require different offsets
+    if ( LegacyProtocol() )
+    {
+        for (i=1; i < OLD_MAX_SOUNDS; i++)
+        {
+            if (!cl.configstrings[OLD_CS_SOUNDS+i][0])
+                break;
+            cl.sound_precache[i] = S_RegisterSound (cl.configstrings[OLD_CS_SOUNDS+i]);
+            Sys_SendKeyEvents ();    // pump message loop
+        }
+        
+    }
+    else
+    {
+        for (i = 1; i < MAX_SOUNDS; i++)
+        {
+            if (!cl.configstrings[CS_SOUNDS + i][0])
+            {
+                break;
+            }
+            
+            cl.sound_precache[i] = S_RegisterSound(cl.configstrings[CS_SOUNDS + i]);
+            IN_Update();
+        }
+    }
+    //end Knightmare
 	S_EndRegistration();
 }
 
@@ -1126,9 +1143,9 @@ CL_ParseServerData(void)
 	cls.serverProtocol = i;
 
 	/* another demo hack */
-	if (Com_ServerState() && (PROTOCOL_VERSION == 34))
-	{
-	}
+    // Knightmare- also allow connectivity with servers using the old protocol
+    //    if (Com_ServerState() && (i < PROTOCOL_VERSION) /*== 35*/)
+    if ( LegacyProtocol() ) {} // do nothing
 	else if (i != PROTOCOL_VERSION)
 	{
 		Com_Error(ERR_DROP, "Server returned version %i, not %i",
@@ -1143,9 +1160,9 @@ CL_ParseServerData(void)
 	Q_strlcpy(cl.gamedir, str, sizeof(cl.gamedir));
 
 	/* set gamedir */
-	if ((*str && (!fs_gamedirvar->string || !*fs_gamedirvar->string ||
-		  strcmp(fs_gamedirvar->string, str))) ||
-		(!*str && (fs_gamedirvar->string || *fs_gamedirvar->string)))
+    if ( ( (*str && (!fs_gamedirvar->string || !*fs_gamedirvar->string || strcmp(fs_gamedirvar->string, str)))
+          || (!*str && (fs_gamedirvar->string || *fs_gamedirvar->string)) )
+        && !cl.attractloop ) // Knightmare- don't allow demos to change this
 	{
 		Cvar_Set("game", str);
 	}
@@ -1166,7 +1183,9 @@ CL_ParseServerData(void)
 		/* seperate the printfs so the server
 		 * message can have a color */
 		Com_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
-		Com_Printf("%c%s\n", 2, str);
+        con.ormask = 128;
+        Com_Printf ("%c"S_COLOR_SHADOW S_COLOR_ALT"%s\n", 2, str);
+        con.ormask = 0;
 
 		/* need to prep refresh at next oportunity */
 		cl.refresh_prepped = false;
@@ -1336,12 +1355,115 @@ CL_ParseClientinfo(int player)
 	char *s;
 	clientinfo_t *ci;
 
-	s = cl.configstrings[player + CS_PLAYERSKINS];
+    // Knightmare- 1/2/2002- GROSS HACK for old demos or
+    // connected to server using old protocol
+    // Changed config strings require different offsets
+    if ( LegacyProtocol() )
+        s = cl.configstrings[player+OLD_CS_PLAYERSKINS];
+    else
+        s = cl.configstrings[player + CS_PLAYERSKINS];
+    //end Knightmare
 
 	ci = &cl.clientinfo[player];
 
 	CL_LoadClientinfo(ci, s);
 }
+
+/*
+ ================
+ CL_MissionPackCDTrack
+ Returns correct OGG track number for mission packs.
+ This assumes that the standard Q2 CD was ripped
+ as track02-track11, and the Rogue CD as track12-track21.
+ ================
+ */
+int CL_MissionPackCDTrack (int tracknum)
+{
+    if (modType("rogue") || cl_rogue_music->value)
+    {
+        if (tracknum >= 2 && tracknum <= 11)
+            return tracknum + 10;
+        else
+            return tracknum;
+    }
+    // an out-of-order mix from Q2 and Rogue CDs
+    else if (modType("xatrix") || cl_xatrix_music->value)
+    {
+        switch(tracknum)
+        {
+            case 2: return 9;    break;
+            case 3: return 13;    break;
+            case 4: return 14;    break;
+            case 5: return 7;    break;
+            case 6: return 16;    break;
+            case 7: return 2;    break;
+            case 8: return 15;    break;
+            case 9: return 3;    break;
+            case 10: return 4;    break;
+            case 11: return 18; break;
+            default: return tracknum; break;
+        }
+    }
+    else
+        return tracknum;
+}
+
+/*
+ =================
+ CL_PlayBackgroundTrack
+ =================
+ */
+#ifdef OGG_SUPPORT
+
+void S_StartBackgroundTrack (const char *introTrack, const char *loopTrack);
+void S_StopBackgroundTrack (void);
+
+void CL_PlayBackgroundTrack (void)
+{
+    char    name[MAX_QPATH];
+    int        track;
+    //fileHandle_t    f;
+    
+    if (!cl.refresh_prepped)
+        return;
+    
+    // using a named audio track intead of numbered
+    if (strlen(cl.configstrings[CS_CDTRACK]) > 2)
+    {
+        sprintf(name, va("music/%s.ogg", cl.configstrings[CS_CDTRACK]) );
+        if (FS_LoadFile(name, NULL) != -1)
+        {
+            CDAudio_Stop();
+            S_StartBackgroundTrack(name, name);
+            return;
+        }
+    }
+    
+    track = atoi(cl.configstrings[CS_CDTRACK]);
+    
+    if (track == 0)
+    {    // Stop any playing track
+        CDAudio_Stop();
+        S_StopBackgroundTrack();
+        return;
+    }
+    
+    // If an OGG file exists play it, otherwise fall back to CD audio
+    sprintf(name, va("music/track%02i.ogg", CL_MissionPackCDTrack(track)) );
+    if ( (FS_LoadFile(name, NULL) != -1) && cl_ogg_music->value )
+        S_StartBackgroundTrack(name, name);
+    else
+        CDAudio_Play(track, true);
+}
+
+#else
+
+void CL_PlayBackgroundTrack (void)
+{
+    CDAudio_Play (atoi(cl.configstrings[CS_CDTRACK]), true);
+}
+
+#endif // OGG_SUPPORT
 
 void
 CL_ParseConfigString(void)
@@ -1364,62 +1486,109 @@ CL_ParseConfigString(void)
 	length = strlen(s);
 	if (length > sizeof(cl.configstrings) - sizeof(cl.configstrings[0])*i - 1)
 	{
-		Com_Error(ERR_DROP, "CL_ParseConfigString: oversize configstring");
-	}
-
-	strcpy(cl.configstrings[i], s);
-
-	/* do something apropriate */
-	if ((i >= CS_LIGHTS) && (i < CS_LIGHTS + MAX_LIGHTSTYLES))
-	{
-		CL_SetLightstyle(i - CS_LIGHTS);
-	}
-	else if (i == CS_CDTRACK)
-	{
-		if (cl.refresh_prepped)
-		{
-			OGG_PlayTrack((int)strtol(cl.configstrings[CS_CDTRACK], (char **)NULL, 10));
-		}
-	}
-	else if ((i >= CS_MODELS) && (i < CS_MODELS + MAX_MODELS))
-	{
-		if (cl.refresh_prepped)
-		{
-			cl.model_draw[i - CS_MODELS] = R_RegisterModel(cl.configstrings[i]);
-
-			if (cl.configstrings[i][0] == '*')
-			{
-				cl.model_clip[i - CS_MODELS] = CM_InlineModel(cl.configstrings[i]);
-			}
-
-			else
-			{
-				cl.model_clip[i - CS_MODELS] = NULL;
-			}
-		}
-	}
-	else if ((i >= CS_SOUNDS) && (i < CS_SOUNDS + MAX_MODELS))
-	{
-		if (cl.refresh_prepped)
-		{
-			cl.sound_precache[i - CS_SOUNDS] =
-				S_RegisterSound(cl.configstrings[i]);
-		}
-	}
-	else if ((i >= CS_IMAGES) && (i < CS_IMAGES + MAX_MODELS))
-	{
-		if (cl.refresh_prepped)
-		{
-			cl.image_precache[i - CS_IMAGES] = Draw_FindPic(cl.configstrings[i]);
-		}
-	}
-	else if ((i >= CS_PLAYERSKINS) && (i < CS_PLAYERSKINS + MAX_CLIENTS))
-	{
-		if (cl.refresh_prepped && strcmp(olds, s))
-		{
-			CL_ParseClientinfo(i - CS_PLAYERSKINS);
-		}
-	}
+        Com_Error(ERR_DROP, "CL_ParseConfigString: oversize configstring");
+    }
+    
+    strcpy(cl.configstrings[i], s);
+    
+    /* do something apropriate */
+    
+    
+    // Knightmare- 1/2/2002- BIG UGLY HACK for old demos or
+    // connected to server using old protocol
+    // Changed config strings require different parsing
+    if ( LegacyProtocol())
+    {
+        if (i >= OLD_CS_LIGHTS && i < OLD_CS_LIGHTS+MAX_LIGHTSTYLES)
+            CL_SetLightstyle (i - OLD_CS_LIGHTS);
+        else if (i == CS_CDTRACK)
+        {
+            if (cl.refresh_prepped)
+                CL_PlayBackgroundTrack ();
+        }
+        else if (i >= CS_MODELS && i < CS_MODELS+OLD_MAX_MODELS)
+        {
+            if (cl.refresh_prepped)
+            {
+                cl.model_draw[i-CS_MODELS] = R_RegisterModel (cl.configstrings[i]);
+                if (cl.configstrings[i][0] == '*')
+                    cl.model_clip[i-CS_MODELS] = CM_InlineModel (cl.configstrings[i]);
+                else
+                    cl.model_clip[i-CS_MODELS] = NULL;
+            }
+        }
+        else if (i >= OLD_CS_SOUNDS && i < OLD_CS_SOUNDS+OLD_MAX_SOUNDS)
+        {
+            if (cl.refresh_prepped)
+                cl.sound_precache[i-OLD_CS_SOUNDS] = S_RegisterSound (cl.configstrings[i]);
+        }
+        else if (i >= OLD_CS_IMAGES && i < OLD_CS_IMAGES+OLD_MAX_IMAGES)
+        {
+            if (cl.refresh_prepped)
+                cl.image_precache[i-OLD_CS_IMAGES] = R_DrawFindPic (cl.configstrings[i]);
+        }
+        else if (i >= OLD_CS_PLAYERSKINS && i < OLD_CS_PLAYERSKINS+MAX_CLIENTS)
+        {
+            if (cl.refresh_prepped && strcmp(olds, s))
+                CL_ParseClientinfo (i-OLD_CS_PLAYERSKINS);
+        }
+    }
+    else // new configstring offsets
+    {
+        
+        if ((i >= CS_LIGHTS) && (i < CS_LIGHTS + MAX_LIGHTSTYLES))
+        {
+            CL_SetLightstyle(i - CS_LIGHTS);
+        }
+        else if (i == CS_CDTRACK)
+        {
+            if (cl.refresh_prepped)
+            {
+//                OGG_PlayTrack((int)strtol(cl.configstrings[CS_CDTRACK], (char **)NULL, 10));
+                CL_PlayBackgroundTrack();
+            }
+        }
+        else if ((i >= CS_MODELS) && (i < CS_MODELS + MAX_MODELS))
+        {
+            if (cl.refresh_prepped)
+            {
+                cl.model_draw[i - CS_MODELS] = R_RegisterModel(cl.configstrings[i]);
+                
+                if (cl.configstrings[i][0] == '*')
+                {
+                    cl.model_clip[i - CS_MODELS] = CM_InlineModel(cl.configstrings[i]);
+                }
+                
+                else
+                {
+                    cl.model_clip[i - CS_MODELS] = NULL;
+                }
+            }
+        }
+        else if ((i >= CS_SOUNDS) && (i < CS_SOUNDS + MAX_SOUNDS)) //Knightmare- was MAX_MODELS
+        {
+            if (cl.refresh_prepped)
+            {
+                cl.sound_precache[i - CS_SOUNDS] =
+                S_RegisterSound(cl.configstrings[i]);
+            }
+        }
+        else if ((i >= CS_IMAGES) && (i < CS_IMAGES + MAX_IMAGES)) //Knightmare- was MAX_MODELS
+        {
+            if (cl.refresh_prepped)
+            {
+                cl.image_precache[i - CS_IMAGES] = Draw_FindPic(cl.configstrings[i]);
+            }
+        }
+        else if ((i >= CS_PLAYERSKINS) && (i < CS_PLAYERSKINS + MAX_CLIENTS))
+        {
+            if (cl.refresh_prepped && strcmp(olds, s))
+            {
+                CL_ParseClientinfo(i - CS_PLAYERSKINS);
+            }
+        }
+    }
+    //end Knightmare
 }
 
 void
@@ -1435,7 +1604,14 @@ CL_ParseStartSoundPacket(void)
 	float ofs;
 
 	flags = MSG_ReadByte(&net_message);
-	sound_num = MSG_ReadByte(&net_message);
+    // Knightmare- 12/23/2001
+    // read sound indices as bytes only if playing old demos or
+    // connected to server using old protocol; otherwise, read as shorts
+    if ( LegacyProtocol() )
+        sound_num = MSG_ReadByte(&net_message);
+    else
+        sound_num = MSG_ReadShort (&net_message);
+    //end Knightmare
 
 	if (flags & SND_VOLUME)
 	{
@@ -1515,6 +1691,43 @@ SHOWNET(char *s)
 	{
 		Com_Printf("%3i:%s\n", net_message.readcount - 1, s);
 	}
+}
+
+// Knightmare- server-controlled fog
+/*
+ =====================
+ CL_ParseFog
+ =====================
+ */
+// Fog is sent like this:
+// gi.WriteByte (svc_fog); // svc_fog = 21
+// gi.WriteByte (fog_enable); // 1 = on, 0 = off
+// gi.WriteByte (fog_model); // 0, 1, or 2
+// gi.WriteByte (fog_density); // 1-100
+// gi.WriteShort (fog_near); // >0, <fog_far
+// gi.WriteShort (fog_far); // >fog_near-64, <5000
+// gi.WriteByte (fog_red); // 0-255
+// gi.WriteByte (fog_green); // 0-255
+// gi.WriteByte (fog_blue); // 0-255
+// gi.unicast (player_ent, true);
+
+void CL_ParseFog (void)
+{
+    qboolean fogenable;
+    int model, density, start, end,
+    red, green, blue, temp;
+    
+    temp = MSG_ReadByte (&net_message);
+    fogenable = (temp > 0) ? true:false;
+    model = MSG_ReadByte (&net_message);
+    density = MSG_ReadByte (&net_message);
+    start = MSG_ReadShort (&net_message);
+    end = MSG_ReadShort (&net_message);
+    red = MSG_ReadByte (&net_message);
+    green = MSG_ReadByte (&net_message);
+    blue = MSG_ReadByte (&net_message);
+    
+    R_SetFogVars (fogenable, model, density, start, end, red, green, blue);
 }
 
 void
@@ -1600,9 +1813,11 @@ CL_ParseServerMessage(void)
 				{
 					S_StartLocalSound("misc/talk.wav");
 					con.ormask = 128;
+                    Com_Printf (S_COLOR_ALT"%s", MSG_ReadString (&net_message)); // Knightmare- add green flag
 				}
-
-				Com_Printf("%s", MSG_ReadString(&net_message));
+                else
+                    Com_Printf("%s", MSG_ReadString(&net_message));
+                
 				con.ormask = 0;
 				break;
 
@@ -1657,6 +1872,10 @@ CL_ParseServerMessage(void)
 				CL_ParseInventory();
 				break;
 
+            case svc_fog:    // Knightmare added
+                CL_ParseFog ();
+                break;
+                
 			case svc_layout:
 				s = MSG_ReadString(&net_message);
 				Q_strlcpy(cl.layout, s, sizeof(cl.layout));

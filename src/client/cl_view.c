@@ -84,21 +84,37 @@ V_AddEntity(entity_t *ent)
 	r_entities[r_numentities++] = *ent;
 }
 
+//Knightmare- Psychospaz's enhanced particle code
 void
-V_AddParticle(vec3_t org, unsigned int color, float alpha)
+V_AddParticle (vec3_t org, vec3_t angle, vec3_t color, float alpha,
+                    int alpha_src, int alpha_dst, float size, int image, int flags)
 {
-	particle_t *p;
-
-	if (r_numparticles >= MAX_PARTICLES)
-	{
-		return;
-	}
-
-	p = &r_particles[r_numparticles++];
-	VectorCopy(org, p->origin);
-	p->color = color;
-	p->alpha = alpha;
+    int i;
+    particle_t    *p;
+    
+    if (r_numparticles >= MAX_PARTICLES)
+        return;
+    p = &r_particles[r_numparticles++];
+    
+    for (i=0;i<3;i++)
+    {
+        p->origin[i] = org[i];
+        p->angle[i] = angle[i];
+    }
+    p->red = color[0];
+    p->green = color[1];
+    p->blue = color[2];
+    p->alpha = alpha;
+    p->image = image;
+    p->flags = flags;
+    p->size  = size;
+#ifdef DECALS
+    p->decal = NULL;
+#endif
+    p->blendfunc_src = alpha_src;
+    p->blendfunc_dst = alpha_dst;
 }
+//end Knightmare
 
 void
 V_AddLight(vec3_t org, float intensity, float r, float g, float b)

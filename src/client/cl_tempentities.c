@@ -1606,7 +1606,7 @@ CL_AddPlayerBeams(void)
 		if ((cl_mod_heatbeam && (b->model == cl_mod_heatbeam) &&
 			 (b->entity == cl.playernum + 1)))
 		{
-			CL_Heatbeam(org, dist);
+			CL_HeatbeamParticles(org, dist);
 		}
 
 		/* add new entities for the beams */

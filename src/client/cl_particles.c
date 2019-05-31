@@ -658,6 +658,8 @@ CL_AddParticles(void)
 #endif
 }
 
+//Knightmare- removed for Psychospaz's enhanced particle code
+#if 0
 void
 CL_GenericParticleEffect(vec3_t org, vec3_t dir, int color,
 		int count, int numcolors, int dirspread, float alphavel)
@@ -708,4 +710,4 @@ CL_GenericParticleEffect(vec3_t org, vec3_t dir, int color,
 		p->alphavel = -1.0f / (0.5f + frandk() * alphavel);
 	}
 }
-
+#endif

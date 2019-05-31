@@ -2564,48 +2564,46 @@ CL_ColorFlash(vec3_t pos, int ent, float intensity, float r, float g, float b)
 void
 CL_DebugTrail(vec3_t start, vec3_t end)
 {
-	vec3_t move;
-	vec3_t vec;
-	float len;
-	cparticle_t *p;
-	float dec;
-	vec3_t right, up;
-
-	VectorCopy(start, move);
-	VectorSubtract(end, start, vec);
-	len = VectorNormalize(vec);
-
-	MakeNormalVectors(vec, right, up);
-
-	dec = 3;
-	VectorScale(vec, dec, vec);
-	VectorCopy(start, move);
-
-	while (len > 0)
-	{
-		len -= dec;
-
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-
-		p->time = (float)cl.time;
-		VectorClear(p->accel);
-		VectorClear(p->vel);
-		p->alpha = 1.0;
-		p->alphavel = -0.1f;
-		p->color = 0x74 + (randk() & 7);
-		VectorCopy(move, p->org);
-		VectorAdd(move, vec, move);
-	}
+    vec3_t        move;
+    vec3_t        vec;
+    float        len;
+    float        dec;
+    vec3_t        right, up;
+    
+    VectorCopy (start, move);
+    VectorSubtract (end, start, vec);
+    len = VectorNormalize (vec);
+    
+    MakeNormalVectors (vec, right, up);
+    
+    dec = 2;
+    VectorScale (vec, dec, vec);
+    VectorCopy (start, move);
+    
+    while (len > 0)
+    {
+        len -= dec;
+        
+        setupParticle (
+                       0,    0,    0,
+                       move[0],    move[1],    move[2],
+                       0,    0,    0,
+                       0,        0,        0,
+                       50,    50,    255,
+                       0,    0,    0,
+                       1,        -0.75,
+                       GL_SRC_ALPHA, GL_ONE,
+                       7.5,            0,
+                       particle_generic,
+                       0,
+                       NULL,0);
+        
+        VectorAdd (move, vec, move);
+    }
 }
 
+//Knightmare- removed for Psychospaz's enhanced particle code
+#if 0
 void
 CL_SmokeTrail(vec3_t start, vec3_t end, int colorStart,
 		int colorRun, int spacing)
@@ -2657,60 +2655,46 @@ CL_SmokeTrail(vec3_t start, vec3_t end, int colorStart,
 	}
 }
 
+#endif
+
 void
 CL_ForceWall(vec3_t start, vec3_t end, int color8)
 {
-	vec3_t move;
-	vec3_t vec;
-	int j;
-	cparticle_t *p;
-
-	float len, time;
-
-	VectorCopy(start, move);
-	VectorSubtract(end, start, vec);
-	len = VectorNormalize(vec);
-
-	VectorScale(vec, 4, vec);
-
-	time = (float)cl.time;
-
-	while (len > 0)
-	{
-		len -= 4;
-
-		if (!free_particles)
-		{
-			return;
-		}
-
-		if (frandk() > 0.3)
-		{
-			p = free_particles;
-			free_particles = p->next;
-			p->next = active_particles;
-			active_particles = p;
-			VectorClear(p->accel);
-
-			p->time = time;
-
-			p->alpha = 1.0;
-			p->alphavel = -1.0f / (3.0 + frandk() * 0.5f);
-			p->color = color8;
-
-			for (j = 0; j < 3; j++)
-			{
-				p->org[j] = move[j] + crandk() * 3;
-				p->accel[j] = 0;
-			}
-
-			p->vel[0] = 0;
-			p->vel[1] = 0;
-			p->vel[2] = -40 - (crandk() * 10);
-		}
-
-		VectorAdd(move, vec, move);
-	}
+    vec3_t move;
+    vec3_t vec;
+    
+    float        len;
+    vec3_t color = { color8red(color8), color8green(color8), color8blue(color8)};
+    
+    VectorCopy(start, move);
+    VectorSubtract(end, start, vec);
+    len = VectorNormalize(vec);
+    
+    VectorScale(vec, 4, vec);
+    
+    // FIXME: this is a really silly way to have a loop
+    while (len > 0)
+    {
+        len -= 4;
+        
+        
+        if (frand() > 0.3)
+            setupParticle (
+                           0,    0,    0,
+                           move[0] + crand()*3,    move[1] + crand()*3,    move[2] + crand()*3,
+                           0,    0,    -40 - (crand()*10),
+                           0,        0,        0,
+                           color[0]+5,    color[1]+5,    color[2]+5,
+                           0,    0,    0,
+                           1,        -1.0 / (3.0+frand()*0.5),
+                           GL_SRC_ALPHA, GL_ONE,
+                           5,            0,
+                           particle_generic,
+                           0,
+                           NULL,0);
+        
+        VectorAdd(move, vec, move);
+    }
 }
 
 /*
@@ -2724,672 +2708,655 @@ CL_BubbleTrail2(vec3_t start, vec3_t end, int dist)
 	vec3_t vec;
 	float len, time;
 	int i;
-	int j;
-	cparticle_t *p;
+    float        dec, size;
 
-	time = (float)cl.time;
-
-	VectorCopy(start, move);
-	VectorSubtract(end, start, vec);
-	len = VectorNormalize(vec);
-
-	VectorScale(vec, dist, vec);
-
-	for (i = 0; i < len; i += dist)
-	{
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-
-		VectorClear(p->accel);
-		p->time = time;
-
-		p->alpha = 1.0;
-		p->alphavel = -1.0f / (1 + frandk() * 0.1f);
-		p->color = 4 + (randk() & 7);
-
-		for (j = 0; j < 3; j++)
-		{
-			p->org[j] = move[j] + crandk() * 2;
-			p->vel[j] = crandk() * 10;
-		}
-
-		p->org[2] -= 4;
-		p->vel[2] += 20;
-		VectorAdd(move, vec, move);
-	}
+    VectorCopy (start, move);
+    VectorSubtract (end, start, vec);
+    len = VectorNormalize (vec);
+    
+    dec = dist;
+    VectorScale (vec, dec, vec);
+    
+    for (i=0 ; i<len ; i+=dec)
+    {
+        size = (frand()>0.25)? 1 : (frand()>0.5) ? 2 : (frand()>0.75) ? 3 : 4;
+        setupParticle (
+                       0,    0,    0,
+                       move[0]+crand()*2,    move[1]+crand()*2,    move[2]+crand()*2,
+                       crand()*5,    crand()*5,    crand()*5+6,
+                       0,        0,        0,
+                       255,    255,    255,
+                       0,    0,    0,
+                       0.75,    -0.5 / (1 + frand() * 0.2),
+                       GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                       size,        1,
+                       particle_bubble,
+                       PART_TRANS|PART_SHADED,
+                       NULL,0);
+        
+        VectorAdd (move, vec, move);
+    }
 }
 
 void
-CL_Heatbeam(vec3_t start, vec3_t forward)
+CL_HeatbeamParticles(vec3_t start, vec3_t forward)
 {
-	vec3_t move;
-	vec3_t vec;
-	float len;
-	int j;
-	cparticle_t *p;
-	vec3_t right, up;
-	float i;
-	float c, s;
-	vec3_t dir;
-	float ltime;
-	float step = 32.0, rstep;
-	float start_pt;
-	float rot;
-	float variance;
-	float time;
-	vec3_t end;
-
-	VectorMA(start, 4096, forward, end);
-
-	VectorCopy(start, move);
-	VectorSubtract(end, start, vec);
-	len = VectorNormalize(vec);
-
-	VectorCopy(cl.v_right, right);
-	VectorCopy(cl.v_up, up);
-
-	VectorMA(move, -0.5, right, move);
-	VectorMA(move, -0.5, up, move);
-
-	time = (float)cl.time;
-
-	ltime = (float)cl.time / 1000.0f;
-	start_pt = (float)fmod(ltime * 96.0f, step);
-	VectorMA(move, start_pt, vec, move);
-
-	VectorScale(vec, step, vec);
-
-	rstep = M_PI / 10.0f;
-
-	for (i = start_pt; i < len; i += step)
-	{
-		if (i > step * 5) /* don't bother after the 5th ring */
-		{
-			break;
-		}
-
-		for (rot = 0; rot < M_PI * 2; rot += rstep)
-		{
-			if (!free_particles)
-			{
-				return;
-			}
-
-			p = free_particles;
-			free_particles = p->next;
-			p->next = active_particles;
-			active_particles = p;
-
-			p->time = time;
-			VectorClear(p->accel);
-			variance = 0.5;
-			c = (float)cos(rot) * variance;
-			s = (float)sin(rot) * variance;
-
-			/* trim it so it looks like it's starting at the origin */
-			if (i < 10)
-			{
-				VectorScale(right, c * (i / 10.0f), dir);
-				VectorMA(dir, s * (i / 10.0f), up, dir);
-			}
-			else
-			{
-				VectorScale(right, c, dir);
-				VectorMA(dir, s, up, dir);
-			}
-
-			p->alpha = 0.5;
-			p->alphavel = -1000.0;
-			p->color = 223 - (randk() & 7);
-
-			for (j = 0; j < 3; j++)
-			{
-				p->org[j] = move[j] + dir[j] * 3;
-				p->vel[j] = 0;
-			}
-		}
-
-		VectorAdd(move, vec, move);
-	}
+    vec3_t move;
+    vec3_t vec;
+    float len;
+    vec3_t right, up;
+    int            i;
+    float c, s;
+    vec3_t dir;
+    float ltime;
+    float        step, rstep;
+    float start_pt;
+    float rot;
+    float variance;
+    float        size;
+    int            maxsteps;
+    vec3_t end;
+    
+    VectorMA(start, 4096, forward, end);
+    
+    VectorCopy(start, move);
+    VectorSubtract(end, start, vec);
+    len = VectorNormalize(vec);
+    
+    // FIXME - pmm - these might end up using old values?
+    //MakeNormalVectors (vec, right, up);
+    VectorCopy(cl.v_right, right);
+    VectorCopy(cl.v_up, up);
+    
+    if (cl_3dcam->value) {
+        ltime = (float) cl.time/250.0;
+        step = 96;
+        maxsteps = 10;
+        variance = 1.2;
+        size = 2;
+    }
+    else {
+        ltime = (float) cl.time/1000.0;
+        step = 32;
+        maxsteps = 7;
+        variance = 0.5;
+        size = 1;
+    }
+    // this just misaligns rings with beam
+    //VectorMA (move, -0.5, right, move);
+    //VectorMA (move, -0.5, up, move);
+    
+    
+    //ltime = (float) cl.time/1000.0;
+    start_pt = fmod(ltime*96.0,step);
+    VectorMA(move, start_pt, vec, move);
+    
+    VectorScale(vec, step, vec);
+    
+    //Com_Printf ("%f\n", ltime);
+    rstep = M_PI/10.0*min(cl_particle_scale->value, 2);
+    for (i = start_pt; i < len; i += step)
+    {
+        if (i>step*maxsteps) // don't bother after the nth ring
+            break;
+        
+        for (rot = 0; rot < M_PI * 2; rot += rstep)
+        {
+            //    variance = 0.5;
+            c = cos(rot)*variance;
+            s = sin(rot)*variance;
+            
+            // trim it so it looks like it's starting at the origin
+            if (i < 10)
+            {
+                VectorScale (right, c*(i/10.0), dir);
+                VectorMA (dir, s*(i/10.0), up, dir);
+            }
+            else
+            {
+                VectorScale(right, c, dir);
+                VectorMA(dir, s, up, dir);
+            }
+            
+            setupParticle (
+                           0,    0,    0,
+                           move[0]+dir[0]*2,    move[1]+dir[1]*2,    move[2]+dir[2]*2, //Knightmare- decreased radius
+                           0,    0,    0,
+                           0,        0,        0,
+                           200+rand()*50,    200+rand()*25,    rand()*50,
+                           0,    0,    0,
+                           0.25,    -1000.0, // decreased alpha
+                           GL_SRC_ALPHA, GL_ONE,
+                           size,        1,        // shrunk size
+                           particle_blaster,
+                           0,
+                           NULL,0);
+        }
+        
+        VectorAdd(move, vec, move);
+    }
 }
 
 /*
  *Puffs with velocity along direction, with some randomness thrown in
  */
 void
-CL_ParticleSteamEffect(vec3_t org, vec3_t dir, int color,
-		int count, int magnitude)
+CL_ParticleSteamEffect (vec3_t org, vec3_t dir, int red, int green, int blue,
+                             int reddelta, int greendelta, int bluedelta, int count, int magnitude)
 {
-	int i, j;
-	cparticle_t *p;
-	float d, time;
-	vec3_t r, u;
-
-	time = (float)cl.time;
-	MakeNormalVectors(dir, r, u);
-
-	for (i = 0; i < count; i++)
-	{
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-
-		p->time = time;
-		p->color = color + (randk() & 7);
-
-		for (j = 0; j < 3; j++)
-		{
-			p->org[j] = org[j] + magnitude * 0.1f * crandk();
-		}
-
-		VectorScale(dir, magnitude, p->vel);
-		d = crandk() * magnitude / 3;
-		VectorMA(p->vel, d, r, p->vel);
-		d = crandk() * magnitude / 3;
-		VectorMA(p->vel, d, u, p->vel);
-
-		p->accel[0] = p->accel[1] = 0;
-		p->accel[2] = -PARTICLE_GRAVITY / 2;
-		p->alpha = 1.0;
-
-		p->alphavel = -1.0f / (0.5f + frandk() * 0.3f);
-	}
+    int            i;
+    cparticle_t    *p;
+    float        d;
+    vec3_t        r, u;
+    //vec3_t color = { color8red(color8), color8green(color8), color8blue(color8)};
+    
+    //vectoangles2 (dir, angle_dir);
+    //AngleVectors (angle_dir, f, r, u);
+    
+    MakeNormalVectors (dir, r, u);
+    
+    for (i=0 ; i<count ; i++)
+    {
+        p = setupParticle (
+                           0,    0,    0,
+                           org[0]+magnitude*0.1*crand(),    org[1]+magnitude*0.1*crand(),    org[2]+magnitude*0.1*crand(),
+                           0,    0,    0,
+                           0,        0,        0,
+                           red,    green,    blue,
+                           reddelta,    greendelta,    bluedelta,
+                           0.5,        -1.0 / (0.5 + frand()*0.3),
+                           GL_SRC_ALPHA, GL_ONE,
+                           4,            -2,
+                           particle_smoke,
+                           0,
+                           NULL,0);
+        
+        if (!p)
+            return;
+        
+        VectorScale (dir, magnitude, p->vel);
+        d = crand()*magnitude/3;
+        VectorMA (p->vel, d, r, p->vel);
+        d = crand()*magnitude/3;
+        VectorMA (p->vel, d, u, p->vel);
+    }
 }
 
 void
 CL_ParticleSteamEffect2(cl_sustain_t *self)
 {
-	int i, j;
-	cparticle_t *p;
-	float d;
-	vec3_t r, u;
-	vec3_t dir;
-
-	VectorCopy(self->dir, dir);
-	MakeNormalVectors(dir, r, u);
-
-	for (i = 0; i < self->count; i++)
-	{
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-
-		p->time = cl.time;
-		p->color = self->color + (randk() & 7);
-
-		for (j = 0; j < 3; j++)
-		{
-			p->org[j] = self->org[j] + self->magnitude * 0.1 * crandk();
-		}
-
-		VectorScale(dir, self->magnitude, p->vel);
-		d = crandk() * self->magnitude / 3;
-		VectorMA(p->vel, d, r, p->vel);
-		d = crandk() * self->magnitude / 3;
-		VectorMA(p->vel, d, u, p->vel);
-
-		p->accel[0] = p->accel[1] = 0;
-		p->accel[2] = -PARTICLE_GRAVITY / 2;
-		p->alpha = 1.0;
-
-		p->alphavel = -1.0 / (0.5 + frandk() * 0.3);
-	}
-
-	self->nextthink += self->thinkinterval;
+    int            i;
+    cparticle_t    *p;
+    float        d;
+    vec3_t        r, u;
+    vec3_t        dir;
+    int            color8 = self->color + (rand()&7);
+    vec3_t color = { color8red(color8), color8green(color8), color8blue(color8)};
+    
+    //vectoangles2 (dir, angle_dir);
+    //AngleVectors (angle_dir, f, r, u);
+    
+    VectorCopy (self->dir, dir);
+    MakeNormalVectors (dir, r, u);
+    
+    for (i=0; i<self->count; i++)
+    {
+        p = setupParticle (
+                           0,        0,        0,
+                           self->org[0] + self->magnitude*0.1*crand(),    self->org[1] + self->magnitude*0.1*crand(),    self->org[2] + self->magnitude*0.1*crand(),
+                           0,        0,        0,
+                           0,        0,        0,
+                           color[0],    color[1],    color[2],
+                           0,        0,        0,
+                           1.0,        -1.0 / (0.5 + frand()*0.3),
+                           GL_SRC_ALPHA, GL_ONE,
+                           4,            0,
+                           particle_smoke,
+                           PART_GRAVITY,
+                           NULL,0);
+        
+        if (!p)
+            return;
+        
+        VectorScale (dir, self->magnitude, p->vel);
+        d = crand()*self->magnitude/3;
+        VectorMA (p->vel, d, r, p->vel);
+        d = crand()*self->magnitude/3;
+        VectorMA (p->vel, d, u, p->vel);
+    }
+    self->nextthink += self->thinkinterval;
 }
 
 void
-CL_TrackerTrail(vec3_t start, vec3_t end, int particleColor)
+CL_TrackerTrail(vec3_t start, vec3_t end)
 {
-	vec3_t move;
-	vec3_t vec;
-	vec3_t forward, right, up, angle_dir;
-	float len;
-	int j;
-	cparticle_t *p;
-	int dec;
-	float dist;
-	float time;
-
-	time = (float)cl.time;
-	VectorCopy(start, move);
-	VectorSubtract(end, start, vec);
-	len = VectorNormalize(vec);
-
-	VectorCopy(vec, forward);
-	AngleVectors2(forward, angle_dir);
-	AngleVectors(angle_dir, forward, right, up);
-
-	dec = 3;
-	VectorScale(vec, 3, vec);
-
-	while (len > 0)
-	{
-		len -= dec;
-
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-		VectorClear(p->accel);
-
-		p->time = time;
-
-		p->alpha = 1.0;
-		p->alphavel = -2.0;
-		p->color = particleColor;
-		dist = DotProduct(move, forward);
-		VectorMA(move, 8 * cos(dist), up, p->org);
-
-		for (j = 0; j < 3; j++)
-		{
-			p->vel[j] = 0;
-			p->accel[j] = 0;
-		}
-
-		p->vel[2] = 5;
-
-		VectorAdd(move, vec, move);
-	}
+    vec3_t        move;
+    vec3_t        vec;
+    vec3_t        forward,right,up,angle_dir;
+    float        len;
+    cparticle_t    *p;
+    int            dec;
+    float        dist;
+    
+    VectorCopy (start, move);
+    VectorSubtract (end, start, vec);
+    len = VectorNormalize (vec);
+    
+    VectorCopy(vec, forward);
+    vectoangles2 (forward, angle_dir);
+    AngleVectors (angle_dir, forward, right, up);
+    
+    dec = 3*max(cl_particle_scale->value/2, 1);
+    VectorScale (vec, 3*max(cl_particle_scale->value/2, 1), vec);
+    
+    // FIXME: this is a really silly way to have a loop
+    while (len > 0)
+    {
+        len -= dec;
+        
+        p = setupParticle (
+                           0,    0,    0,
+                           0,    0,    0,
+                           0,    0,    5,
+                           0,    0,    0,
+                           0,    0,    0,
+                           0,    0,    0,
+                           1.0,    -2.0,
+                           GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                           2,        0,
+                           particle_generic,
+                           PART_TRANS,
+                           NULL,0);
+        
+        if (!p)
+            return;
+        
+        dist = DotProduct(move, forward);
+        VectorMA(move, 8 * cos(dist), up, p->org);
+        
+        VectorAdd (move, vec, move);
+    }
 }
 
 void
 CL_Tracker_Shell(vec3_t origin)
 {
-	vec3_t dir;
-	int i;
-	cparticle_t *p;
-	float time;
-
-	time = (float)cl.time;
-
-	for (i = 0; i < 300; i++)
-	{
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-		VectorClear(p->accel);
-
-		p->time = time;
-
-		p->alpha = 1.0;
-		p->alphavel = INSTANT_PARTICLE;
-		p->color = 0;
-		dir[0] = crandk();
-		dir[1] = crandk();
-		dir[2] = crandk();
-		VectorNormalize(dir);
-
-		VectorMA(origin, 40, dir, p->org);
-	}
+    vec3_t            dir;
+    int                i;
+    cparticle_t        *p;
+    
+    for(i=0; i < (300/cl_particle_scale->value); i++)
+    {
+        p = setupParticle (
+                           0,    0,    0,
+                           0,    0,    0,
+                           0,    0,    0,
+                           0,    0,    0,
+                           0,    0,    0,
+                           0,    0,    0,
+                           1.0,    -2.0,
+                           GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                           1,        0,    //Knightmare- changed size
+                           particle_generic,
+                           PART_TRANS,
+                           NULL,0);
+        
+        if (!p)
+            return;
+        
+        dir[0] = crand();
+        dir[1] = crand();
+        dir[2] = crand();
+        VectorNormalize(dir);
+        VectorMA(origin, 40, dir, p->org);
+    }
 }
 
 void
 CL_MonsterPlasma_Shell(vec3_t origin)
 {
-	vec3_t dir;
-	int i;
-	cparticle_t *p;
-	float time;
-
-	time = (float)cl.time;
-
-	for (i = 0; i < 40; i++)
-	{
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-		VectorClear(p->accel);
-
-		p->time = time;
-
-		p->alpha = 1.0;
-		p->alphavel = INSTANT_PARTICLE;
-		p->color = 0xe0;
-		dir[0] = crandk();
-		dir[1] = crandk();
-		dir[2] = crandk();
-		VectorNormalize(dir);
-
-		VectorMA(origin, 10, dir, p->org);
-	}
+    vec3_t            dir;
+    int                i;
+    cparticle_t        *p;
+    
+    for(i=0; i<40; i++)
+    {
+        p = setupParticle (
+                           0,        0,        0,
+                           0,        0,        0,
+                           0,        0,        0,
+                           0,        0,        0,
+                           220,    140,    50, //Knightmare- this was all black
+                           0,        0,        0,
+                           1.0,    INSTANT_PARTICLE,
+                           GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                           2,        0,
+                           particle_generic,
+                           PART_TRANS|PART_INSTANT,
+                           NULL,0);
+        
+        if (!p)
+            return;
+        
+        dir[0] = crand();
+        dir[1] = crand();
+        dir[2] = crand();
+        VectorNormalize(dir);
+        
+        VectorMA(origin, 10, dir, p->org);
+    }
 }
 
 void
 CL_Widowbeamout(cl_sustain_t *self)
 {
-	vec3_t dir;
-	int i;
-	cparticle_t *p;
-	static int colortable[4] = {2 * 8, 13 * 8, 21 * 8, 18 * 8};
-	float ratio;
-	float time;
-
-	ratio = 1.0f - (((float)self->endtime - (float)cl.time) / 2100.0f);
-	time = (float)cl.time;
-
-	for (i = 0; i < 300; i++)
-	{
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-		VectorClear(p->accel);
-
-		p->time = time;
-
-		p->alpha = 1.0;
-		p->alphavel = INSTANT_PARTICLE;
-		p->color = colortable[randk() & 3];
-		dir[0] = crandk();
-		dir[1] = crandk();
-		dir[2] = crandk();
-		VectorNormalize(dir);
-
-		VectorMA(self->org, (45.0 * ratio), dir, p->org);
-	}
+    vec3_t            dir;
+    int                i;
+    static int colortable0[6] = {125,    255,    185,    125,    185,    255};
+    static int colortable1[6] = {185,    125,    255,    255,    125,    185};
+    static int colortable2[6] = {255,    185,    125,    185,    255,    125};
+    cparticle_t        *p;
+    float            ratio;
+    int                index;
+    
+    ratio = 1.0 - (((float)self->endtime - (float)cl.time)/2100.0);
+    
+    for(i=0; i<300; i++)
+    {
+        index = rand()&5;
+        p = setupParticle (
+                           0,    0,    0,
+                           0,    0,    0,
+                           0,    0,    0,
+                           0,    0,    0,
+                           colortable0[index],    colortable1[index],    colortable2[index],
+                           0,    0,    0,
+                           1.0,    INSTANT_PARTICLE,
+                           GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                           2,        0,
+                           particle_generic,
+                           PART_TRANS|PART_INSTANT,
+                           NULL,0);
+        
+        if (!p)
+            return;
+        
+        dir[0] = crand();
+        dir[1] = crand();
+        dir[2] = crand();
+        VectorNormalize(dir);
+        
+        VectorMA(self->org, (45.0 * ratio), dir, p->org);
+    }
 }
 
 void
 CL_Nukeblast(cl_sustain_t *self)
 {
-	vec3_t dir;
-	int i;
-	cparticle_t *p;
-	static int colortable[4] = {110, 112, 114, 116};
-	float ratio;
-	float time;
-
-	ratio = 1.0f - (((float)self->endtime - (float)cl.time) / 1000.0f);
-	time = (float)cl.time;
-
-	for (i = 0; i < 700; i++)
-	{
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-		VectorClear(p->accel);
-
-		p->time = time;
-
-		p->alpha = 1.0;
-		p->alphavel = INSTANT_PARTICLE;
-		p->color = colortable[randk() & 3];
-		dir[0] = crandk();
-		dir[1] = crandk();
-		dir[2] = crandk();
-		VectorNormalize(dir);
-
-		VectorMA(self->org, (200.0 * ratio), dir, p->org);
-	}
+    vec3_t            dir;
+    int                i;
+    cparticle_t        *p;
+    static int colortable0[4] = {185,    155,    125,    95};
+    static int colortable1[4] = {185,    155,    125,    95};
+    static int colortable2[4] = {255,    255,    255,    255};
+    float            ratio, size;
+    int                index;
+    
+    ratio = 1.0 - (((float)self->endtime - (float)cl.time)/1000.0);
+    size = ratio*ratio;
+    
+    for(i=0; i<(700/cl_particle_scale->value); i++)
+    {
+        index = rand()&3;
+        p = setupParticle (
+                           0,    0,    0,
+                           0,    0,    0,
+                           0,    0,    0,
+                           0,    0,    0,
+                           colortable0[index],    colortable1[index],    colortable2[index],
+                           0,    0,    0,
+                           1-size,    INSTANT_PARTICLE,
+                           GL_SRC_ALPHA, GL_ONE,
+                           10*(0.5+ratio*0.5),    -1,
+                           particle_generic,
+                           PART_INSTANT,
+                           NULL,0);
+        
+        if (!p)
+            return;
+        
+        
+        dir[0] = crand();
+        dir[1] = crand();
+        dir[2] = crand();
+        VectorNormalize(dir);
+        VectorScale(dir, -1, p->angle);
+        VectorMA(self->org, 200.0*size, dir, p->org); //was 100
+        VectorMA(vec3_origin, 400.0*size, dir, p->vel); //was 100
+        
+    }
 }
 
 void
 CL_WidowSplash(vec3_t org)
 {
-	static int colortable[4] = {2 * 8, 13 * 8, 21 * 8, 18 * 8};
-	int i;
-	cparticle_t *p;
-	vec3_t dir;
-	float time;
-
-	time = (float)cl.time;
-
-	for (i = 0; i < 256; i++)
-	{
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-
-		p->time = time;
-		p->color = colortable[randk() & 3];
-		dir[0] = crandk();
-		dir[1] = crandk();
-		dir[2] = crandk();
-		VectorNormalize(dir);
-		VectorMA(org, 45.0, dir, p->org);
-		VectorMA(vec3_origin, 40.0, dir, p->vel);
-
-		p->accel[0] = p->accel[1] = 0;
-		p->alpha = 1.0;
-
-		p->alphavel = -0.8f / (0.5f + frandk() * 0.3f);
-	}
+    static int colortable[4] = {2*8,13*8,21*8,18*8};
+    int            i;
+    cparticle_t    *p;
+    vec3_t        dir;
+    
+    for (i=0; i<256; i++)
+    {
+        p = setupParticle (
+                           0,    0,    0,
+                           0,    0,    0,
+                           0,    0,    0,
+                           0,    0,    0,
+                           rand()&255,    rand()&255,    rand()&255,
+                           0,    0,    0,
+                           1.0,        -0.8 / (0.5 + frand()*0.3),
+                           GL_SRC_ALPHA, GL_ONE,
+                           3,            0,
+                           particle_generic,
+                           0,
+                           NULL,0);
+        
+        if (!p)
+            return;
+        
+        dir[0] = crand();
+        dir[1] = crand();
+        dir[2] = crand();
+        VectorNormalize(dir);
+        VectorMA(org, 45.0, dir, p->org);
+        VectorMA(vec3_origin, 40.0, dir, p->vel);
+    }
 }
 
 void
 CL_Tracker_Explode(vec3_t origin)
 {
-	vec3_t dir, backdir;
-	int i;
-	cparticle_t *p;
-	float time;
-
-	time = (float)cl.time;
-
-	for (i = 0; i < 300; i++)
-	{
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-		VectorClear(p->accel);
-
-		p->time = time;
-
-		p->alpha = 1.0;
-		p->alphavel = -1.0;
-		p->color = 0;
-		dir[0] = crandk();
-		dir[1] = crandk();
-		dir[2] = crandk();
-		VectorNormalize(dir);
-		VectorScale(dir, -1, backdir);
-
-		VectorMA(origin, 64, dir, p->org);
-		VectorScale(backdir, 64, p->vel);
-	}
+    vec3_t            dir, backdir;
+    int                i;
+    cparticle_t        *p;
+    
+    for (i=0; i<(300/cl_particle_scale->value); i++)
+    {
+        p = setupParticle (
+                           0,        0,        0,
+                           0,        0,        0,
+                           0,        0,        0,
+                           0,        0,        -10, //was 20
+                           0,        0,        0,
+                           0,        0,        0,
+                           1.0,    -0.5,
+                           GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                           2,        0,
+                           particle_generic,
+                           PART_TRANS,
+                           NULL,0);
+        
+        if (!p)
+            return;
+        
+        dir[0] = crand();
+        dir[1] = crand();
+        dir[2] = crand();
+        VectorNormalize(dir);
+        VectorScale(dir, -1, backdir);
+        
+        VectorCopy (origin, p->org); //Knightmare- start at center, not edge
+        //    VectorMA(origin, 64, dir, p->org);
+        VectorScale(dir, (crand()*128), p->vel); //was backdir, 64
+    }
 }
 
 void
-CL_TagTrail(vec3_t start, vec3_t end, int color)
+CL_TagTrail(vec3_t start, vec3_t end, int color8)
 {
-	vec3_t move;
-	vec3_t vec;
-	float len;
-	int j;
-	cparticle_t *p;
-	int dec;
-	float time;
-
-	time = (float)cl.time;
-
-	VectorCopy(start, move);
-	VectorSubtract(end, start, vec);
-	len = VectorNormalize(vec);
-
-	dec = 5;
-	VectorScale(vec, 5, vec);
-
-	while (len >= 0)
-	{
-		len -= dec;
-
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-		VectorClear(p->accel);
-
-		p->time = time;
-
-		p->alpha = 1.0;
-		p->alphavel = -1.0f / (0.8f + frandk() * 0.2f);
-		p->color = color;
-
-		for (j = 0; j < 3; j++)
-		{
-			p->org[j] = move[j] + crandk() * 16;
-			p->vel[j] = crandk() * 5;
-			p->accel[j] = 0;
-		}
-
-		VectorAdd(move, vec, move);
-	}
+    vec3_t        move;
+    vec3_t        vec;
+    float        len;
+    int            dec;
+    vec3_t color = { color8red(color8), color8green(color8), color8blue(color8)};
+    
+    VectorCopy (start, move);
+    VectorSubtract (end, start, vec);
+    len = VectorNormalize (vec);
+    
+    dec = 5;
+    VectorScale (vec, 5, vec);
+    
+    while (len >= 0)
+    {
+        len -= dec;
+        
+        setupParticle (
+                       0,    0,    0,
+                       move[0] + crand()*16,    move[1] + crand()*16,    move[2] + crand()*16,
+                       crand()*5,    crand()*5,    crand()*5,
+                       0,        0,        20,
+                       color[0],    color[1],    color[2],
+                       0,    0,    0,
+                       1.0,        -1.0 / (0.8+frand()*0.2),
+                       GL_SRC_ALPHA, GL_ONE,
+                       1.5,            0,
+                       particle_generic,
+                       0,
+                       NULL,0);
+        
+        VectorAdd (move, vec, move);
+    }
 }
 
 void
-CL_ColorExplosionParticles(vec3_t org, int color, int run)
+CL_ColorExplosionParticles(vec3_t org, int color8, int run)
 {
-	int i;
-	int j;
-	cparticle_t *p;
-	float time;
-
-	time = (float)cl.time;
-
-	for (i = 0; i < 128; i++)
-	{
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-
-		p->time = time;
-		p->color = color + (randk() % run);
-
-		for (j = 0; j < 3; j++)
-		{
-			p->org[j] = org[j] + ((randk() % 32) - 16);
-			p->vel[j] = (randk() % 256) - 128;
-		}
-
-		p->accel[0] = p->accel[1] = 0;
-		p->accel[2] = -PARTICLE_GRAVITY;
-		p->alpha = 1.0;
-
-		p->alphavel = -0.4f / (0.6f + frandk() * 0.2f);
-	}
+    int            i;
+    vec3_t color = {color8red(color8), color8green(color8), color8blue(color8)};
+    
+    for (i=0 ; i<128 ; i++)
+    {
+        setupParticle (
+                       0,    0,    0,
+                       org[0] + ((rand()%32)-16),    org[1] + ((rand()%32)-16),    org[2] + ((rand()%32)-16),
+                       (rand()%256)-128,    (rand()%256)-128,    (rand()%256)-128,
+                       0,        0,        20,
+                       color[0] + (rand() % run),    color[1] + (rand() % run),    color[2] + (rand() % run),
+                       0,    0,    0,
+                       1.0,        -0.4 / (0.6 + frand()*0.2),
+                       GL_SRC_ALPHA, GL_ONE,
+                       2,            1,
+                       particle_generic,
+                       0,
+                       NULL,0);
+    }
 }
 
 /*
  * Like the steam effect, but unaffected by gravity
  */
-void
-CL_ParticleSmokeEffect(vec3_t org, vec3_t dir, int color,
-		int count, int magnitude)
+void pRotateThink (cparticle_t *p, vec3_t org, vec3_t angle, float *alpha, float *size, int *image, float *time)
 {
-	int i, j;
-	cparticle_t *p;
-	float d;
-	vec3_t r, u;
-	float time;
-
-	time = (float)cl.time;
-
-	MakeNormalVectors(dir, r, u);
-
-	for (i = 0; i < count; i++)
-	{
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-
-		p->time = time;
-		p->color = color + (randk() & 7);
-
-		for (j = 0; j < 3; j++)
-		{
-			p->org[j] = org[j] + magnitude * 0.1f * crandk();
-		}
-
-		VectorScale(dir, magnitude, p->vel);
-		d = crandk() * magnitude / 3;
-		VectorMA(p->vel, d, r, p->vel);
-		d = crandk() * magnitude / 3;
-		VectorMA(p->vel, d, u, p->vel);
-
-		p->accel[0] = p->accel[1] = p->accel[2] = 0;
-		p->alpha = 1.0;
-
-		p->alphavel = -1.0f / (0.5f + frandk() * 0.3f);
-	}
+    angle[2] =    angle[0] + *time*angle[1] + *time**time*angle[2];
+    p->thinknext=true;
 }
 
+void
+CL_ParticleSmokeEffect(vec3_t org, vec3_t dir, float size)
+{
+    float alpha = fabs(crand())*0.25 + 0.750;
+    
+    setupParticle (
+                   crand()*180, crand()*100, 0,
+                   org[0],    org[1],    org[2],
+                   dir[0],    dir[1],    dir[2],
+                   0,        0,        10,
+                   255,    255,    255,
+                   0,    0,    0,
+                   alpha,        -1.0,
+                   GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                   size,            5,
+                   particle_smoke,
+                   PART_TRANS|PART_SHADED|PART_OVERBRIGHT,
+                   pRotateThink,true);
+}
+
+/*
+ ===============
+ CL_ElectricParticles
+ 
+ new sparks for Rogue turrets
+ ===============
+ */
+void pElectricSparksThink (cparticle_t *p, vec3_t org, vec3_t angle, float *alpha, float *size, int *image, float *time)
+{
+    int i;
+    
+    //setting up angle for sparks
+    {
+        float time1, time2;
+        
+        time1 = *time;
+        time2 = time1*time1;
+        
+        for (i=0;i<2;i++)
+            angle[i] = 0.25*(p->vel[i]*time1 + (p->accel[i])*time2);
+        angle[2] = 0.25*(p->vel[2]*time1 + (p->accel[2]-PARTICLE_GRAVITY)*time2);
+    }
+    
+    p->thinknext = true;
+}
+
+void CL_ElectricParticles (vec3_t org, vec3_t dir, int count)
+{
+    int            i, j;
+    vec3_t        start;
+    float d;
+    
+    for (i = 0; i < 40; i++)
+    {
+        d = rand()&31;
+        for (j = 0; j < 3; j++)
+            start[j] = org[j] + ((rand()&7)-4) + d*dir[j];
+        setupParticle (
+                       0,            0,            0,
+                       start[0],    start[1],    start[2],
+                       crand()*20,    crand()*20,    crand()*20,
+                       0,            0,            -PARTICLE_GRAVITY,
+                       25,            100,        255,
+                       50,            50,            50,
+                       1,        -1.0 / (0.5 + frand()*0.3),
+                       GL_SRC_ALPHA, GL_ONE,
+                       6,        -3,
+                       particle_blaster,
+                       PART_GRAVITY|PART_SPARK,
+                       pElectricSparksThink, true);
+    }
+}
+
+//Knightmare- removed for Psychospaz's enhanced particle code
+#if 0
 /*
  * Wall impact puffs (Green)
  */
@@ -3489,6 +3456,7 @@ CL_BlasterTrail2(vec3_t start, vec3_t end)
 		VectorAdd(move, vec, move);
 	}
 }
+#endif
 
 void CL_LightningBeam (vec3_t start, vec3_t end, int srcEnt, int dstEnt, float size)
 {
