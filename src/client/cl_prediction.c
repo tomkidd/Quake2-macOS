@@ -165,10 +165,188 @@ CL_ClipMoveToEntities(vec3_t start, vec3_t mins, vec3_t maxs,
 	}
 }
 
+/*
+ ====================
+ CL_ClipMoveToEntities2
+ Similar to above, but uses entnum as reference.
+ ====================
+ */
+void CL_ClipMoveToEntities2 (int entnum, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, trace_t *tr)
+{
+    int            i, x, zd, zu;
+    trace_t        trace;
+    int            headnode;
+    float        *angles;
+    entity_state_t    *ent;
+    int            num;
+    cmodel_t        *cmodel;
+    vec3_t        bmins, bmaxs;
+    
+    for (i=0 ; i<cl.frame.num_entities ; i++)
+    {
+        num = (cl.frame.parse_entities + i)&(MAX_PARSE_ENTITIES-1);
+        ent = &cl_parse_entities[num];
+        
+        if (!ent->solid)
+            continue;
+        
+        // Don't clip against the passed entity number
+        if (ent->number == entnum)
+            continue;
+        
+        if (ent->solid == 31)
+        {    // special value for bmodel
+            cmodel = cl.model_clip[ent->modelindex];
+            if (!cmodel)
+                continue;
+            headnode = cmodel->headnode;
+            angles = ent->angles;
+        }
+        else
+        {    // encoded bbox
+            x = 8*(ent->solid & 31);
+            zd = 8*((ent->solid>>5) & 31);
+            zu = 8*((ent->solid>>10) & 63) - 32;
+            
+            bmins[0] = bmins[1] = -x;
+            bmaxs[0] = bmaxs[1] = x;
+            bmins[2] = -zd;
+            bmaxs[2] = zu;
+            
+            headnode = CM_HeadnodeForBox (bmins, bmaxs);
+            angles = vec3_origin;    // boxes don't rotate
+        }
+        
+        if (tr->allsolid)
+            return;
+        
+        trace = CM_TransformedBoxTrace (start, end,
+                                        mins, maxs, headnode,  MASK_PLAYERSOLID,
+                                        ent->origin, angles);
+        
+        if (trace.allsolid || trace.startsolid ||
+            trace.fraction < tr->fraction)
+        {
+            trace.ent = (struct edict_s *)ent;
+            if (tr->startsolid)
+            {
+                *tr = trace;
+                tr->startsolid = true;
+            }
+            else
+                *tr = trace;
+        }
+        else if (trace.startsolid)
+            tr->startsolid = true;
+    }
+}
+
+/*
+ ====================
+ CL_ClipMoveToBrushEntities
+ Similar to CL_ClipMoveToEntities,
+ but only checks against brush models.
+ ====================
+ */
+void CL_ClipMoveToBrushEntities ( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, trace_t *tr )
+{
+    int            i;
+    trace_t        trace;
+    int            headnode;
+    float        *angles;
+    entity_state_t    *ent;
+    int            num;
+    cmodel_t        *cmodel;
+    
+    for (i=0 ; i<cl.frame.num_entities ; i++)
+    {
+        num = (cl.frame.parse_entities + i)&(MAX_PARSE_ENTITIES-1);
+        ent = &cl_parse_entities[num];
+        
+        if (ent->solid != 31) // brush models only
+            continue;
+        
+        // special value for bmodel
+        cmodel = cl.model_clip[ent->modelindex];
+        if (!cmodel)
+            continue;
+        headnode = cmodel->headnode;
+        angles = ent->angles;
+        
+        if (tr->allsolid)
+            return;
+        
+        trace = CM_TransformedBoxTrace (start, end,
+                                        mins, maxs, headnode,  MASK_PLAYERSOLID,
+                                        ent->origin, angles);
+        
+        if (trace.allsolid || trace.startsolid ||
+            trace.fraction < tr->fraction)
+        {
+            trace.ent = (struct edict_s *)ent;
+            if (tr->startsolid)
+            {
+                *tr = trace;
+                tr->startsolid = true;
+            }
+            else
+                *tr = trace;
+        }
+        else if (trace.startsolid)
+            tr->startsolid = true;
+    }
+}
+
+/*
+ ====================
+ CL_Trace
+ ====================
+ */
+trace_t CL_Trace (vec3_t start, vec3_t end, float size,  int contentmask)
+{
+    vec3_t maxs, mins;
+    
+    VectorSet(maxs, size, size, size);
+    VectorSet(mins, -size, -size, -size);
+    
+    return CM_BoxTrace (start, end, mins, maxs, 0, contentmask);
+}
+
+
+/*
+ ====================
+ CL_BrushTrace
+ Similar to CL_Trace, but also
+ clips against brush models.
+ ====================
+ */
+trace_t CL_BrushTrace (vec3_t start, vec3_t end, float size,  int contentmask)
+{
+    vec3_t maxs, mins;
+    trace_t    t;
+    
+    VectorSet(maxs, size, size, size);
+    VectorSet(mins, -size, -size, -size);
+    
+    t = CM_BoxTrace (start, end, mins, maxs, 0, contentmask);
+    if (t.fraction < 1.0)
+        t.ent = (struct edict_s *)1;
+    
+    // check all solid brush models
+    CL_ClipMoveToBrushEntities (start, mins, maxs, end, &t);
+    
+    return t;
+}
+
 trace_t
 CL_PMTrace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
 {
 	trace_t t;
+    
+    if (!mins)
+        mins = vec3_origin;
+    if (!maxs)
+        maxs = vec3_origin;
 
 	/* check against world */
 	t = CM_BoxTrace(start, end, mins, maxs, 0, MASK_PLAYERSOLID);
@@ -182,6 +360,33 @@ CL_PMTrace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
 	CL_ClipMoveToEntities(start, mins, maxs, end, &t);
 
 	return t;
+}
+
+//Knightmare added- this can check using masks, good for checking surface flags
+//    also checks for bmodels
+/*
+ ================
+ CL_PMSurfaceTrace
+ ================
+ */
+trace_t CL_PMSurfaceTrace (int playernum, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int contentmask)
+{
+    trace_t    t;
+    
+    if (!mins)
+        mins = vec3_origin;
+    if (!maxs)
+        maxs = vec3_origin;
+    
+    // check against world
+    t = CM_BoxTrace (start, end, mins, maxs, 0, contentmask);
+    if (t.fraction < 1.0)
+        t.ent = (struct edict_s *)1;
+    
+    // check all other solid models
+    CL_ClipMoveToEntities2 (playernum, start, mins, maxs, end, &t);
+    
+    return t;
 }
 
 int
