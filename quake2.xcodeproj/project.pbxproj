@@ -210,6 +210,7 @@
 		A1D529F422935A2B005928FF /* libjpeg.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A1D529F322935A2B005928FF /* libjpeg.a */; };
 		A1D529F6229364E9005928FF /* wildcard.c in Sources */ = {isa = PBXBuildFile; fileRef = A1D529F5229364E9005928FF /* wildcard.c */; };
 		A1D529FB2294B479005928FF /* cl_cinematic.c in Sources */ = {isa = PBXBuildFile; fileRef = A1D529F92294B381005928FF /* cl_cinematic.c */; };
+		A1DE86DC22A5D2620041E450 /* cl_string.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86DB22A5D2620041E450 /* cl_string.c */; };
 		A1E39F9C22838FB9005B2FB7 /* g_crane.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F8722838FB8005B2FB7 /* g_crane.c */; };
 		A1E39F9D22838FB9005B2FB7 /* g_ctf.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F8822838FB8005B2FB7 /* g_ctf.c */; };
 		A1E39F9E22838FB9005B2FB7 /* g_patchplayermodels.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F8922838FB8005B2FB7 /* g_patchplayermodels.c */; };
@@ -523,6 +524,7 @@
 		A1D529F82294B347005928FF /* cinematic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cinematic.h; sourceTree = "<group>"; };
 		A1D529F92294B381005928FF /* cl_cinematic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_cinematic.c; sourceTree = "<group>"; };
 		A1D52A02229756A1005928FF /* particles.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = particles.h; sourceTree = "<group>"; };
+		A1DE86DB22A5D2620041E450 /* cl_string.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_string.c; sourceTree = "<group>"; };
 		A1E39F8722838FB8005B2FB7 /* g_crane.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_crane.c; sourceTree = "<group>"; };
 		A1E39F8822838FB8005B2FB7 /* g_ctf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_ctf.c; sourceTree = "<group>"; };
 		A1E39F8922838FB8005B2FB7 /* g_patchplayermodels.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_patchplayermodels.c; sourceTree = "<group>"; };
@@ -1144,9 +1146,9 @@
 		A15FA22C2110C5BC0048A3AD /* client */ = {
 			isa = PBXGroup;
 			children = (
-				A1D529F92294B381005928FF /* cl_cinematic.c */,
 				A1D529F82294B347005928FF /* cinematic.h */,
 				A15FA2912110C5BC0048A3AD /* cl_cin.c */,
+				A1D529F92294B381005928FF /* cl_cinematic.c */,
 				A15FA2882110C5BC0048A3AD /* cl_console.c */,
 				A15FA2A62110C5BC0048A3AD /* cl_download.c */,
 				A15FA22D2110C5BC0048A3AD /* cl_effects.c */,
@@ -1161,6 +1163,7 @@
 				A15FA2862110C5BC0048A3AD /* cl_particles.c */,
 				A15FA2322110C5BC0048A3AD /* cl_prediction.c */,
 				A15FA28F2110C5BC0048A3AD /* cl_screen.c */,
+				A1DE86DB22A5D2620041E450 /* cl_string.c */,
 				A15FA22F2110C5BC0048A3AD /* cl_tempentities.c */,
 				A15FA2A42110C5BC0048A3AD /* cl_view.c */,
 				A15FA29D2110C5BC0048A3AD /* header */,
@@ -1874,6 +1877,7 @@
 				A1D529F6229364E9005928FF /* wildcard.c in Sources */,
 				A15FA4332111516A0048A3AD /* cl_input.c in Sources */,
 				A15FA429211151570048A3AD /* main.c in Sources */,
+				A1DE86DC22A5D2620041E450 /* cl_string.c in Sources */,
 				A15FA43D2111516A0048A3AD /* cl_tempentities.c in Sources */,
 				A15FA454211151E00048A3AD /* frame.c in Sources */,
 				A15FA453211151E00048A3AD /* filesystem.c in Sources */,
