@@ -2435,6 +2435,9 @@ SCR_GetDefaultScale(void)
 	return i;
 }
 
+#define DIV640 0.0015625
+
+//Knightmare- Psychospaz's new crosshair code
 void
 SCR_DrawCrosshair(void)
 {
@@ -2449,25 +2452,45 @@ SCR_DrawCrosshair(void)
 	{
 		crosshair->modified = false;
 		SCR_TouchPics();
+
+        if (!strcmp("dday",Cvar_Get ("game", "0", CVAR_ARCHIVE)->string)) //dday has no crosshair (FORCED)
+            Cvar_SetValue("crosshair", 0);
 	}
 
+    if (crosshair_scale->modified)
+    {
+        crosshair_scale->modified=false;
+        if (crosshair_scale->value>5)
+            Cvar_SetValue("crosshair_scale", 5);
+        else if (crosshair_scale->value<0.25)
+            Cvar_SetValue("crosshair_scale", 0.25);
+    }
+    
 	if (!crosshair_pic[0])
 	{
 		return;
 	}
 
-	if (crosshair_scale->value < 0)
-	{
-		scale = SCR_GetDefaultScale();
-	}
-	else
-	{
-		scale = SCR_ClampScale(crosshair_scale->value);
-	}
+//    if (crosshair_scale->value < 0)
+//    {
+//        scale = SCR_GetDefaultScale();
+//    }
+//    else
+//    {
+//        scale = SCR_ClampScale(crosshair_scale->value);
+//    }
 
-	Draw_PicScaled(scr_vrect.x + (scr_vrect.width - crosshair_width * scale) / 2,
-			scr_vrect.y + (scr_vrect.height - crosshair_height * scale) / 2,
-			crosshair_pic, scale);
+    scale = crosshair_scale->value * (viddef.width*DIV640);
+
+//    Draw_PicScaled(scr_vrect.x + (scr_vrect.width - crosshair_width * scale) / 2,
+//            scr_vrect.y + (scr_vrect.height - crosshair_height * scale) / 2,
+//            crosshair_pic, scale);
+    
+    R_DrawScaledPic (scr_vrect.x + ((scr_vrect.width - scale*crosshair_width)/2), // width
+                     scr_vrect.y + ((scr_vrect.height - scale*crosshair_height)/2),    // height
+                     scale,    // scale
+                     0.75 + 0.25*sin(anglemod(cl.time*0.005)),    // alpha
+                     crosshair_pic); // pic
 }
 
 float

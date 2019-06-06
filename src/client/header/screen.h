@@ -75,6 +75,19 @@ void	SCR_TouchPics(void);
 
 void	SCR_RunConsole(void);
 
+void    SCR_InitScreenScale (void);
+void    SCR_AdjustFrom640 (float *x, float *y, float *w, float *h, scralign_t align);
+float    SCR_ScaledVideo (float param);
+float    SCR_VideoScale (void);
+
+void    SCR_AdjustFrom640 (float *x, float *y, float *w, float *h, scralign_t align);
+void    SCR_DrawFill (float x, float y, float width, float height, scralign_t align, int color);
+void    SCR_DrawFill2 (float x, float y, float width, float height, scralign_t align, int red, int green, int blue, int alpha);
+void    SCR_DrawPic (float x, float y, float width, float height, scralign_t align, char *pic, float alpha);
+void    SCR_DrawChar (float x, float y, scralign_t align, int num, int red, int green, int blue, int alpha, qboolean italic, qboolean last);
+void    SCR_DrawString (float x, float y, scralign_t align, const char *string, int alpha);
+
+
 extern	float		scr_con_current;
 extern	float		scr_conlines; /* lines of console to display */
 
@@ -82,6 +95,7 @@ extern	int			sb_lines;
 
 extern	cvar_t		*scr_viewsize;
 extern	cvar_t		*crosshair;
+extern    cvar_t        *crosshair_scale; //Knightmare added
 
 extern	vrect_t		scr_vrect; /* position of render window */
 

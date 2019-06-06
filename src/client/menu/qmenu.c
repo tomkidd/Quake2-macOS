@@ -24,6 +24,8 @@
  * =======================================================================
  */
 
+// Looks like this file's concepts are taken over by the /ui/ directory in kmquake2, skipping for now -tkidd
+
 #include <string.h>
 #include <ctype.h>
 #include "../header/client.h"

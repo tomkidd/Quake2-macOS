@@ -32,6 +32,9 @@ int gun_frame;
 struct model_s *gun_model;
 
 cvar_t *crosshair;
+//Knightmare- Psychospaz's scalable corsshair
+cvar_t        *crosshair_scale;
+
 cvar_t *crosshair_3d;
 cvar_t *crosshair_3d_glow;
 
@@ -46,6 +49,8 @@ cvar_t *crosshair_3d_glow_b;
 
 cvar_t *cl_stats;
 
+cvar_t        *hand;
+
 int r_numdlights;
 dlight_t r_dlights[MAX_DLIGHTS];
 
@@ -54,6 +59,11 @@ entity_t r_entities[MAX_ENTITIES];
 
 int r_numparticles;
 particle_t r_particles[MAX_PARTICLES];
+
+#ifdef DECALS
+int            r_numdecalfrags;
+particle_t    r_decalfrags[MAX_DECAL_FRAGS];
+#endif
 
 lightstyle_t r_lightstyles[MAX_LIGHTSTYLES];
 
@@ -71,12 +81,82 @@ V_ClearScene(void)
 	r_numdlights = 0;
 	r_numentities = 0;
 	r_numparticles = 0;
+#ifdef DECALS
+    r_numdecalfrags = 0;
+#endif
+}
+
+// Knightmare- added Psychospaz's chasecam
+/*
+ =====================
+ 
+ 3D Cam Stuff -psychospaz
+ 
+ =====================
+ */
+#define CAM_MAXALPHADIST 0.000111
+void vectoangles2 (vec3_t value1, vec3_t angles);
+float viewermodelalpha;
+
+void ClipCam (vec3_t start, vec3_t end, vec3_t newpos)
+{
+    int i;
+    
+    trace_t tr = CL_Trace (start, end, 5, MASK_SOLID);
+    for (i=0;i<3;i++)
+        newpos[i]=tr.endpos[i];
+}
+
+void AddViewerEntAlpha (entity_t *ent)
+{
+    if (viewermodelalpha == 1 || !cl_3dcam_alpha->value)
+        return;
+    
+    ent->alpha *= viewermodelalpha;
+    if (ent->alpha < 1.0F)
+        ent->flags |= RF_TRANSLUCENT;
+}
+
+#define ANGLEMAX 90.0
+void CalcViewerCamTrans (float distance)
+{
+    float alphacalc = cl_3dcam_dist->value;
+    
+    // no div by 0
+    if (alphacalc < 1)
+        alphacalc = 1;
+    
+    viewermodelalpha = distance/alphacalc;
+    
+    if (viewermodelalpha>1)
+        viewermodelalpha = 1;
 }
 
 void
 V_AddEntity(entity_t *ent)
 {
-	if (r_numentities >= MAX_ENTITIES)
+    // Knightmare- added Psychospaz's chasecam
+    if (ent->flags & RF_VIEWERMODEL) //here is our client
+    {    int i;
+        
+        // what was i thinking before!?
+        for (i=0;i<3;i++)
+            clientOrg[i] = ent->oldorigin[i] = ent->origin[i] = cl.predicted_origin[i];
+        
+        if (hand->value == 1) //lefthanded
+            ent->flags |= RF_MIRRORMODEL;
+        
+        if (cl_3dcam->value
+            && !(cl.attractloop && !(cl.cinematictime > 0 && cls.realtime - cl.cinematictime > 1000)))
+        {
+            AddViewerEntAlpha(ent);
+            ent->flags &= ~RF_VIEWERMODEL;
+            ent->renderfx |= RF2_CAMERAMODEL;
+        }
+    }
+    // end Knightmare
+
+    if (r_numentities >= MAX_ENTITIES)
 	{
 		return;
 	}
@@ -116,6 +196,41 @@ V_AddParticle (vec3_t org, vec3_t angle, vec3_t color, float alpha,
 }
 //end Knightmare
 
+/*
+ =====================
+ V_AddDecal
+ =====================
+ */
+#ifdef DECALS
+void V_AddDecal (vec3_t org, vec3_t angle, vec3_t color, float alpha,
+                 int alpha_src, int alpha_dst, float size, int image, int flags, decalpolys_t *decal)
+{
+    int i;
+    particle_t    *d;
+    
+    if (r_numdecalfrags >= MAX_DECAL_FRAGS)
+        return;
+    d = &r_decalfrags[r_numdecalfrags++];
+    
+    for (i=0;i<3;i++)
+    {
+        d->origin[i] = org[i];
+        d->angle[i] = angle[i];
+    }
+    d->red = color[0];
+    d->green = color[1];
+    d->blue = color[2];
+    d->alpha = alpha;
+    d->image = image;
+    d->flags = flags;
+    d->size  = size;
+    d->decal = decal;
+    
+    d->blendfunc_src = alpha_src;
+    d->blendfunc_dst = alpha_dst;
+}
+#endif
+
 void
 V_AddLight(vec3_t org, float intensity, float r, float g, float b)
 {
@@ -132,6 +247,31 @@ V_AddLight(vec3_t org, float intensity, float r, float g, float b)
 	dl->color[0] = r;
 	dl->color[1] = g;
 	dl->color[2] = b;
+    VectorCopy (vec3_origin, dl->direction);
+    dl->spotlight = false;
+}
+
+/*
+ =====================
+ V_AddSpotLight
+ 
+ =====================
+ */
+void V_AddSpotLight (vec3_t org, vec3_t direction, float intensity, float r, float g, float b)
+{
+    dlight_t    *dl;
+    
+    if (r_numdlights >= MAX_DLIGHTS)
+        return;
+    dl = &r_dlights[r_numdlights++];
+    VectorCopy (org, dl->origin);
+    VectorCopy(direction, dl->direction);
+    dl->intensity = intensity;
+    dl->color[0] = r;
+    dl->color[1] = g;
+    dl->color[2] = b;
+    
+    dl->spotlight=true;
 }
 
 void
@@ -162,7 +302,7 @@ V_TestParticles(void)
 	int i, j;
 	float d, r, u;
 
-	r_numparticles = MAX_PARTICLES;
+    r_numparticles = 4096;
 
 	for (i = 0; i < r_numparticles; i++)
 	{
@@ -243,26 +383,38 @@ V_TestLights(void)
 		dl->color[1] = (float)((((i % 6) + 1) & 2) >> 1);
 		dl->color[2] = (float)((((i % 6) + 1) & 4) >> 2);
 		dl->intensity = 200;
+        dl->spotlight = false;
 	}
 }
 
 /*
  * Call before entering a new level, or after changing dlls
  */
+qboolean needLoadingPlaque (void);
 void
 CL_PrepRefresh(void)
 {
 	char mapname[32];
-	int i;
-	char name[MAX_QPATH];
+    int            i, max;
+    char        pname[MAX_QPATH];
 	float rotate;
 	vec3_t axis;
+    qboolean    newPlaque = needLoadingPlaque();
 
 	if (!cl.configstrings[CS_MODELS + 1][0])
 	{
 		return;
 	}
 
+    if (newPlaque)
+        SCR_BeginLoadingPlaque();
+    
+    // Knightmare- for Psychospaz's map loading screen
+    loadingMessage = true;
+    Com_sprintf (loadingMessages, sizeof(loadingMessages), S_COLOR_ALT"loading %s", cl.configstrings[CS_MODELS+1]);
+    loadingPercent = 0;
+    // end Knightmare
+    
 	SCR_AddDirtyPoint(0, 0);
 	SCR_AddDirtyPoint(viddef.width - 1, viddef.height - 1);
 
@@ -276,7 +428,12 @@ CL_PrepRefresh(void)
 	R_BeginRegistration (mapname);
 	Com_Printf("                                     \r");
 
-	/* precache status bar pics */
+    // Knightmare- for Psychospaz's map loading screen
+    Com_sprintf (loadingMessages, sizeof(loadingMessages), S_COLOR_ALT"loading models...");
+    loadingPercent += 20;
+    // end Knightmare
+
+    /* precache status bar pics */
 	Com_Printf("pics\r");
 	SCR_UpdateScreen();
 	SCR_TouchPics();
@@ -287,20 +444,29 @@ CL_PrepRefresh(void)
 	num_cl_weaponmodels = 1;
 	strcpy(cl_weaponmodels[0], "weapon.md2");
 
+    // Knightmare- for Psychospaz's map loading screen
+    for (i=1, max=0 ; i<MAX_MODELS && cl.configstrings[CS_MODELS+i][0] ; i++)
+        max++;
+    
 	for (i = 1; i < MAX_MODELS && cl.configstrings[CS_MODELS + i][0]; i++)
 	{
-		strcpy(name, cl.configstrings[CS_MODELS + i]);
-		name[37] = 0; /* never go beyond one line */
+		strcpy(pname, cl.configstrings[CS_MODELS + i]);
+		pname[37] = 0; /* never go beyond one line */
 
-		if (name[0] != '*')
+		if (pname[0] != '*')
 		{
-			Com_Printf("%s\r", name);
+			Com_Printf("%s\r", pname);
+            // Knightmare- for Psychospaz's map loading screen
+            //only make max of 40 chars long
+            if (i > 1)
+                Com_sprintf (loadingMessages, sizeof(loadingMessages),
+                             S_COLOR_ALT"loading %s", (strlen(pname)>40)? &pname[strlen(pname)-40]: pname);
 		}
 
 		SCR_UpdateScreen();
 		IN_Update();
 
-		if (name[0] == '#')
+		if (pname[0] == '#')
 		{
 			/* special player weapon model */
 			if (num_cl_weaponmodels < MAX_CLIENTWEAPONMODELS)
@@ -315,7 +481,7 @@ CL_PrepRefresh(void)
 		{
 			cl.model_draw[i] = R_RegisterModel(cl.configstrings[CS_MODELS + i]);
 
-			if (name[0] == '*')
+			if (pname[0] == '*')
 			{
 				cl.model_clip[i] = CM_InlineModel(cl.configstrings[CS_MODELS + i]);
 			}
@@ -326,39 +492,97 @@ CL_PrepRefresh(void)
 			}
 		}
 
-		if (name[0] != '*')
+		if (pname[0] != '*')
 		{
 			Com_Printf("                                     \r");
 		}
+        // Knightmare- for Psychospaz's map loading screen
+        loadingPercent += 40.0f/(float)max;
 	}
+    // Knightmare- for Psychospaz's map loading screen
+    Com_sprintf (loadingMessages, sizeof(loadingMessages), S_COLOR_ALT"loading pics...");
 
 	Com_Printf("images\r");
 	SCR_UpdateScreen();
 
-	for (i = 1; i < MAX_IMAGES && cl.configstrings[CS_IMAGES + i][0]; i++)
-	{
-		cl.image_precache[i] = Draw_FindPic(cl.configstrings[CS_IMAGES + i]);
-		IN_Update();
-	}
+    // Knightmare- BIG UGLY HACK for connected to server using old protocol
+    // Changed configstrings require different parsing
+    if (LegacyProtocol() )
+    {    // Knightmare- for Psychospaz's map loading screen
+        for (i=1, max=0; i<OLD_MAX_IMAGES && cl.configstrings[OLD_CS_IMAGES+i][0]; i++)
+            max++;
+        for (i=1; i<OLD_MAX_IMAGES && cl.configstrings[OLD_CS_IMAGES+i][0]; i++)
+        {
+            cl.image_precache[i] = R_DrawFindPic (cl.configstrings[OLD_CS_IMAGES+i]);
+            Sys_SendKeyEvents ();    // pump message loop
+            // Knightmare- for Psychospaz's map loading screen
+            loadingPercent += 20.0f/(float)max;
+        }
+    }
+    else
+    {    // Knightmare- for Psychospaz's map loading screen
+        for (i=1, max=0; i<MAX_IMAGES && cl.configstrings[CS_IMAGES+i][0]; i++)
+            max++;
+        for (i = 1; i < MAX_IMAGES && cl.configstrings[CS_IMAGES + i][0]; i++)
+        {
+            cl.image_precache[i] = Draw_FindPic(cl.configstrings[CS_IMAGES + i]);
+            IN_Update();
+            // Knightmare- for Psychospaz's map loading screen
+            loadingPercent += 20.0f/(float)max;
+        }
+    }
 
+    // Knightmare- for Psychospaz's map loading screen
+    Com_sprintf (loadingMessages, sizeof(loadingMessages), S_COLOR_ALT"loading players...");
+    
 	Com_Printf("                                     \r");
 
+    // Knightmare- for Psychospaz's map loading screen
+    for (i=1, max=0 ; i<MAX_CLIENTS ; i++)
+        if ( LegacyProtocol() ) {
+            if (cl.configstrings[OLD_CS_PLAYERSKINS+i][0])
+                max++;
+        } else {
+            if (cl.configstrings[CS_PLAYERSKINS+i][0])
+                max++;
+        }
+    
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
-		if (!cl.configstrings[CS_PLAYERSKINS + i][0])
-		{
-			continue;
-		}
+        // Knightmare- BIG UGLY HACK for old connected to server using old protocol
+        // Changed configstrings require different parsing
+        if ( LegacyProtocol() ) {
+            if (!cl.configstrings[OLD_CS_PLAYERSKINS+i][0])
+                continue;
+        } else {
+            if (!cl.configstrings[CS_PLAYERSKINS + i][0])
+            {
+                continue;
+            }
+        }
 
 		Com_Printf("client %i\r", i);
 		SCR_UpdateScreen();
 		IN_Update();
 		CL_ParseClientinfo(i);
 		Com_Printf("                                     \r");
+
+        // Knightmare- for Psychospaz's map loading screen
+        loadingPercent += 20.0f/(float)max;
 	}
 
-	CL_LoadClientinfo(&cl.baseclientinfo, "unnamed\\male/grunt");
-
+    // Knightmare- for Psychospaz's map loading screen
+    Com_sprintf (loadingMessages, sizeof(loadingMessages), S_COLOR_ALT"loading players...done");
+    //hack hack hack - psychospaz
+    loadingPercent = 100;
+    
+    // Knightmare - Vics fix to get rid of male/grunt flicker
+    // CL_LoadClientinfo (&cl.baseclientinfo, "unnamed\\male/grunt");
+    CL_LoadClientinfo (&cl.baseclientinfo, va("unnamed\\%s", skin->string));
+    
+    // Knightmare- refresh the player model/skin info
+    userinfo_modified = true;
+    
 	/* set sky textures and speed */
 	Com_Printf("sky\r");
 	SCR_UpdateScreen();
@@ -388,6 +612,15 @@ CL_PrepRefresh(void)
 	{
 		OGG_PlayTrack(track);
 	}
+
+    // Knightmare- for Psychospaz's map loading screen
+    loadingMessage = false;
+    // Knightmare- close loading screen as soon as done
+    cls.disable_screen = false;
+    
+    // Knightmare- don't start map with game paused
+    if (cls.key_dest != key_menu)
+        Cvar_Set ("paused", "0");
 }
 
 float
@@ -465,7 +698,9 @@ entitycmpfnc(const entity_t *a, const entity_t *b)
 void
 V_RenderView(float stereo_separation)
 {
-	if (cls.state != ca_active)
+    float f; // Barnes added
+
+    if (cls.state != ca_active)
 	{
 		return;
 	}
@@ -543,6 +778,13 @@ V_RenderView(float stereo_separation)
 		cl.refdef.vieworg[2] += 1.0 / 16;
 
 		cl.refdef.time = cl.time * 0.001f;
+        
+        // Barnes- Warp if underwater ala q3a :-)
+        if (cl.refdef.rdflags & RDF_UNDERWATER) {
+            f = sin(cl.time * 0.001 * 0.4 * (M_PI*2.7));
+            cl.refdef.fov_x += f * (cl.refdef.fov_x/90.0); // Knightmare- scale to fov
+            cl.refdef.fov_y -= f * (cl.refdef.fov_y/90.0); // Knightmare- scale to fov
+        } // end Barnes
 
 		cl.refdef.areabits = cl.frame.areabits;
 
@@ -570,6 +812,12 @@ V_RenderView(float stereo_separation)
 		cl.refdef.entities = r_entities;
 		cl.refdef.num_particles = r_numparticles;
 		cl.refdef.particles = r_particles;
+
+#ifdef DECALS
+        cl.refdef.num_decals = r_numdecalfrags;
+        cl.refdef.decals = r_decalfrags;
+#endif
+        
 		cl.refdef.num_dlights = r_numdlights;
 		cl.refdef.dlights = r_dlights;
 		cl.refdef.lightstyles = r_lightstyles;
@@ -598,9 +846,24 @@ V_RenderView(float stereo_separation)
 	cl.refdef.y = scr_vrect.y;
 	cl.refdef.width = scr_vrect.width;
 	cl.refdef.height = scr_vrect.height;
+
+    // adjust fov for wide aspect ratio
+    if (cl_widescreen_fov->value)
+    {
+        float standardRatio, currentRatio;
+        standardRatio = (float)SCREEN_WIDTH/(float)SCREEN_HEIGHT;
+        currentRatio = (float)cl.refdef.width/(float)cl.refdef.height;
+        if (currentRatio > standardRatio)
+            cl.refdef.fov_x *= (currentRatio / standardRatio);
+    }
+    
 	cl.refdef.fov_y = CalcFov(cl.refdef.fov_x, (float)cl.refdef.width,
 				(float)cl.refdef.height);
 
+#ifdef LIGHT_BLOOMS
+    cl.refdef.rdflags |= RDF_BLOOM;   //BLOOMS
+#endif
+    
 	R_RenderFrame(&cl.refdef);
 
 	if (cl_stats->value)
@@ -619,7 +882,9 @@ V_RenderView(float stereo_separation)
 	SCR_AddDirtyPoint(scr_vrect.x + scr_vrect.width - 1,
 			scr_vrect.y + scr_vrect.height - 1);
 
-	SCR_DrawCrosshair();
+    // don't draw crosshair while in menu
+    if (cls.key_dest != key_menu)
+        SCR_DrawCrosshair();
 }
 
 void 
@@ -676,6 +941,76 @@ V_Viewpos_f(void)
 			(int)cl.refdef.viewangles[YAW]);
 }
 
+// Knightmare- diagnostic commands from Lazarus
+/*
+ =============
+ V_Texture_f
+ =============
+ */
+void V_Texture_f (void)
+{
+    trace_t    tr;
+    vec3_t    forward, start, end;
+    
+    if (!developer->value) // only works in developer mode
+        return;
+    
+    VectorCopy(cl.refdef.vieworg, start);
+    AngleVectors(cl.refdef.viewangles, forward, NULL, NULL);
+    VectorMA(start, 8192, forward, end);
+    tr = CL_PMSurfaceTrace(cl.playernum+1, start,NULL,NULL,end,MASK_ALL);
+    if (!tr.ent)
+        Com_Printf("Nothing hit?\n");
+    else {
+        if (!tr.surface)
+            Com_Printf("Not a brush\n");
+        else
+            Com_Printf("Texture=%s, surface=0x%08x, value=%d\n",tr.surface->name,tr.surface->flags,tr.surface->value);
+    }
+}
+
+/*
+ =============
+ V_Surf_f
+ =============
+ */
+void V_Surf_f (void)
+{
+    trace_t    tr;
+    vec3_t    forward, start, end;
+    int        s;
+    
+    if (!developer->value) // only works in developer mode
+        return;
+    
+    // Disable this in multiplayer
+    if ( cl.configstrings[CS_MAXCLIENTS][0] &&
+        strcmp(cl.configstrings[CS_MAXCLIENTS], "1") )
+        return;
+    
+    if (Cmd_Argc() < 2)
+    {
+        Com_Printf("Syntax: surf <value>\n");
+        return;
+    }
+    else
+        s = atoi(Cmd_Argv(1));
+    
+    VectorCopy(cl.refdef.vieworg, start);
+    AngleVectors(cl.refdef.viewangles, forward, NULL, NULL);
+    VectorMA(start, 8192, forward, end);
+    tr = CL_PMSurfaceTrace(cl.playernum+1, start,NULL,NULL,end,MASK_ALL);
+    if (!tr.ent)
+        Com_Printf("Nothing hit?\n");
+    else
+    {
+        if (!tr.surface)
+            Com_Printf("Not a brush\n");
+        else
+            tr.surface->flags = s;
+    }
+}
+
 void
 V_Init(void)
 {
@@ -685,12 +1020,19 @@ V_Init(void)
 
 	Cmd_AddCommand("viewpos", V_Viewpos_f);
 
-	crosshair = Cvar_Get("crosshair", "0", CVAR_ARCHIVE);
-	crosshair_scale = Cvar_Get("crosshair_scale", "-1", CVAR_ARCHIVE);
+    // Knightmare- diagnostic commands from Lazarus
+    Cmd_AddCommand ("texture", V_Texture_f);
+    Cmd_AddCommand ("surf", V_Surf_f);
+
+    hand = Cvar_Get ("hand", "0", CVAR_ARCHIVE);
+    
+    crosshair = Cvar_Get("crosshair", "1", CVAR_ARCHIVE);
+    crosshair_scale = Cvar_Get ("crosshair_scale", "1", CVAR_ARCHIVE); //Knightmare added
+
 	cl_testblend = Cvar_Get("cl_testblend", "0", 0);
 	cl_testparticles = Cvar_Get("cl_testparticles", "0", 0);
 	cl_testentities = Cvar_Get("cl_testentities", "0", 0);
-	cl_testlights = Cvar_Get("cl_testlights", "0", 0);
+    cl_testlights = Cvar_Get ("cl_testlights", "0", CVAR_CHEAT);
 
 	cl_stats = Cvar_Get("cl_stats", "0", 0);
 }

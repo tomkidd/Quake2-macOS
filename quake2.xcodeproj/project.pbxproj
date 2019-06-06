@@ -156,7 +156,6 @@
 		A15FA43C2111516A0048A3AD /* cl_screen.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA28F2110C5BC0048A3AD /* cl_screen.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA43D2111516A0048A3AD /* cl_tempentities.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA22F2110C5BC0048A3AD /* cl_tempentities.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA43E2111516A0048A3AD /* cl_view.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2A42110C5BC0048A3AD /* cl_view.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA43F211151740048A3AD /* menu.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA28B2110C5BC0048A3AD /* menu.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA440211151740048A3AD /* qmenu.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA28A2110C5BC0048A3AD /* qmenu.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA441211151740048A3AD /* videomenu.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA28C2110C5BC0048A3AD /* videomenu.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA445211151B00048A3AD /* pcx.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2642110C5BC0048A3AD /* pcx.c */; settings = {COMPILER_FLAGS = "-w"; }; };
@@ -1881,7 +1880,6 @@
 				A15FA43D2111516A0048A3AD /* cl_tempentities.c in Sources */,
 				A15FA454211151E00048A3AD /* frame.c in Sources */,
 				A15FA453211151E00048A3AD /* filesystem.c in Sources */,
-				A15FA43F211151740048A3AD /* menu.c in Sources */,
 				A15FA461211152110048A3AD /* sv_cmd.c in Sources */,
 				A15FA44F211151E00048A3AD /* cmdparser.c in Sources */,
 				A15FA45A211151EC0048A3AD /* flash.c in Sources */,

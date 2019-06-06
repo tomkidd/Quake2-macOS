@@ -28,6 +28,8 @@
  * =======================================================================
  */
 
+// yquake2 already does ogg files and uses SDL so I'm mostly leaving this file untouched -tkidd
+
 #include "../header/client.h"
 #include "header/local.h"
 #include "header/qal.h"
@@ -317,7 +319,12 @@ S_RegisterSexedSound(entity_state_t *ent, char *base)
 
 	/* determine what model the client is using */
 	model[0] = 0;
-	n = CS_PLAYERSKINS + ent->number - 1;
+    // Knightmare- BIG UGLY HACK for old connected to server using old protocol
+    // Changed config strings require different parsing
+    if ( LegacyProtocol() )
+        n = OLD_CS_PLAYERSKINS + ent->number - 1;
+    else
+        n = CS_PLAYERSKINS + ent->number - 1;
 
 	if (cl.configstrings[n][0])
 	{

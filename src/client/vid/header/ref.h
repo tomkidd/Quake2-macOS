@@ -259,6 +259,8 @@ typedef struct {
 #endif
 } refdef_t;
 
+// from here on down it doesn't exist in kmquake2, but leaving in for now -tkidd
+
 // FIXME: bump API_VERSION?
 #define	API_VERSION		5
 #define EXPORT
