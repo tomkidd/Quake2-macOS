@@ -210,6 +210,28 @@
 		A1D529F6229364E9005928FF /* wildcard.c in Sources */ = {isa = PBXBuildFile; fileRef = A1D529F5229364E9005928FF /* wildcard.c */; };
 		A1D529FB2294B479005928FF /* cl_cinematic.c in Sources */ = {isa = PBXBuildFile; fileRef = A1D529F92294B381005928FF /* cl_cinematic.c */; };
 		A1DE86DC22A5D2620041E450 /* cl_string.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86DB22A5D2620041E450 /* cl_string.c */; };
+		A1DE870822A9C8F50041E450 /* ui_options.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86F122A9C8F50041E450 /* ui_options.c */; };
+		A1DE870922A9C8F50041E450 /* ui_mp_dmoptions.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86F222A9C8F50041E450 /* ui_mp_dmoptions.c */; };
+		A1DE870A22A9C8F50041E450 /* ui_backend.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86F322A9C8F50041E450 /* ui_backend.c */; };
+		A1DE870B22A9C8F50041E450 /* ui_main.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86F422A9C8F50041E450 /* ui_main.c */; };
+		A1DE870C22A9C8F50041E450 /* ui_mp_addressbook.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86F522A9C8F50041E450 /* ui_mp_addressbook.c */; };
+		A1DE870D22A9C8F50041E450 /* ui_multiplayer.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86F622A9C8F50041E450 /* ui_multiplayer.c */; };
+		A1DE870E22A9C8F50041E450 /* ui_video_advanced.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86F722A9C8F50041E450 /* ui_video_advanced.c */; };
+		A1DE870F22A9C8F50041E450 /* ui_quit.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86F822A9C8F50041E450 /* ui_quit.c */; };
+		A1DE871022A9C8F50041E450 /* ui_mp_startserver.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86F922A9C8F50041E450 /* ui_mp_startserver.c */; };
+		A1DE871122A9C8F50041E450 /* ui_options_ingame.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86FB22A9C8F50041E450 /* ui_options_ingame.c */; };
+		A1DE871222A9C8F50041E450 /* ui_mp_download.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86FC22A9C8F50041E450 /* ui_mp_download.c */; };
+		A1DE871322A9C8F50041E450 /* ui_mp_joinserver.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86FD22A9C8F50041E450 /* ui_mp_joinserver.c */; };
+		A1DE871422A9C8F50041E450 /* ui_options_sound.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86FE22A9C8F50041E450 /* ui_options_sound.c */; };
+		A1DE871522A9C8F50041E450 /* ui_options_interface.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE86FF22A9C8F50041E450 /* ui_options_interface.c */; };
+		A1DE871622A9C8F50041E450 /* ui_options_keys.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE870022A9C8F50041E450 /* ui_options_keys.c */; };
+		A1DE871722A9C8F50041E450 /* ui_mp_playersetup.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE870122A9C8F50041E450 /* ui_mp_playersetup.c */; };
+		A1DE871822A9C8F50041E450 /* ui_game.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE870222A9C8F50041E450 /* ui_game.c */; };
+		A1DE871922A9C8F50041E450 /* ui_subsystem.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE870322A9C8F50041E450 /* ui_subsystem.c */; };
+		A1DE871A22A9C8F50041E450 /* ui_video.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE870422A9C8F50041E450 /* ui_video.c */; };
+		A1DE871B22A9C8F50041E450 /* ui_game_credits.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE870522A9C8F50041E450 /* ui_game_credits.c */; };
+		A1DE871C22A9C8F50041E450 /* ui_options_controls.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE870622A9C8F50041E450 /* ui_options_controls.c */; };
+		A1DE871D22A9C8F50041E450 /* ui_game_saveload.c in Sources */ = {isa = PBXBuildFile; fileRef = A1DE870722A9C8F50041E450 /* ui_game_saveload.c */; };
 		A1E39F9C22838FB9005B2FB7 /* g_crane.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F8722838FB8005B2FB7 /* g_crane.c */; };
 		A1E39F9D22838FB9005B2FB7 /* g_ctf.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F8822838FB8005B2FB7 /* g_ctf.c */; };
 		A1E39F9E22838FB9005B2FB7 /* g_patchplayermodels.c in Sources */ = {isa = PBXBuildFile; fileRef = A1E39F8922838FB8005B2FB7 /* g_patchplayermodels.c */; };
@@ -524,6 +546,29 @@
 		A1D529F92294B381005928FF /* cl_cinematic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_cinematic.c; sourceTree = "<group>"; };
 		A1D52A02229756A1005928FF /* particles.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = particles.h; sourceTree = "<group>"; };
 		A1DE86DB22A5D2620041E450 /* cl_string.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_string.c; sourceTree = "<group>"; };
+		A1DE86F122A9C8F50041E450 /* ui_options.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_options.c; sourceTree = "<group>"; };
+		A1DE86F222A9C8F50041E450 /* ui_mp_dmoptions.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_mp_dmoptions.c; sourceTree = "<group>"; };
+		A1DE86F322A9C8F50041E450 /* ui_backend.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_backend.c; sourceTree = "<group>"; };
+		A1DE86F422A9C8F50041E450 /* ui_main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_main.c; sourceTree = "<group>"; };
+		A1DE86F522A9C8F50041E450 /* ui_mp_addressbook.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_mp_addressbook.c; sourceTree = "<group>"; };
+		A1DE86F622A9C8F50041E450 /* ui_multiplayer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_multiplayer.c; sourceTree = "<group>"; };
+		A1DE86F722A9C8F50041E450 /* ui_video_advanced.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_video_advanced.c; sourceTree = "<group>"; };
+		A1DE86F822A9C8F50041E450 /* ui_quit.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_quit.c; sourceTree = "<group>"; };
+		A1DE86F922A9C8F50041E450 /* ui_mp_startserver.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_mp_startserver.c; sourceTree = "<group>"; };
+		A1DE86FA22A9C8F50041E450 /* ui_local.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ui_local.h; sourceTree = "<group>"; };
+		A1DE86FB22A9C8F50041E450 /* ui_options_ingame.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_options_ingame.c; sourceTree = "<group>"; };
+		A1DE86FC22A9C8F50041E450 /* ui_mp_download.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_mp_download.c; sourceTree = "<group>"; };
+		A1DE86FD22A9C8F50041E450 /* ui_mp_joinserver.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_mp_joinserver.c; sourceTree = "<group>"; };
+		A1DE86FE22A9C8F50041E450 /* ui_options_sound.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_options_sound.c; sourceTree = "<group>"; };
+		A1DE86FF22A9C8F50041E450 /* ui_options_interface.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_options_interface.c; sourceTree = "<group>"; };
+		A1DE870022A9C8F50041E450 /* ui_options_keys.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_options_keys.c; sourceTree = "<group>"; };
+		A1DE870122A9C8F50041E450 /* ui_mp_playersetup.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_mp_playersetup.c; sourceTree = "<group>"; };
+		A1DE870222A9C8F50041E450 /* ui_game.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_game.c; sourceTree = "<group>"; };
+		A1DE870322A9C8F50041E450 /* ui_subsystem.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_subsystem.c; sourceTree = "<group>"; };
+		A1DE870422A9C8F50041E450 /* ui_video.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_video.c; sourceTree = "<group>"; };
+		A1DE870522A9C8F50041E450 /* ui_game_credits.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_game_credits.c; sourceTree = "<group>"; };
+		A1DE870622A9C8F50041E450 /* ui_options_controls.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_options_controls.c; sourceTree = "<group>"; };
+		A1DE870722A9C8F50041E450 /* ui_game_saveload.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ui_game_saveload.c; sourceTree = "<group>"; };
 		A1E39F8722838FB8005B2FB7 /* g_crane.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_crane.c; sourceTree = "<group>"; };
 		A1E39F8822838FB8005B2FB7 /* g_ctf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_ctf.c; sourceTree = "<group>"; };
 		A1E39F8922838FB8005B2FB7 /* g_patchplayermodels.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_patchplayermodels.c; sourceTree = "<group>"; };
@@ -698,6 +743,7 @@
 				A15FA20C2110C5BC0048A3AD /* common */,
 				A15FA1A72110C5BC0048A3AD /* game */,
 				A15FA19A2110C5BC0048A3AD /* server */,
+				A1DE86F022A9C8F50041E450 /* ui */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -1437,6 +1483,36 @@
 			path = quake2;
 			sourceTree = "<group>";
 		};
+		A1DE86F022A9C8F50041E450 /* ui */ = {
+			isa = PBXGroup;
+			children = (
+				A1DE86F322A9C8F50041E450 /* ui_backend.c */,
+				A1DE870522A9C8F50041E450 /* ui_game_credits.c */,
+				A1DE870722A9C8F50041E450 /* ui_game_saveload.c */,
+				A1DE870222A9C8F50041E450 /* ui_game.c */,
+				A1DE86FA22A9C8F50041E450 /* ui_local.h */,
+				A1DE86F422A9C8F50041E450 /* ui_main.c */,
+				A1DE86F522A9C8F50041E450 /* ui_mp_addressbook.c */,
+				A1DE86F222A9C8F50041E450 /* ui_mp_dmoptions.c */,
+				A1DE86FC22A9C8F50041E450 /* ui_mp_download.c */,
+				A1DE86FD22A9C8F50041E450 /* ui_mp_joinserver.c */,
+				A1DE870122A9C8F50041E450 /* ui_mp_playersetup.c */,
+				A1DE86F922A9C8F50041E450 /* ui_mp_startserver.c */,
+				A1DE86F622A9C8F50041E450 /* ui_multiplayer.c */,
+				A1DE870622A9C8F50041E450 /* ui_options_controls.c */,
+				A1DE86FB22A9C8F50041E450 /* ui_options_ingame.c */,
+				A1DE86FF22A9C8F50041E450 /* ui_options_interface.c */,
+				A1DE870022A9C8F50041E450 /* ui_options_keys.c */,
+				A1DE86FE22A9C8F50041E450 /* ui_options_sound.c */,
+				A1DE86F122A9C8F50041E450 /* ui_options.c */,
+				A1DE86F822A9C8F50041E450 /* ui_quit.c */,
+				A1DE870322A9C8F50041E450 /* ui_subsystem.c */,
+				A1DE86F722A9C8F50041E450 /* ui_video_advanced.c */,
+				A1DE870422A9C8F50041E450 /* ui_video.c */,
+			);
+			path = ui;
+			sourceTree = "<group>";
+		};
 		A1E39FB12288EB92005B2FB7 /* actor */ = {
 			isa = PBXGroup;
 			children = (
@@ -1827,9 +1903,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1DE870D22A9C8F50041E450 /* ui_multiplayer.c in Sources */,
 				A15FA4352111516A0048A3AD /* cl_keyboard.c in Sources */,
 				A15FA468211152110048A3AD /* sv_send.c in Sources */,
 				A15FA44E211151E00048A3AD /* clientserver.c in Sources */,
+				A1DE871022A9C8F50041E450 /* ui_mp_startserver.c in Sources */,
 				A1323A1F21CC8FB000E20D6D /* glimp_sdl.c in Sources */,
 				A15FA42F2111516A0048A3AD /* cl_console.c in Sources */,
 				A15FA42C2111515F0048A3AD /* signalhandler.c in Sources */,
@@ -1844,21 +1922,32 @@
 				A15FA460211151FB0048A3AD /* zone.c in Sources */,
 				A15FA44C211151D40048A3AD /* wave.c in Sources */,
 				A15FA4302111516A0048A3AD /* cl_download.c in Sources */,
+				A1DE870922A9C8F50041E450 /* ui_mp_dmoptions.c in Sources */,
+				A1DE870C22A9C8F50041E450 /* ui_mp_addressbook.c in Sources */,
 				A1D529FB2294B479005928FF /* cl_cinematic.c in Sources */,
 				A15FA469211152110048A3AD /* sv_user.c in Sources */,
 				A15FA4392111516A0048A3AD /* cl_parse.c in Sources */,
 				A15FA446211151B00048A3AD /* pvs.c in Sources */,
+				A1DE871B22A9C8F50041E450 /* ui_game_credits.c in Sources */,
+				A1DE870F22A9C8F50041E450 /* ui_quit.c in Sources */,
 				A15FA44A211151D40048A3AD /* openal.c in Sources */,
 				A15FA448211151B00048A3AD /* wal.c in Sources */,
 				A1323A1521CC8F8100E20D6D /* sdl.c in Sources */,
+				A1DE871C22A9C8F50041E450 /* ui_options_controls.c in Sources */,
 				A15FA462211152110048A3AD /* sv_conless.c in Sources */,
+				A1DE871122A9C8F50041E450 /* ui_options_ingame.c in Sources */,
 				A15FA43A2111516A0048A3AD /* cl_particles.c in Sources */,
+				A1DE870E22A9C8F50041E450 /* ui_video_advanced.c in Sources */,
+				A1DE871822A9C8F50041E450 /* ui_game.c in Sources */,
+				A1DE871722A9C8F50041E450 /* ui_mp_playersetup.c in Sources */,
 				A15FA452211151E00048A3AD /* cvar.c in Sources */,
+				A1DE871522A9C8F50041E450 /* ui_options_interface.c in Sources */,
 				A15FA456211151E30048A3AD /* md4.c in Sources */,
 				A15FA467211152110048A3AD /* sv_save.c in Sources */,
 				A15FA451211151E00048A3AD /* crc.c in Sources */,
 				A15FA42A211151570048A3AD /* network.c in Sources */,
 				A1323A2421CC8FF700E20D6D /* miniz.c in Sources */,
+				A1DE871D22A9C8F50041E450 /* ui_game_saveload.c in Sources */,
 				A15FA42D211151620048A3AD /* system.c in Sources */,
 				A15FA4382111516A0048A3AD /* cl_network.c in Sources */,
 				A15FA455211151E00048A3AD /* glob.c in Sources */,
@@ -1868,6 +1957,7 @@
 				A15FA464211152110048A3AD /* sv_game.c in Sources */,
 				A15FA45E211151F70048A3AD /* ioapi.c in Sources */,
 				A15FA4322111516A0048A3AD /* cl_entities.c in Sources */,
+				A1DE870A22A9C8F50041E450 /* ui_backend.c in Sources */,
 				A15FA43C2111516A0048A3AD /* cl_screen.c in Sources */,
 				A15FA458211151E30048A3AD /* netchan.c in Sources */,
 				A15FA43B2111516A0048A3AD /* cl_prediction.c in Sources */,
@@ -1876,11 +1966,15 @@
 				A1D529F6229364E9005928FF /* wildcard.c in Sources */,
 				A15FA4332111516A0048A3AD /* cl_input.c in Sources */,
 				A15FA429211151570048A3AD /* main.c in Sources */,
+				A1DE871922A9C8F50041E450 /* ui_subsystem.c in Sources */,
 				A1DE86DC22A5D2620041E450 /* cl_string.c in Sources */,
 				A15FA43D2111516A0048A3AD /* cl_tempentities.c in Sources */,
+				A1DE871A22A9C8F50041E450 /* ui_video.c in Sources */,
 				A15FA454211151E00048A3AD /* frame.c in Sources */,
+				A1DE871422A9C8F50041E450 /* ui_options_sound.c in Sources */,
 				A15FA453211151E00048A3AD /* filesystem.c in Sources */,
 				A15FA461211152110048A3AD /* sv_cmd.c in Sources */,
+				A1DE870B22A9C8F50041E450 /* ui_main.c in Sources */,
 				A15FA44F211151E00048A3AD /* cmdparser.c in Sources */,
 				A15FA45A211151EC0048A3AD /* flash.c in Sources */,
 				A15FA447211151B00048A3AD /* stb.c in Sources */,
@@ -1894,11 +1988,15 @@
 				A15FA417211150E90048A3AD /* AppDelegate.swift in Sources */,
 				A15FA450211151E00048A3AD /* collision.c in Sources */,
 				A15FA4242111513A0048A3AD /* misc.c in Sources */,
+				A1DE871622A9C8F50041E450 /* ui_options_keys.c in Sources */,
 				A15FA457211151E30048A3AD /* movemsg.c in Sources */,
 				A15FA449211151D40048A3AD /* ogg.c in Sources */,
+				A1DE871322A9C8F50041E450 /* ui_mp_joinserver.c in Sources */,
 				A15FA440211151740048A3AD /* qmenu.c in Sources */,
+				A1DE870822A9C8F50041E450 /* ui_options.c in Sources */,
 				A1323A2021CC8FB000E20D6D /* vid.c in Sources */,
 				A15FA465211152110048A3AD /* sv_init.c in Sources */,
+				A1DE871222A9C8F50041E450 /* ui_mp_download.c in Sources */,
 				A15FA42E2111516A0048A3AD /* cl_cin.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
