@@ -24,7 +24,7 @@
  * =======================================================================
  */
 
-#include "../header/client.h"
+#include "../client.h"
 #include "header/local.h"
 
 byte *data_p;

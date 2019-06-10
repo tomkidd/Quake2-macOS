@@ -28,7 +28,7 @@
 #define SV_SERVER_H
 
 #include "../../common/header/common.h"
-#include "../../game/header/game.h"
+#include "../../game/game.h"
 
 #define MAX_MASTERS 8
 #define LATENCY_COUNTS 16
