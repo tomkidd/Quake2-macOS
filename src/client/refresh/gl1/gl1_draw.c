@@ -31,6 +31,24 @@ image_t *draw_chars;
 extern qboolean scrap_dirty;
 void Scrap_Upload(void);
 
+#define DEFAULT_FONT_SIZE 8.0f
+
+void RefreshFont (void)
+{
+    con_font->modified = false;
+    
+    draw_chars = R_FindImage (va("fonts/%s.pcx", con_font->string), it_pic);
+    if (!draw_chars) // fall back on default font
+        draw_chars = R_FindImage ("fonts/default.pcx", it_pic);
+    if (!draw_chars) // fall back on old Q2 conchars
+        draw_chars = R_FindImage ("pics/conchars.pcx", it_pic);
+    if (!draw_chars) // Knightmare- prevent crash caused by missing font
+        VID_Error (ERR_FATAL, "RefreshFont: couldn't load pics/conchars");
+    
+    GL_Bind( draw_chars->texnum );
+}
+
+
 extern unsigned r_rawpalette[256];
 
 void
@@ -42,7 +60,60 @@ Draw_InitLocal(void)
 	{
 		ri.Sys_Error(ERR_FATAL, "Couldn't load pics/conchars.pcx");
 	}
+
+    // load console characters (don't bilerp characters)
+    RefreshFont();
+    
+    R_InitChars (); // init char indexes
 }
+
+/*
+ ================
+ R_CharMapScale
+ ================
+ */
+float R_CharMapScale (void)
+{
+    return (draw_chars->width/128.0); //current width / original width
+}
+
+
+unsigned    char_count;
+/*
+ ================
+ R_InitChars
+ ================
+ */
+void R_InitChars (void)
+{
+    char_count = 0;
+}
+
+/*
+ ================
+ R_FlushChars
+ ================
+ */
+void R_FlushChars (void)
+{
+    if (rb_vertex == 0 || rb_index == 0) // nothing to flush
+        return;
+    
+    GL_Disable (GL_ALPHA_TEST);
+    GL_TexEnv (GL_MODULATE);
+    GL_Enable (GL_BLEND);
+    GL_DepthMask (false);
+    GL_Bind(draw_chars->texnum);
+    
+    RB_DrawArrays (GL_QUADS);
+    char_count = 0;
+    
+    GL_DepthMask (true);
+    GL_Disable (GL_BLEND);
+    GL_TexEnv (GL_REPLACE);
+    GL_Enable (GL_ALPHA_TEST);
+}
+
 
 /*
  * Draws one 8*8 graphics character with 0 being transparent.
@@ -50,57 +121,88 @@ Draw_InitLocal(void)
  * smoothly scrolled off.
  */
 void
-RDraw_CharScaled(int x, int y, int num, float scale)
+RDraw_CharScaled(float x, float y, int num, float scale,
+                 int red, int green, int blue, int alpha, qboolean italic, qboolean last)
 {
-	int row, col;
-	float frow, fcol, size, scaledSize;
-
-	num &= 255;
-
-	if ((num & 127) == 32)
-	{
-		return; /* space */
-	}
-
-	if (y <= -8)
-	{
-		return; /* totally off screen */
-	}
-
-	row = num >> 4;
-	col = num & 15;
-
-	frow = row * 0.0625;
-	fcol = col * 0.0625;
-	size = 0.0625;
-
-	scaledSize = 8*scale;
-
-	R_Bind(draw_chars->texnum);
-
-	GLfloat vtx[] = {
-		x, y,
-		x + scaledSize, y,
-		x + scaledSize, y + scaledSize,
-		x, y + scaledSize
-	};
-
-	GLfloat tex[] = {
-		fcol, frow,
-		fcol + size, frow,
-		fcol + size, frow + size,
-		fcol, frow + size
-	};
-
-	glEnableClientState( GL_VERTEX_ARRAY );
-	glEnableClientState( GL_TEXTURE_COORD_ARRAY );
-
-	glVertexPointer( 2, GL_FLOAT, 0, vtx );
-	glTexCoordPointer( 2, GL_FLOAT, 0, tex );
-	glDrawArrays( GL_TRIANGLE_FAN, 0, 4 );
-
-	glDisableClientState( GL_VERTEX_ARRAY );
-	glDisableClientState( GL_TEXTURE_COORD_ARRAY );
+    int            row, col, i;
+    float        frow, fcol, size, cscale, italicAdd;
+    vec2_t        texCoord[4], verts[4];
+    qboolean    addChar = true;
+    
+    num &= 255;
+    
+    if (alpha > 255)
+        alpha = 255;
+    else if (alpha < 1)
+        alpha = 1;
+    
+    if ((num & 127) == 32)    // space
+        addChar = false;
+    if (y <= -(scale * DEFAULT_FONT_SIZE))    // totally off screen
+        addChar = false;
+    
+    row = num >> 4;
+    col = num&15;
+    
+    frow = row*0.0625;
+    fcol = col*0.0625;
+    size = 0.0625;
+    cscale = scale * DEFAULT_FONT_SIZE;
+    
+    italicAdd = (italic) ? (cscale*0.25) : 0;
+    
+    if (addChar)
+    {
+        Vector2Set(texCoord[0], fcol, frow);
+        Vector2Set(texCoord[1], fcol + size, frow);
+        Vector2Set(texCoord[2], fcol + size, frow + size);
+        Vector2Set(texCoord[3], fcol, frow + size);
+        
+        Vector2Set(verts[0], x+italicAdd, y);
+        Vector2Set(verts[1], x+cscale+italicAdd, y);
+        Vector2Set(verts[2], x+cscale-italicAdd, y+cscale);
+        Vector2Set(verts[3], x-italicAdd, y+cscale);
+        
+#if 1
+        if (char_count == 0)
+            rb_vertex = rb_index = 0;
+        if (rb_vertex + 4 >= MAX_VERTICES || rb_index + 4 >= MAX_INDICES)
+            R_FlushChars ();
+        for (i=0; i<4; i++) {
+            VA_SetElem2(texCoordArray[0][rb_vertex], texCoord[i][0], texCoord[i][1]);
+            VA_SetElem2(vertexArray[rb_vertex], verts[i][0], verts[i][1]);
+            VA_SetElem4(colorArray[rb_vertex], red*DIV255, green*DIV255, blue*DIV255, alpha*DIV255);
+            indexArray[rb_index++] = rb_vertex;
+            rb_vertex++;
+        }
+        char_count++;
+#else
+        GL_Disable (GL_ALPHA_TEST);
+        GL_TexEnv (GL_MODULATE);
+        GL_Enable (GL_BLEND);
+        GL_DepthMask (false);
+        GL_Bind(draw_chars->texnum);
+        
+        qglBegin (GL_QUADS);
+        qglColor4f (red*DIV255, green*DIV255, blue*DIV255, alpha*DIV255);
+        qglTexCoord2f (texCoord[0][0], texCoord[0][1]);
+        qglVertex2f (verts[0][0], verts[0][1]);
+        qglTexCoord2f (texCoord[1][0], texCoord[1][1]);
+        qglVertex2f (verts[1][0], verts[1][1]);
+        qglTexCoord2f (texCoord[2][0], texCoord[2][1]);
+        qglVertex2f (verts[2][0], verts[2][1]);
+        qglTexCoord2f (texCoord[3][0], texCoord[3][1]);
+        qglVertex2f (verts[3][0], verts[3][1]);
+        qglEnd ();
+        
+        GL_DepthMask (true);
+        GL_Disable (GL_BLEND);
+        GL_TexEnv (GL_REPLACE);
+        GL_Enable (GL_ALPHA_TEST);
+#endif
+    }
+    if (last)
+        R_FlushChars ();
 }
 
 image_t *
@@ -143,6 +245,8 @@ void
 RDraw_StretchPic(int x, int y, int w, int h, char *pic)
 {
 	image_t *gl;
+    int            i;
+    vec2_t        texCoord[4], verts[4];
 
 	gl = RDraw_FindPic(pic);
 
@@ -157,6 +261,16 @@ RDraw_StretchPic(int x, int y, int w, int h, char *pic)
 		Scrap_Upload();
 	}
 
+    // Psychospaz's transparent console support
+    if (gl->has_alpha || alpha < 1.0)
+    {
+        GL_Disable (GL_ALPHA_TEST);
+        GL_TexEnv (GL_MODULATE);
+        //qglColor4f (1,1,1,alpha);
+        GL_Enable (GL_BLEND);
+        GL_DepthMask (false);
+    }
+    
 	R_Bind(gl->texnum);
 
 	GLfloat vtx[] = {
