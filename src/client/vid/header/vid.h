@@ -36,8 +36,7 @@ typedef struct vrect_s {
 
 // Hold the video state.
 typedef struct {
-	int height;
-	int	width;
+    unsigned        width, height;            // coordinates from main game
 } viddef_t;
 
 // Global video state.
@@ -55,7 +54,7 @@ const char *VID_MenuKey(int);
 // Stuff provided by platform backend.
 extern int glimp_refreshRate;
 
-qboolean GLimp_Init(void);
+//qboolean GLimp_Init(void);
 void GLimp_Shutdown(void);
 qboolean GLimp_InitGraphics(int fullscreen, int *pwidth, int *pheight);
 void GLimp_ShutdownGraphics(void);

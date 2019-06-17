@@ -31,7 +31,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 vec3_t	vlightgrid[VLIGHT_GRIDSIZE_X][VLIGHT_GRIDSIZE_Y];
 
-static vec3_t r_avertexnormals[NUMVERTEXNORMALS] = {
+// making non-static for now -tkidd
+//static vec3_t r_avertexnormals[NUMVERTEXNORMALS] = {
+vec3_t r_avertexnormals[NUMVERTEXNORMALS] = {
 	#include "anorms.h"
 };
 

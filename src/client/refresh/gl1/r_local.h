@@ -24,8 +24,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <stdio.h>
 
+#if defined(__APPLE__)
+#include <OpenGL/gl.h>
+#else
 #include <GL/gl.h>
 #include <GL/glu.h>
+#endif
+
 #include "glext.h" //Knightmare- MrG's shader waterwarp support
 #include <math.h>
 
@@ -35,7 +40,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 #endif
 
-#include "../client/ref.h"
+#include "../../../client/vid/header/ref.h"
 
 
 #include "qgl.h"
@@ -49,10 +54,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifndef __VIDDEF_T
 #define __VIDDEF_T
-typedef struct
-{
-	unsigned		width, height;			// coordinates from main game
-} viddef_t;
+// Hold the video state.
+//typedef struct {
+//    unsigned        width, height;            // coordinates from main game
+//} viddef_t;
 #endif
 
 extern	viddef_t	vid;

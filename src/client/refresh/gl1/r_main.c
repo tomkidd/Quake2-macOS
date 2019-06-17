@@ -1482,19 +1482,20 @@ qboolean R_Init ( void *hinstance, void *hWnd, char *reason )
 	}
 
 	// WGL_3DFX_gamma_control
-	if ( strstr(gl_config.extensions_string, "WGL_3DFX_gamma_control") )
-	{
-		if (!r_ignorehwgamma->value)
-		{
-			qwglGetDeviceGammaRamp3DFX	= ( BOOL (WINAPI *)(HDC, WORD *)) qwglGetProcAddress( "wglGetDeviceGammaRamp3DFX" );
-			qwglSetDeviceGammaRamp3DFX	= ( BOOL (WINAPI *)(HDC, WORD *)) qwglGetProcAddress( "wglSetDeviceGammaRamp3DFX" );
-			Com_Printf( "...using WGL_3DFX_gamma_control\n" );
-		}
-		else
-			Com_Printf( "...ignoring WGL_3DFX_gamma_control\n" );
-	}
-	else
-		Com_Printf( "...WGL_3DFX_gamma_control not found\n" );
+    // no 3dfx no sale -tkidd
+//    if ( strstr(gl_config.extensions_string, "WGL_3DFX_gamma_control") )
+//    {
+//        if (!r_ignorehwgamma->value)
+//        {
+//            qwglGetDeviceGammaRamp3DFX    = ( BOOL (WINAPI *)(HDC, WORD *)) qwglGetProcAddress( "wglGetDeviceGammaRamp3DFX" );
+//            qwglSetDeviceGammaRamp3DFX    = ( BOOL (WINAPI *)(HDC, WORD *)) qwglGetProcAddress( "wglSetDeviceGammaRamp3DFX" );
+//            Com_Printf( "...using WGL_3DFX_gamma_control\n" );
+//        }
+//        else
+//            Com_Printf( "...ignoring WGL_3DFX_gamma_control\n" );
+//    }
+//    else
+//        Com_Printf( "...WGL_3DFX_gamma_control not found\n" );
 
 
 	GL_SetDefaultState();

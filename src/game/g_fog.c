@@ -107,7 +107,12 @@ void Fog_Off (edict_t *player_ent)
 
 #include <windows.h>
 #define __MSC__
-#include <gl/gl.h>
+
+#if defined(__APPLE__)
+#include <OpenGL/gl.h>
+#else
+#include <GL/gl.h>
+#endif
 
 #endif    // KMQUAKE2_ENGINE_MOD
 

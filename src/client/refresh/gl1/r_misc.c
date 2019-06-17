@@ -21,8 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // r_misc.c - particle image loading, and screenshots
 
 #include "r_local.h"
-#include "include/jpeglib.h" // Heffo - JPEG Screenshots
-
+//#include "include/jpeglib.h" // Heffo - JPEG Screenshots
+#include <jpeglib.h>
 
 /*
 ==================
