@@ -363,7 +363,7 @@ debris_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /* 
 }
 
 void
-ThrowDebris(edict_t *self, char *modelname, float speed, vec3_t origin)
+ThrowDebris(edict_t *self, char *modelname, float speed, vec3_t origin, int skin, int effects)
 {
 	edict_t *chunk;
 	vec3_t v;
@@ -1037,7 +1037,7 @@ func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker,
 	if (self->dmg)
 	{
 		T_RadiusDamage(self, attacker, self->dmg, NULL,
-				self->dmg + 40, MOD_EXPLOSIVE);
+				self->dmg + 40, MOD_EXPLOSIVE, -0.5);
 	}
 
 	VectorSubtract(self->s.origin, inflictor->s.origin, self->velocity);
@@ -1069,7 +1069,7 @@ func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker,
 			chunkorigin[0] = origin[0] + crandom() * size[0];
 			chunkorigin[1] = origin[1] + crandom() * size[1];
 			chunkorigin[2] = origin[2] + crandom() * size[2];
-			ThrowDebris(self, "models/objects/debris1/tris.md2", 1, chunkorigin);
+			ThrowDebris(self, "models/objects/debris1/tris.md2", 1, chunkorigin, 0, 0);
 		}
 	}
 
@@ -1086,7 +1086,7 @@ func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker,
 		chunkorigin[0] = origin[0] + crandom() * size[0];
 		chunkorigin[1] = origin[1] + crandom() * size[1];
 		chunkorigin[2] = origin[2] + crandom() * size[2];
-		ThrowDebris(self, "models/objects/debris2/tris.md2", 2, chunkorigin);
+		ThrowDebris(self, "models/objects/debris2/tris.md2", 2, chunkorigin, 0, 0);
 	}
 
 	G_UseTargets(self, attacker);
@@ -1221,7 +1221,7 @@ barrel_explode(edict_t *self)
 	}
 
 	T_RadiusDamage(self, self->activator, self->dmg, NULL,
-			self->dmg + 40, MOD_BARREL);
+			self->dmg + 40, MOD_BARREL, -0.5);
 	VectorCopy(self->s.origin, save);
 	VectorMA(self->absmin, 0.5, self->size, self->s.origin);
 
@@ -1230,61 +1230,61 @@ barrel_explode(edict_t *self)
 	org[0] = self->s.origin[0] + crandom() * self->size[0];
 	org[1] = self->s.origin[1] + crandom() * self->size[1];
 	org[2] = self->s.origin[2] + crandom() * self->size[2];
-	ThrowDebris(self, "models/objects/debris1/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris1/tris.md2", spd, org, 0, 0);
 	org[0] = self->s.origin[0] + crandom() * self->size[0];
 	org[1] = self->s.origin[1] + crandom() * self->size[1];
 	org[2] = self->s.origin[2] + crandom() * self->size[2];
-	ThrowDebris(self, "models/objects/debris1/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris1/tris.md2", spd, org, 0, 0);
 
 	/* bottom corners */
 	spd = 1.75 * (float)self->dmg / 200.0;
 	VectorCopy(self->absmin, org);
-	ThrowDebris(self, "models/objects/debris3/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris3/tris.md2", spd, org, 0, 0);
 	VectorCopy(self->absmin, org);
 	org[0] += self->size[0];
-	ThrowDebris(self, "models/objects/debris3/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris3/tris.md2", spd, org, 0, 0);
 	VectorCopy(self->absmin, org);
 	org[1] += self->size[1];
-	ThrowDebris(self, "models/objects/debris3/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris3/tris.md2", spd, org, 0, 0);
 	VectorCopy(self->absmin, org);
 	org[0] += self->size[0];
 	org[1] += self->size[1];
-	ThrowDebris(self, "models/objects/debris3/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris3/tris.md2", spd, org, 0, 0);
 
 	/* a bunch of little chunks */
 	spd = 2 * self->dmg / 200;
 	org[0] = self->s.origin[0] + crandom() * self->size[0];
 	org[1] = self->s.origin[1] + crandom() * self->size[1];
 	org[2] = self->s.origin[2] + crandom() * self->size[2];
-	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org, 0, 0);
 	org[0] = self->s.origin[0] + crandom() * self->size[0];
 	org[1] = self->s.origin[1] + crandom() * self->size[1];
 	org[2] = self->s.origin[2] + crandom() * self->size[2];
-	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org, 0, 0);
 	org[0] = self->s.origin[0] + crandom() * self->size[0];
 	org[1] = self->s.origin[1] + crandom() * self->size[1];
 	org[2] = self->s.origin[2] + crandom() * self->size[2];
-	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org, 0, 0);
 	org[0] = self->s.origin[0] + crandom() * self->size[0];
 	org[1] = self->s.origin[1] + crandom() * self->size[1];
 	org[2] = self->s.origin[2] + crandom() * self->size[2];
-	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org, 0, 0);
 	org[0] = self->s.origin[0] + crandom() * self->size[0];
 	org[1] = self->s.origin[1] + crandom() * self->size[1];
 	org[2] = self->s.origin[2] + crandom() * self->size[2];
-	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org, 0, 0);
 	org[0] = self->s.origin[0] + crandom() * self->size[0];
 	org[1] = self->s.origin[1] + crandom() * self->size[1];
 	org[2] = self->s.origin[2] + crandom() * self->size[2];
-	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org, 0, 0);
 	org[0] = self->s.origin[0] + crandom() * self->size[0];
 	org[1] = self->s.origin[1] + crandom() * self->size[1];
 	org[2] = self->s.origin[2] + crandom() * self->size[2];
-	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org, 0, 0);
 	org[0] = self->s.origin[0] + crandom() * self->size[0];
 	org[1] = self->s.origin[1] + crandom() * self->size[1];
 	org[2] = self->s.origin[2] + crandom() * self->size[2];
-	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
+	ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org, 0, 0);
 
 	VectorCopy(save, self->s.origin);
 
@@ -1867,7 +1867,7 @@ misc_viper_bomb_touch(edict_t *self, edict_t *other /* unused */, cplane_t *plan
 	G_UseTargets(self, self->activator);
 
 	self->s.origin[2] = self->absmin[2] + 1;
-	T_RadiusDamage(self, self, self->dmg, NULL, self->dmg + 40, MOD_BOMB);
+	T_RadiusDamage(self, self, self->dmg, NULL, self->dmg + 40, MOD_BOMB, -0.5);
 	BecomeExplosion2(self);
 }
 

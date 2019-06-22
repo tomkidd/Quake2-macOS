@@ -53,6 +53,10 @@ typedef unsigned char byte;
  #define NULL ((void *)0)
 #endif
 
+//Knightmare- whether to include new engine enhancements
+#undef    Q2MP4_ENGINE_MOD
+//end Knightmare
+
 /* angle indexes */
 #define PITCH 0                     /* up / down */
 #define YAW 1                       /* left / right */
@@ -98,8 +102,13 @@ typedef unsigned char byte;
 #define MAX_CLIENTS 256             /* absolute limit */
 #define MAX_EDICTS 1024             /* must change protocol to increase more */
 #define MAX_LIGHTSTYLES 256
+#ifdef Q2MP4_ENGINE_MOD        //Knightmare- Ding-Dong, Index: Overflow is dead!
+#define    MAX_MODELS            8192    // these are sent over the net as shorts
+#define    MAX_SOUNDS            8192    // so they cannot be blindly increased
+#else
 #define MAX_MODELS 256              /* these are sent over the net as bytes */
 #define MAX_SOUNDS 256              /* so they cannot be blindly increased */
+#endif
 #define MAX_IMAGES 256
 #define MAX_ITEMS 256
 #define MAX_GENERAL (MAX_CLIENTS * 2)       /* general config strings */
@@ -380,6 +389,7 @@ typedef struct cvar_s
 #define CONTENTS_WATER 32
 #define CONTENTS_MIST 64
 #define LAST_VISIBLE_CONTENTS 64
+#define CONTENTS_MUD            128    // not a "real" content property - used only for watertype
 
 /* remaining contents are non-visible, and don't eat brushes */
 #define CONTENTS_AREAPORTAL 0x8000
@@ -413,6 +423,25 @@ typedef struct cvar_s
 #define SURF_TRANS66 0x20
 #define SURF_FLOWING 0x40       /* scroll towards angle */
 #define SURF_NODRAW 0x80        /* don't bother referencing the texture */
+
+// Never used in the game, just here for completeness:
+#define    SURF_HINT        0x100    // make a primary bsp splitter
+#define    SURF_SKIP        0x200    // completely ignore, allowing non-closed brushes
+
+// Lazarus surface flags for footstep sounds:
+#define SURF_METAL        0x00000400    // metal floor
+#define SURF_DIRT        0x00000800    // dirt, sand, rock
+#define SURF_VENT        0x00001000    // ventillation duct
+#define SURF_GRATE        0x00002000    // metal grating
+#define SURF_TILE        0x00004000    // floor tiles
+#define SURF_GRASS      0x00008000  // grass
+#define SURF_SNOW       0x00010000  // snow
+#define SURF_CARPET     0x00020000  // carpet
+#define SURF_FORCE      0x00040000  // forcefield
+#define SURF_GRAVEL     0x00080000  // gravel
+#define SURF_ICE        0x00100000  // ice
+#define SURF_STANDARD   0x00200000  // normal footsteps
+#define SURF_STEPMASK    0x000FFC00
 
 /* content masks */
 #define MASK_ALL (-1)
@@ -519,11 +548,19 @@ typedef enum
  * prediction stays in sync, so no floats are used.
  * if any part of the game code modifies this struct, it
  * will result in a prediction error of some degree. */
+
+#undef HUGE_WORLD           // Lazarus: if defined, world is now limited to +/- 268435456.
+                            // This of course requires changes in the exe and the compilers
+
 typedef struct
 {
 	pmtype_t pm_type;
 
+#ifdef HUGE_WORLD
+    long        origin[3];
+#else
 	short origin[3];            /* 12.3 */
+#endif
 	short velocity[3];          /* 12.3 */
 	byte pm_flags;              /* ducked, jump_held, etc */
 	byte pm_time;               /* each unit = 8 ms */
@@ -535,6 +572,8 @@ typedef struct
 /* button bits */
 #define BUTTON_ATTACK 1
 #define BUTTON_USE 2
+#define BUTTON_ATTACK2      4
+#define BUTTONS_ATTACK (BUTTON_ATTACK | BUTTON_ATTACK2)
 #define BUTTON_ANY 128 /* any key whatsoever */
 
 /* usercmd_t is sent to the server each client frame */
@@ -632,6 +671,9 @@ typedef struct
 #define RF_SHELL_DOUBLE 0x00010000          /* 65536 */
 #define RF_SHELL_HALF_DAM 0x00020000
 #define RF_USE_DISGUISE 0x00040000
+
+// Lazarus
+#define RF_VAMPIRE            0x00080000        // 524288
 
 /* player_state_t->refdef flags */
 #define RDF_UNDERWATER 1            /* warp the screen as apropriate */
@@ -981,6 +1023,7 @@ typedef enum
 #define CHAN_VOICE 2
 #define CHAN_ITEM 3
 #define CHAN_BODY 4
+#define CHAN_GIZMO 5
 /* modifier flags */
 #define CHAN_NO_PHS_ADD 8           /* send to all clients, not just ones in PHS (ATTN 0 will also do this) */
 #define CHAN_RELIABLE 16            /* send by reliable message, not datagram */
@@ -1011,6 +1054,15 @@ typedef enum
 #define STAT_CHASE 16
 #define STAT_SPECTATOR 17
 
+#ifdef WESQ2
+#define STAT_PRESSURE_ICON      18
+#define STAT_PRESSURE           19
+#define STAT_TEMPERATURE_ICON   20
+#define STAT_TEMPERATURE        21
+#endif
+
+#define STAT_SPEED              22
+#define STAT_ZOOM               23
 #define MAX_STATS 32
 
 /* dmflags->value flags */
@@ -1144,5 +1196,251 @@ typedef struct
 
 size_t verify_fread(void *, size_t, size_t, FILE *);
 size_t verify_fwrite(void *, size_t, size_t, FILE *);
+
+
+typedef enum
+{
+    FOOTSTEP_METAL1,
+    FOOTSTEP_METAL2,
+    FOOTSTEP_METAL3,
+    FOOTSTEP_METAL4,
+    FOOTSTEP_DIRT1,
+    FOOTSTEP_DIRT2,
+    FOOTSTEP_DIRT3,
+    FOOTSTEP_DIRT4,
+    FOOTSTEP_VENT1,
+    FOOTSTEP_VENT2,
+    FOOTSTEP_VENT3,
+    FOOTSTEP_VENT4,
+    FOOTSTEP_GRATE1,
+    FOOTSTEP_GRATE2,
+    FOOTSTEP_GRATE3,
+    FOOTSTEP_GRATE4,
+    FOOTSTEP_TILE1,
+    FOOTSTEP_TILE2,
+    FOOTSTEP_TILE3,
+    FOOTSTEP_TILE4,
+    FOOTSTEP_GRASS1,
+    FOOTSTEP_GRASS2,
+    FOOTSTEP_GRASS3,
+    FOOTSTEP_GRASS4,
+    FOOTSTEP_SNOW1,
+    FOOTSTEP_SNOW2,
+    FOOTSTEP_SNOW3,
+    FOOTSTEP_SNOW4,
+    FOOTSTEP_CARPET1,
+    FOOTSTEP_CARPET2,
+    FOOTSTEP_CARPET3,
+    FOOTSTEP_CARPET4,
+    FOOTSTEP_FORCE1,
+    FOOTSTEP_FORCE2,
+    FOOTSTEP_FORCE3,
+    FOOTSTEP_FORCE4,
+    FOOTSTEP_SLOSH1,
+    FOOTSTEP_SLOSH2,
+    FOOTSTEP_SLOSH3,
+    FOOTSTEP_SLOSH4,
+    FOOTSTEP_LADDER1,
+    FOOTSTEP_LADDER2,
+    FOOTSTEP_LADDER3,
+    FOOTSTEP_LADDER4
+} footstep_t;
+
+typedef enum
+{
+    ENTITY_DONT_USE_THIS_ONE,
+    ENTITY_ITEM_HEALTH,
+    ENTITY_ITEM_HEALTH_SMALL,
+    ENTITY_ITEM_HEALTH_LARGE,
+    ENTITY_ITEM_HEALTH_MEGA,
+    ENTITY_INFO_PLAYER_START,
+    ENTITY_INFO_PLAYER_DEATHMATCH,
+    ENTITY_INFO_PLAYER_COOP,
+    ENTITY_INFO_PLAYER_INTERMISSION,
+    ENTITY_FUNC_PLAT,
+    ENTITY_FUNC_BUTTON,
+    ENTITY_FUNC_DOOR,
+    ENTITY_FUNC_DOOR_SECRET,
+    ENTITY_FUNC_DOOR_ROTATING,
+    ENTITY_FUNC_ROTATING,
+    ENTITY_FUNC_TRAIN,
+    ENTITY_FUNC_WATER,
+    ENTITY_FUNC_CONVEYOR,
+    ENTITY_FUNC_AREAPORTAL,
+    ENTITY_FUNC_CLOCK,
+    ENTITY_FUNC_WALL,
+    ENTITY_FUNC_OBJECT,
+    ENTITY_FUNC_TIMER,
+    ENTITY_FUNC_EXPLOSIVE,
+    ENTITY_FUNC_KILLBOX,
+    ENTITY_TARGET_ACTOR,
+    ENTITY_TARGET_ANIMATION,
+    ENTITY_TARGET_BLASTER,
+    ENTITY_TARGET_CHANGELEVEL,
+    ENTITY_TARGET_CHARACTER,
+    ENTITY_TARGET_CROSSLEVEL_TARGET,
+    ENTITY_TARGET_CROSSLEVEL_TRIGGER,
+    ENTITY_TARGET_EARTHQUAKE,
+    ENTITY_TARGET_EXPLOSION,
+    ENTITY_TARGET_GOAL,
+    ENTITY_TARGET_HELP,
+    ENTITY_TARGET_LASER,
+    ENTITY_TARGET_LIGHTRAMP,
+    ENTITY_TARGET_SECRET,
+    ENTITY_TARGET_SPAWNER,
+    ENTITY_TARGET_SPEAKER,
+    ENTITY_TARGET_SPLASH,
+    ENTITY_TARGET_STRING,
+    ENTITY_TARGET_TEMP_ENTITY,
+    ENTITY_TRIGGER_ALWAYS,
+    ENTITY_TRIGGER_COUNTER,
+    ENTITY_TRIGGER_ELEVATOR,
+    ENTITY_TRIGGER_GRAVITY,
+    ENTITY_TRIGGER_HURT,
+    ENTITY_TRIGGER_KEY,
+    ENTITY_TRIGGER_ONCE,
+    ENTITY_TRIGGER_MONSTERJUMP,
+    ENTITY_TRIGGER_MULTIPLE,
+    ENTITY_TRIGGER_PUSH,
+    ENTITY_TRIGGER_RELAY,
+    ENTITY_VIEWTHING,
+    ENTITY_WORLDSPAWN,
+    ENTITY_LIGHT,
+    ENTITY_LIGHT_MINE1,
+    ENTITY_LIGHT_MINE2,
+    ENTITY_INFO_NOTNULL,
+    ENTITY_PATH_CORNER,
+    ENTITY_POINT_COMBAT,
+    ENTITY_MISC_EXPLOBOX,
+    ENTITY_MISC_BANNER,
+    ENTITY_MISC_SATELLITE_DISH,
+    ENTITY_MISC_ACTOR,
+    ENTITY_MISC_GIB_ARM,
+    ENTITY_MISC_GIB_LEG,
+    ENTITY_MISC_GIB_HEAD,
+    ENTITY_MISC_INSANE,
+    ENTITY_MISC_DEADSOLDIER,
+    ENTITY_MISC_VIPER,
+    ENTITY_MISC_VIPER_BOMB,
+    ENTITY_MISC_BIGVIPER,
+    ENTITY_MISC_STROGG_SHIP,
+    ENTITY_MISC_TELEPORTER,
+    ENTITY_MISC_TELEPORTER_DEST,
+    ENTITY_MISC_BLACKHOLE,
+    ENTITY_MISC_EASTERTANK,
+    ENTITY_MISC_EASTERCHICK,
+    ENTITY_MISC_EASTERCHICK2,
+    ENTITY_MONSTER_BERSERK,
+    ENTITY_MONSTER_GLADIATOR,
+    ENTITY_MONSTER_GUNNER,
+    ENTITY_MONSTER_INFANTRY,
+    ENTITY_MONSTER_SOLDIER_LIGHT,
+    ENTITY_MONSTER_SOLDIER,
+    ENTITY_MONSTER_SOLDIER_SS,
+    ENTITY_MONSTER_TANK,
+    ENTITY_MONSTER_MEDIC,
+    ENTITY_MONSTER_FLIPPER,
+    ENTITY_MONSTER_CHICK,
+    ENTITY_MONSTER_PARASITE,
+    ENTITY_MONSTER_FLYER,
+    ENTITY_MONSTER_BRAIN,
+    ENTITY_MONSTER_FLOATER,
+    ENTITY_MONSTER_HOVER,
+    ENTITY_MONSTER_MUTANT,
+    ENTITY_MONSTER_SUPERTANK,
+    ENTITY_MONSTER_BOSS2,
+    ENTITY_MONSTER_BOSS3_STAND,
+    ENTITY_MONSTER_JORG,
+    ENTITY_MONSTER_COMMANDER_BODY,
+    ENTITY_TURRET_BREACH,
+    ENTITY_TURRET_BASE,
+    ENTITY_TURRET_DRIVER,
+    ENTITY_CRANE_BEAM,
+    ENTITY_CRANE_HOIST,
+    ENTITY_CRANE_HOOK,
+    ENTITY_CRANE_CONTROL,
+    ENTITY_CRANE_RESET,
+    ENTITY_FUNC_BOBBINGWATER,
+    ENTITY_FUNC_DOOR_SWINGING,
+    ENTITY_FUNC_FORCE_WALL,
+    ENTITY_FUNC_MONITOR,
+    ENTITY_FUNC_PENDULUM,
+    ENTITY_FUNC_PIVOT,
+    ENTITY_FUNC_PUSHABLE,
+    ENTITY_FUNC_REFLECT,
+    ENTITY_FUNC_TRACKCHANGE,
+    ENTITY_FUNC_TRACKTRAIN,
+    ENTITY_FUNC_TRAINBUTTON,
+    ENTITY_FUNC_VEHICLE,
+    ENTITY_HINT_PATH,
+    ENTITY_INFO_TRAIN_START,
+    ENTITY_MISC_LIGHT,
+    ENTITY_MODEL_SPAWN,
+    ENTITY_MODEL_TRAIN,
+    ENTITY_MODEL_TURRET,
+    ENTITY_MONSTER_MAKRON,
+    ENTITY_PATH_TRACK,
+    ENTITY_TARGET_ANGER,
+    ENTITY_TARGET_ATTRACTOR,
+    ENTITY_TARGET_CD,
+    ENTITY_TARGET_CHANGE,
+    ENTITY_TARGET_CLONE,
+    ENTITY_TARGET_EFFECT,
+    ENTITY_TARGET_FADE,
+    ENTITY_TARGET_FAILURE,
+    ENTITY_TARGET_FOG,
+    ENTITY_TARGET_FOUNTAIN,
+    ENTITY_TARGET_LIGHTSWITCH,
+    ENTITY_TARGET_LOCATOR,
+    ENTITY_TARGET_LOCK,
+    ENTITY_TARGET_LOCK_CLUE,
+    ENTITY_TARGET_LOCK_CODE,
+    ENTITY_TARGET_LOCK_DIGIT,
+    ENTITY_TARGET_MONITOR,
+    ENTITY_TARGET_MONSTERBATTLE,
+    ENTITY_TARGET_MOVEWITH,
+    ENTITY_TARGET_PRECIPITATION,
+    ENTITY_TARGET_ROCKS,
+    ENTITY_TARGET_ROTATION,
+    ENTITY_TARGET_SET_EFFECT,
+    ENTITY_TARGET_SKILL,
+    ENTITY_TARGET_SKY,
+    ENTITY_TARGET_PLAYBACK,
+    ENTITY_TARGET_TEXT,
+    ENTITY_THING,
+    ENTITY_TREMOR_TRIGGER_MULTIPLE,
+    ENTITY_TRIGGER_BBOX,
+    ENTITY_TRIGGER_DISGUISE,
+    ENTITY_TRIGGER_FOG,
+    ENTITY_TRIGGER_INSIDE,
+    ENTITY_TRIGGER_LOOK,
+    ENTITY_TRIGGER_MASS,
+    ENTITY_TRIGGER_SCALES,
+    ENTITY_TRIGGER_SPEAKER,
+    ENTITY_TRIGGER_SWITCH,
+    ENTITY_TRIGGER_TELEPORTER,
+    ENTITY_TRIGGER_TRANSITION,
+    ENTITY_BOLT,
+    ENTITY_DEBRIS,
+    ENTITY_GIB,
+    ENTITY_GIBHEAD,
+    ENTITY_GRENADE,
+    ENTITY_HANDGRENADE,
+    ENTITY_ROCKET,
+    ENTITY_CHASECAM,
+    ENTITY_CAMPLAYER,
+    ENTITY_PLAYER_NOISE
+} entity_id;
+
+#define DEG2RAD( a ) ( a * M_PI ) / 180.0F
+
+#ifdef __LCC__
+#define max(a,b)    (((a) > (b)) ? (a) : (b))
+#define min(a,b)    (((a) < (b)) ? (a) : (b))
+#define _mkdir mkdir
+#endif
+
+
+
 
 #endif /* COMMON_SHARED_H */

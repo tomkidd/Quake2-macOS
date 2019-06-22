@@ -76,6 +76,8 @@ cvar_t *flood_msgs;
 cvar_t *flood_persecond;
 cvar_t *flood_waitdelay;
 
+cvar_t    *corpse_fadetime;
+
 cvar_t *sv_maplist;
 
 cvar_t *gib_on;

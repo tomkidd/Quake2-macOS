@@ -81,7 +81,7 @@ Boss2Rocket(edict_t *self)
 	vec[2] += self->enemy->viewheight;
 	VectorSubtract(vec, start, dir);
 	VectorNormalize(dir);
-	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_1);
+	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_1, (self->spawnflags & SF_MONSTER_SPECIAL ? self->enemy : NULL));
 
 	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_2],
 			forward, right, start);
@@ -89,7 +89,7 @@ Boss2Rocket(edict_t *self)
 	vec[2] += self->enemy->viewheight;
 	VectorSubtract(vec, start, dir);
 	VectorNormalize(dir);
-	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_2);
+	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_2, (self->spawnflags & SF_MONSTER_SPECIAL ? self->enemy : NULL));
 
 	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_3],
 			forward, right, start);
@@ -97,7 +97,7 @@ Boss2Rocket(edict_t *self)
 	vec[2] += self->enemy->viewheight;
 	VectorSubtract(vec, start, dir);
 	VectorNormalize(dir);
-	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_3);
+	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_3, (self->spawnflags & SF_MONSTER_SPECIAL ? self->enemy : NULL));
 
 	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_4],
 			forward, right, start);
@@ -105,7 +105,7 @@ Boss2Rocket(edict_t *self)
 	vec[2] += self->enemy->viewheight;
 	VectorSubtract(vec, start, dir);
 	VectorNormalize(dir);
-	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_4);
+	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_4, (self->spawnflags & SF_MONSTER_SPECIAL ? self->enemy : NULL));
 }
 
 void

@@ -59,14 +59,17 @@ ChickMoan(edict_t *self)
 		return;
 	}
 
-	if (random() < 0.5)
-	{
-		gi.sound(self, CHAN_VOICE, sound_idle1, 1, ATTN_IDLE, 0);
-	}
-	else
-	{
-		gi.sound(self, CHAN_VOICE, sound_idle2, 1, ATTN_IDLE, 0);
-	}
+    if(!(self->spawnflags & SF_MONSTER_AMBUSH))
+    {
+        if (random() < 0.5)
+        {
+            gi.sound(self, CHAN_VOICE, sound_idle1, 1, ATTN_IDLE, 0);
+        }
+        else
+        {
+            gi.sound(self, CHAN_VOICE, sound_idle2, 1, ATTN_IDLE, 0);
+        }
+    }
 }
 
 mframe_t chick_frames_fidget[] = {
@@ -357,7 +360,7 @@ chick_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -415,6 +418,14 @@ chick_dead(edict_t *self)
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
 	gi.linkentity(self);
+    M_FlyCheck (self);
+    
+    // Lazarus monster fade
+    if(world->effects & FX_WORLDSPAWN_CORPSEFADE)
+    {
+        self->think=FadeDieSink;
+        self->nextthink=level.time+corpse_fadetime->value;
+    }
 }
 
 mframe_t chick_frames_death2[] = {
@@ -486,8 +497,10 @@ chick_die(edict_t *self, edict_t *inflictor /* unused */,
 		return;
 	}
 
-	/* check for gib */
-	if (self->health <= self->gib_health)
+    self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
+
+    /* check for gib */
+	if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex( "misc/udeath.wav"), 1, ATTN_NORM, 0);
 
@@ -646,21 +659,91 @@ ChickRocket(edict_t *self)
 		return;
 	}
 
+    // DWH: Added skill level-dependent rocket speed, leading target, suicide prevention,
+    //      target elevation dependent target location, and homing rockets
+    
+    trace_t    trace;
 	vec3_t forward, right;
 	vec3_t start;
 	vec3_t dir;
 	vec3_t vec;
+    int        rocketSpeed;
 
 	AngleVectors(self->s.angles, forward, right, NULL);
 	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_CHICK_ROCKET_1],
 			forward, right, start);
 
+    if((self->spawnflags & SF_MONSTER_SPECIAL))
+        rocketSpeed = 400; // DWH: Homing rockets are tougher if slow
+    else
+        rocketSpeed = 500 + (100 * skill->value);    // PGM rock & roll.... :)
+    
+    if(visible(self,self->enemy))
+    {
 	VectorCopy(self->enemy->s.origin, vec);
-	vec[2] += self->enemy->viewheight;
+        if(!(self->enemy->flags & FL_REFLECT))
+        {
+            if(random() < 0.66 || (start[2] < self->enemy->absmin[2]))
+                vec[2] += self->enemy->viewheight;
+            else
+                vec[2] = self->enemy->absmin[2];
+        }
 	VectorSubtract(vec, start, dir);
+
+        // Lazarus fog reduction of accuracy
+        if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+        {
+            vec[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+            vec[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+            vec[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        }
+        
+        // lead target, but not if using homers
+        // 20, 35, 50, 65 chance of leading
+        // DWH: Switched this around from Rogue code... it led target more often
+        //      for Easy, which seemed backwards
+        if( (random() < (0.2 + skill->value * 0.15) ) && !(self->spawnflags & SF_MONSTER_SPECIAL))
+        {
+            float    dist;
+            float    time;
+            
+            dist = VectorLength (dir);
+            time = dist/rocketSpeed;
+            VectorMA(vec, time, self->enemy->velocity, vec);
+            VectorSubtract(vec, start, dir);
+        }
+    }
+    else
+    {
+        // Fire at feet of last known position
+        VectorCopy(self->monsterinfo.last_sighting,vec);
+        vec[2] += self->enemy->mins[2];
+        VectorSubtract(vec,start,dir);
+    }
+    
 	VectorNormalize(dir);
 
-	monster_fire_rocket(self, start, dir, 50, 500, MZ2_CHICK_ROCKET_1);
+    if(self->enemy->flags & FL_REFLECT)
+    {
+        // If forcing chick to shoot at reflection, go ahead
+        monster_fire_rocket (self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1,
+                             (self->spawnflags & SF_MONSTER_SPECIAL ? self->enemy : NULL) );
+    }
+    else
+    {
+        // paranoia, make sure we're not shooting a target right next to us
+        trace = gi.trace(start, vec3_origin, vec3_origin, vec, self, MASK_SHOT);
+        if(trace.ent == self->enemy || trace.ent == world)
+        {
+            VectorSubtract(trace.endpos,start,vec);
+            if(VectorLength(vec) > MELEE_DISTANCE)
+            {
+                if(trace.fraction > 0.5 || (trace.ent && trace.ent->client))
+                    monster_fire_rocket (self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1,
+                                         (self->spawnflags & SF_MONSTER_SPECIAL ? self->enemy : NULL) );
+            }
+        }
+    }
 }
 
 void
@@ -685,19 +768,33 @@ ChickReload(edict_t *self)
 	gi.sound(self, CHAN_VOICE, sound_missile_reload, 1, ATTN_NORM, 0);
 }
 
+void chick_skip_frames (edict_t *self)
+{
+    if(skill->value >= 1)
+    {
+        if(self->s.frame == FRAME_attak102)
+            self->s.frame = FRAME_attak103;
+        if(self->s.frame == FRAME_attak105)
+            self->s.frame = FRAME_attak106;
+    }
+    if(skill->value > 1)
+        if(self->s.frame == FRAME_attak109)
+            self->s.frame = FRAME_attak112;
+}
+
 mframe_t chick_frames_start_attack1[] = {
 	{ai_charge, 0, Chick_PreAttack1},
-	{ai_charge, 0, NULL},
-	{ai_charge, 0, NULL},
-	{ai_charge, 4, NULL},
-	{ai_charge, 0, NULL},
-	{ai_charge, -3, NULL},
-	{ai_charge, 3, NULL},
-	{ai_charge, 5, NULL},
-	{ai_charge, 7, NULL},
-	{ai_charge, 0, NULL},
-	{ai_charge, 0, NULL},
-	{ai_charge, 0, NULL},
+	{ai_charge, 0, chick_skip_frames},
+	{ai_charge, 0, chick_skip_frames},
+	{ai_charge, 4, chick_skip_frames},
+	{ai_charge, 0, chick_skip_frames},
+	{ai_charge, -3, chick_skip_frames},
+	{ai_charge, 3, chick_skip_frames},
+	{ai_charge, 5, chick_skip_frames},
+	{ai_charge, 7, chick_skip_frames},
+	{ai_charge, 0, chick_skip_frames},
+	{ai_charge, 0, chick_skip_frames},
+	{ai_charge, 0, chick_skip_frames},
 	{ai_charge, 0, chick_attack1}
 };
 
@@ -923,6 +1020,7 @@ SP_monster_chick(edict_t *self)
 		G_FreeEdict(self);
 		return;
 	}
+    self->class_id = ENTITY_MONSTER_CHICK;
 
 	sound_missile_prelaunch = gi.soundindex("chick/chkatck1.wav");
 	sound_missile_launch = gi.soundindex("chick/chkatck2.wav");
@@ -942,13 +1040,25 @@ SP_monster_chick(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
+
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/bitch/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/bitch/tris.md2");
 	VectorSet(self->mins, -16, -16, 0);
 	VectorSet(self->maxs, 16, 16, 56);
 
-	self->health = 175;
-	self->gib_health = -70;
-	self->mass = 200;
+    // DWH: mapper-configurable health
+    if(!self->health)
+        self->health = 175;
+    if(!self->gib_health)
+        self->gib_health = -70;
+    if(!self->mass)
+        self->mass = 200;
 
 	self->pain = chick_pain;
 	self->die = chick_die;
@@ -961,9 +1071,25 @@ SP_monster_chick(edict_t *self)
 	self->monsterinfo.melee = chick_melee;
 	self->monsterinfo.sight = chick_sight;
 
+    // Lazarus
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    if(!self->monsterinfo.flies)
+        self->monsterinfo.flies = 0.40;
+    self->common_name = "Iron Maiden";
+    
 	gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &chick_move_stand;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&chick_move_death1,
+            &chick_move_death2,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);

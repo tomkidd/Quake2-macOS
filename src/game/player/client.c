@@ -976,7 +976,7 @@ player_die(edict_t *self, edict_t *inflictor, edict_t *attacker,
  * after each death and level change in deathmatch
  */
 void
-InitClientPersistant(gclient_t *client)
+InitClientPersistant(gclient_t *client, int style)
 {
 	gitem_t *item;
 
@@ -1648,6 +1648,8 @@ PutClientInServer(edict_t *ent)
 	vec3_t spawn_origin, spawn_angles;
 	gclient_t *client;
 	int i;
+    int                    spawn_style;
+    int                    spawn_health;
 	client_persistant_t saved;
 	client_respawn_t resp;
 
@@ -1664,7 +1666,7 @@ PutClientInServer(edict_t *ent)
 	{
 		resp = client->resp;
 		memcpy(userinfo, client->pers.userinfo, sizeof(userinfo));
-		InitClientPersistant(client);
+		InitClientPersistant(client, spawn_style);
 		ClientUserinfoChanged(ent, userinfo);
 	}
 	else if (coop->value)
@@ -1696,7 +1698,7 @@ PutClientInServer(edict_t *ent)
 
 	if (client->pers.health <= 0)
 	{
-		InitClientPersistant(client);
+		InitClientPersistant(client, spawn_style);
 	}
 
 	client->resp = resp;
@@ -2086,7 +2088,7 @@ ClientConnect(edict_t *ent, char *userinfo)
 
 		if (!game.autosaved || !ent->client->pers.weapon)
 		{
-			InitClientPersistant(ent->client);
+			InitClientPersistant(ent->client, world->style);
 		}
 	}
 

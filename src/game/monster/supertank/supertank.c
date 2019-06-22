@@ -679,7 +679,7 @@ supertankRocket(edict_t *self)
 	VectorSubtract(vec, start, dir);
 	VectorNormalize(dir);
 
-	monster_fire_rocket(self, start, dir, 50, 500, flash_number);
+	monster_fire_rocket(self, start, dir, 50, 500, flash_number, (self->spawnflags & SF_MONSTER_SPECIAL ? self->enemy : NULL));
 }
 
 void

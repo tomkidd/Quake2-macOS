@@ -26,11 +26,11 @@
 
 #include "header/local.h"
 
-typedef struct
-{
-	char *name;
-	void (*spawn)(edict_t *ent);
-} spawn_t;
+//typedef struct
+//{
+//    char *name;
+//    void (*spawn)(edict_t *ent);
+//} spawn_t;
 
 void SP_item_health(edict_t *self);
 void SP_item_health_small(edict_t *self);
@@ -708,7 +708,7 @@ SpawnEntities(const char *mapname, char *entities, const char *spawnpoint)
 			ent->spawnflags &=
 				~(SPAWNFLAG_NOT_EASY | SPAWNFLAG_NOT_MEDIUM |
 				  SPAWNFLAG_NOT_HARD |
-				  SPAWNFLAG_NOT_COOP | SPAWNFLAG_NOT_DEATHMATCH);
+				  SPAWNFLAG_NOT_DEATHMATCH);
 		}
 
 		ED_CallSpawn(ent);

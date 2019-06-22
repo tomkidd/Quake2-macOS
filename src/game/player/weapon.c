@@ -893,6 +893,51 @@ Weapon_GrenadeLauncher(edict_t *ent)
 
 /* ROCKET */
 
+edict_t    *rocket_target(edict_t *self, vec3_t start, vec3_t forward)
+{
+    float       bd, d;
+    int            i;
+    edict_t        *who, *best;
+    trace_t     tr;
+    vec3_t      dir, end;
+    
+    VectorMA(start, 8192, forward, end);
+    
+    /* Check for aiming directly at a damageable entity */
+    tr = gi.trace(start, NULL, NULL, end, self, MASK_SHOT);
+    if ((tr.ent->takedamage != DAMAGE_NO) && (tr.ent->solid != SOLID_NOT))
+        return tr.ent;
+    
+    /* Check for damageable entity within a tolerance of view angle */
+    bd = 0;
+    best = NULL;
+    for (i=1, who=g_edicts+1; i<globals.num_edicts; i++, who++)    {
+        if (!who->inuse)
+            continue;
+        if (who == self)
+            continue;
+        if (who->takedamage == DAMAGE_NO)
+            continue;
+        if (who->solid == SOLID_NOT)
+            continue;
+        VectorMA(who->absmin,0.5,who->size,end);
+        tr = gi.trace (start, vec3_origin, vec3_origin, end, self, MASK_OPAQUE);
+        if(tr.fraction < 1.0)
+            continue;
+        VectorSubtract(end, self->s.origin, dir);
+        VectorNormalize(dir);
+        d = DotProduct(forward, dir);
+        if (d > bd) {
+            bd = d;
+            best = who;
+        }
+    }
+    if (bd > 0.90)
+        return best;
+    
+    return NULL;
+}
+
 void
 Weapon_RocketLauncher_Fire(edict_t *ent)
 {
@@ -924,8 +969,22 @@ Weapon_RocketLauncher_Fire(edict_t *ent)
 
 	VectorSet(offset, 8, 8, ent->viewheight - 8);
 	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
-	fire_rocket(ent, start, forward, damage, 650, damage_radius, radius_damage);
-
+    if(ent->client->pers.fire_mode)
+    {
+        edict_t    *target;
+        
+        if(ent->client->homing_rocket && ent->client->homing_rocket->inuse)
+        {
+            ent->client->ps.gunframe++;
+            return;
+        }
+        
+        target = rocket_target(ent, start, forward);
+        fire_rocket (ent, start, forward, damage, 650, damage_radius, radius_damage, target);
+    }
+    else
+        fire_rocket (ent, start, forward, damage, 650, damage_radius, radius_damage, NULL);
+    
 	/* send muzzle flash */
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteShort(ent - g_edicts);

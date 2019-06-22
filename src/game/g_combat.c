@@ -732,7 +732,7 @@ T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker,
 
 void
 T_RadiusDamage(edict_t *inflictor, edict_t *attacker, float damage,
-		edict_t *ignore, float radius, int mod)
+		edict_t *ignore, float radius, int mod, double dmg_slope)
 {
 	float points;
 	edict_t *ent = NULL;

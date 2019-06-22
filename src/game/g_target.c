@@ -362,7 +362,7 @@ target_explosion_explode(edict_t *self)
 	gi.multicast(self->s.origin, MULTICAST_PHS);
 
 	T_RadiusDamage(self, self->activator, self->dmg, NULL,
-			self->dmg + 40, MOD_EXPLOSIVE);
+			self->dmg + 40, MOD_EXPLOSIVE, -0.5);
 
 	save = self->delay;
 	self->delay = 0;
@@ -525,7 +525,7 @@ use_target_splash(edict_t *self, edict_t *other /* unused */, edict_t *activator
 	if (self->dmg)
 	{
 		T_RadiusDamage(self, activator, self->dmg, NULL,
-				self->dmg + 40, MOD_SPLASH);
+				self->dmg + 40, MOD_SPLASH, -0.5);
 	}
 }
 

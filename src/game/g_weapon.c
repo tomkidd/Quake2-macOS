@@ -561,7 +561,7 @@ Grenade_Explode(edict_t *ent)
 		mod = MOD_G_SPLASH;
 	}
 
-	T_RadiusDamage(ent, ent->owner, ent->dmg, ent->enemy, ent->dmg_radius, mod);
+	T_RadiusDamage(ent, ent->owner, ent->dmg, ent->enemy, ent->dmg_radius, mod, -0.5);
 
 	VectorMA(ent->s.origin, -0.02, ent->velocity, origin);
 	gi.WriteByte(svc_temp_entity);
@@ -800,14 +800,17 @@ rocket_touch(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
 				while (n--)
 				{
 					ThrowDebris(ent, "models/objects/debris2/tris.md2",
-							2, ent->s.origin);
+							2, ent->s.origin, 0, 0);
 				}
 			}
 		}
 	}
 
-	T_RadiusDamage(ent, ent->owner, ent->radius_dmg, other, ent->dmg_radius,
-			MOD_R_SPLASH);
+    // Lazarus: bad monsters have a large damage radius
+    if (ent->owner && (ent->owner->svflags & SVF_MONSTER) && !(ent->owner->monsterinfo.aiflags & AI_GOOD_GUY))
+        T_RadiusDamage(ent, ent->owner, ent->radius_dmg, other, ent->dmg_radius + 17.5*skill->value, MOD_R_SPLASH, -2.0/(4.0+skill->value) );
+    else
+        T_RadiusDamage(ent, ent->owner, ent->radius_dmg, other, ent->dmg_radius, MOD_R_SPLASH, -0.5);
 
 	gi.WriteByte(svc_temp_entity);
 
@@ -828,7 +831,7 @@ rocket_touch(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
 
 void
 fire_rocket(edict_t *self, vec3_t start, vec3_t dir, int damage,
-		int speed, float damage_radius, int radius_damage)
+		int speed, float damage_radius, int radius_damage, edict_t *home_target)
 {
 	edict_t *rocket;
 
@@ -1054,7 +1057,7 @@ bfg_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 		}
 	}
 
-	T_RadiusDamage(self, self->owner, 200, other, 100, MOD_BFG_BLAST);
+	T_RadiusDamage(self, self->owner, 200, other, 100, MOD_BFG_BLAST, -0.5);
 
 	gi.sound(self, CHAN_VOICE, gi.soundindex(
 					"weapons/bfg__x1b.wav"), 1, ATTN_NORM, 0);

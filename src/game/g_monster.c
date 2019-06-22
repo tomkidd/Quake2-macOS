@@ -26,6 +26,79 @@
 
 #include "header/local.h"
 
+void InitiallyDead (edict_t *self);
+
+// Lazarus: If worldspawn CORPSE_SINK effects flag is set,
+//          monsters/actors fade out and sink into the floor
+//          30 seconds after death
+
+#define SINKAMT            1
+void FadeSink (edict_t *ent)
+{
+    ent->count++;
+    ent->s.origin[2]-=SINKAMT;
+    ent->think=FadeSink;
+    if (ent->count==5)
+    {
+        ent->s.renderfx &= ~RF_TRANSLUCENT;
+        ent->s.effects |= EF_SPHERETRANS;
+    }
+    if (ent->count==10)
+        ent->think=G_FreeEdict;
+    ent->nextthink=level.time+FRAMETIME;
+}
+void FadeDieSink (edict_t *ent)
+{
+    ent->takedamage = DAMAGE_NO;    // can't gib 'em once they start sinking
+    ent->s.effects &= ~EF_FLIES;
+    ent->s.sound = 0;
+    ent->s.origin[2]-=SINKAMT;
+    ent->s.renderfx=RF_TRANSLUCENT;
+    ent->think=FadeSink;
+    ent->nextthink=level.time+FRAMETIME;
+    ent->count=0;
+}
+
+
+// Lazarus: M_SetDeath is used to restore the death movement,
+//          bounding box, and a few other parameters for dead
+//          monsters that change levels with a trigger_transition
+
+qboolean M_SetDeath(edict_t *self, mmove_t **deathmoves)
+{
+    mmove_t    *move=NULL;
+    mmove_t *dmove;
+    
+    if(self->health > 0)
+        return false;
+    
+    while(*deathmoves && !move)
+    {
+        dmove = *deathmoves;
+        if( (self->s.frame >= dmove->firstframe) &&
+           (self->s.frame <= dmove->lastframe)     )
+            move = dmove;
+        else
+            deathmoves++;
+    }
+    if(move)
+    {
+        self->monsterinfo.currentmove = move;
+        if(self->monsterinfo.currentmove->endfunc)
+            self->monsterinfo.currentmove->endfunc(self);
+        self->s.frame = move->lastframe;
+        self->s.skinnum |= 1;
+        return true;
+    }
+    return false;
+}
+
+//
+// monster weapons
+//
+
+
+
 void monster_start_go(edict_t *self);
 
 /* Monster weapons */
@@ -101,14 +174,14 @@ monster_fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir,
 
 void
 monster_fire_rocket(edict_t *self, vec3_t start, vec3_t dir,
-		int damage, int speed, int flashtype)
+		int damage, int speed, int flashtype, edict_t *homing_target)
 {
 	if (!self)
 	{
 		return;
 	}
 
-	fire_rocket(self, start, dir, damage, speed, damage + 20, damage);
+	fire_rocket(self, start, dir, damage, speed, damage + 20, damage, homing_target);
 
 	gi.WriteByte(svc_muzzleflash2);
 	gi.WriteShort(self - g_edicts);
@@ -1050,4 +1123,327 @@ swimmonster_start(edict_t *self)
 	self->flags |= FL_SWIM;
 	self->think = swimmonster_start_go;
 	monster_start(self);
+}
+
+#define MAX_SKINS        16
+#define MAX_SKINNAME    64
+
+#include "header/pak.h"
+
+// here temporarily? -tkidd
+
+/* the glcmd format:
+ * - a positive integer starts a tristrip command, followed by that many
+ *   vertex structures.
+ * - a negative integer starts a trifan command, followed by -x vertexes
+ *   a zero indicates the end of the command list.
+ * - a vertex consists of a floating point s, a floating point t,
+ *   and an integer vertex index. */
+
+typedef struct
+{
+    int ident;
+    int version;
+    
+    int skinwidth;
+    int skinheight;
+    int framesize;  /* byte size of each frame */
+    
+    int num_skins;
+    int num_xyz;
+    int num_st;     /* greater than num_xyz for seams */
+    int num_tris;
+    int num_glcmds; /* dwords in strip/fan command list */
+    int num_frames;
+    
+    int ofs_skins;  /* each skin is a MAX_SKINNAME string */
+    int ofs_st;     /* byte offset from start for stverts */
+    int ofs_tris;   /* offset for dtriangles */
+    int ofs_frames; /* offset for first frame */
+    int ofs_glcmds;
+    int ofs_end;    /* end of file */
+} dmdl_t;
+
+// end tkidd
+
+int PatchMonsterModel (char *modelname)
+{
+    cvar_t        *gamedir;
+    int            j;
+    int            numskins;            // number of skin entries
+    char        skins[MAX_SKINS][MAX_SKINNAME];    // skin entries
+    char        infilename[MAX_OSPATH];
+    char        outfilename[MAX_OSPATH];
+    char        *p;
+    FILE        *infile;
+    FILE        *outfile;
+    dmdl_t        model;                // model header
+    byte        *data;                // model data
+    int            datasize;            // model data size (bytes)
+    int            newoffset;            // model data offset (after skins)
+    qboolean    is_tank=false;
+    qboolean    is_soldier=false;
+    
+    // get game (moddir) name
+    gamedir = gi.cvar("game", "", 0);
+    if (!*gamedir->string)
+        return 0;    // we're in baseq2
+    
+    sprintf (outfilename, "%s/%s", gamedir->string, modelname);
+    if (outfile = fopen (outfilename, "rb"))
+    {
+        // output file already exists, move along
+        fclose (outfile);
+        //        gi.dprintf ("PatchMonsterModel: Could not save %s, file already exists\n", outfilename);
+        return 0;
+    }
+    
+    
+    numskins = 8;
+    // special cases
+    if(!strcmp(modelname,"models/monsters/tank/tris.md2"))
+    {
+        is_tank = true;
+        numskins = 16;
+    }
+    else if(!strcmp(modelname,"models/monsters/soldier/tris.md2"))
+    {
+        is_soldier = true;
+        numskins = 24;
+    }
+    
+    for (j=0; j<numskins; j++)
+    {
+        memset (skins[j], 0, MAX_SKINNAME);
+        strcpy( skins[j], modelname );
+        p = strstr( skins[j], "tris.md2" );
+        if(!p)
+        {
+            fclose (outfile);
+            gi.dprintf( "Error patching %s\n",modelname);
+            return 0;
+        }
+        *p = 0;
+        if(is_soldier)
+        {
+            switch (j) {
+                case 0:
+                    strcat (skins[j], "skin_lt.pcx"); break;
+                case 1:
+                    strcat (skins[j], "skin_ltp.pcx"); break;
+                case 2:
+                    strcat (skins[j], "skin.pcx"); break;
+                case 3:
+                    strcat (skins[j], "pain.pcx"); break;
+                case 4:
+                    strcat (skins[j], "skin_ss.pcx"); break;
+                case 5:
+                    strcat (skins[j], "skin_ssp.pcx"); break;
+                case 6:
+                    strcat (skins[j], "custom1_lt.pcx"); break;
+                case 7:
+                    strcat (skins[j], "custompain1_lt.pcx"); break;
+                case 8:
+                    strcat (skins[j], "custom1.pcx"); break;
+                case 9:
+                    strcat (skins[j], "custompain1.pcx"); break;
+                case 10:
+                    strcat (skins[j], "custom1_ss.pcx"); break;
+                case 11:
+                    strcat (skins[j], "custompain1_ss.pcx"); break;
+                case 12:
+                    strcat (skins[j], "custom2_lt.pcx"); break;
+                case 13:
+                    strcat (skins[j], "custompain2_lt.pcx"); break;
+                case 14:
+                    strcat (skins[j], "custom2.pcx"); break;
+                case 15:
+                    strcat (skins[j], "custompain2.pcx"); break;
+                case 16:
+                    strcat (skins[j], "custom2_ss.pcx"); break;
+                case 17:
+                    strcat (skins[j], "custompain2_ss.pcx"); break;
+                case 18:
+                    strcat (skins[j], "custom3_lt.pcx"); break;
+                case 19:
+                    strcat (skins[j], "custompain3_lt.pcx"); break;
+                case 20:
+                    strcat (skins[j], "custom3.pcx"); break;
+                case 21:
+                    strcat (skins[j], "custompain3.pcx"); break;
+                case 22:
+                    strcat (skins[j], "custom3_ss.pcx"); break;
+                case 23:
+                    strcat (skins[j], "custompain3_ss.pcx"); break;
+            }
+        }
+        else if(is_tank)
+        {
+            switch (j) {
+                case 0:
+                    strcat (skins[j], "skin.pcx"); break;
+                case 1:
+                    strcat (skins[j], "pain.pcx"); break;
+                case 2:
+                    strcat (skins[j], "../ctank/skin.pcx"); break;
+                case 3:
+                    strcat (skins[j], "../ctank/pain.pcx"); break;
+                case 4:
+                    strcat (skins[j], "custom1.pcx"); break;
+                case 5:
+                    strcat (skins[j], "custompain1.pcx"); break;
+                case 6:
+                    strcat (skins[j], "../ctank/custom1.pcx"); break;
+                case 7:
+                    strcat (skins[j], "../ctank/custompain1.pcx"); break;
+                case 8:
+                    strcat (skins[j], "custom2.pcx"); break;
+                case 9:
+                    strcat (skins[j], "custompain2.pcx"); break;
+                case 10:
+                    strcat (skins[j], "../ctank/custom2.pcx"); break;
+                case 11:
+                    strcat (skins[j], "../ctank/custompain2.pcx"); break;
+                case 12:
+                    strcat (skins[j], "custom3.pcx"); break;
+                case 13:
+                    strcat (skins[j], "custompain3.pcx"); break;
+                case 14:
+                    strcat (skins[j], "../ctank/custom3.pcx"); break;
+                case 15:
+                    strcat (skins[j], "../ctank/custompain3.pcx"); break;
+            }
+        }
+        else
+        {
+            switch (j) {
+                case 0:
+                    strcat (skins[j], "skin.pcx"); break;
+                case 1:
+                    strcat (skins[j], "pain.pcx"); break;
+                case 2:
+                    strcat (skins[j], "custom1.pcx"); break;
+                case 3:
+                    strcat (skins[j], "custompain1.pcx"); break;
+                case 4:
+                    strcat (skins[j], "custom2.pcx"); break;
+                case 5:
+                    strcat (skins[j], "custompain2.pcx"); break;
+                case 6:
+                    strcat (skins[j], "custom3.pcx"); break;
+                case 7:
+                    strcat (skins[j], "custompain3.pcx"); break;
+            }
+        }
+    }
+    
+    // load original model
+    sprintf (infilename, "baseq2/%s", modelname);
+    if ( !(infile = fopen (infilename, "rb")) )
+    {
+        // If file doesn't exist on user's hard disk, it must be in
+        // pak0.pak
+        
+        pak_header_t    pakheader;
+        pak_item_t        pakitem;
+        FILE            *fpak;
+        int                k, numitems;
+        
+        fpak = fopen("baseq2/pak0.pak","rb");
+        if(!fpak)
+        {
+            cvar_t    *cddir;
+            char    pakfile[MAX_OSPATH];
+            
+            cddir = gi.cvar("cddir", "", 0);
+            sprintf(pakfile,"%s/baseq2/pak0.pak",cddir->string);
+            fpak = fopen(pakfile,"rb");
+            if(!fpak)
+            {
+                gi.dprintf("PatchMonsterModel: Cannot find pak0.pak\n");
+                return 0;
+            }
+        }
+        fread(&pakheader,1,sizeof(pak_header_t),fpak);
+        numitems = pakheader.dsize/sizeof(pak_item_t);
+        fseek(fpak,pakheader.dstart,SEEK_SET);
+        data = NULL;
+        for(k=0; k<numitems && !data; k++)
+        {
+            fread(&pakitem,1,sizeof(pak_item_t),fpak);
+            if(!Q_stricmp(pakitem.name,modelname))
+            {
+                fseek(fpak,pakitem.start,SEEK_SET);
+                fread(&model, sizeof(dmdl_t), 1, fpak);
+                datasize = model.ofs_end - model.ofs_skins;
+                if ( !(data = malloc (datasize)) )    // make sure freed locally
+                {
+                    fclose(fpak);
+                    gi.dprintf ("PatchMonsterModel: Could not allocate memory for model\n");
+                    return 0;
+                }
+                fread (data, sizeof (byte), datasize, fpak);
+            }
+        }
+        fclose(fpak);
+        if(!data)
+        {
+            gi.dprintf("PatchMonsterModel: Could not find %s in baseq2/pak0.pak\n",modelname);
+            return 0;
+        }
+    }
+    else
+    {
+        fread (&model, sizeof (dmdl_t), 1, infile);
+        
+        datasize = model.ofs_end - model.ofs_skins;
+        if ( !(data = malloc (datasize)) )    // make sure freed locally
+        {
+            gi.dprintf ("PatchMonsterModel: Could not allocate memory for model\n");
+            return 0;
+        }
+        fread (data, sizeof (byte), datasize, infile);
+        
+        fclose (infile);
+    }
+    
+    // update model info
+    model.num_skins = numskins;
+    
+    newoffset = numskins * MAX_SKINNAME;
+    model.ofs_st     += newoffset;
+    model.ofs_tris   += newoffset;
+    model.ofs_frames += newoffset;
+    model.ofs_glcmds += newoffset;
+    model.ofs_end    += newoffset;
+    
+    // removing teporarily - tkidd
+    // save new model
+//    sprintf (outfilename, "%s/models", gamedir->string);    // make some dirs if needed
+//    _mkdir (outfilename);
+//    strcat (outfilename,"/monsters");
+//    _mkdir (outfilename);
+//    sprintf (outfilename, "%s/%s", gamedir->string, modelname);
+//    p = strstr(outfilename,"/tris.md2");
+//    *p = 0;
+//    _mkdir (outfilename);
+//
+//    sprintf (outfilename, "%s/%s", gamedir->string, modelname);
+    
+    if ( !(outfile = fopen (outfilename, "wb")) )
+    {
+        // file couldn't be created for some other reason
+        gi.dprintf ("PatchMonsterModel: Could not save %s\n", outfilename);
+        free (data);
+        return 0;
+    }
+    
+    fwrite (&model, sizeof (dmdl_t), 1, outfile);
+    fwrite (skins, sizeof (char), newoffset, outfile);
+    fwrite (data, sizeof (byte), datasize, outfile);
+    
+    fclose (outfile);
+    gi.dprintf ("PatchMonsterModel: Saved %s\n", outfilename);
+    free (data);
+    return 1;
 }
