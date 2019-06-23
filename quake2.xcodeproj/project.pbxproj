@@ -202,6 +202,7 @@
 		A15FA476211153E70048A3AD /* baseq2 in Resources */ = {isa = PBXBuildFile; fileRef = A15FA474211153E60048A3AD /* baseq2 */; };
 		A15FA477211153E70048A3AD /* music in Resources */ = {isa = PBXBuildFile; fileRef = A15FA475211153E70048A3AD /* music */; };
 		A15FA479211154310048A3AD /* game.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = A15FA362211114310048A3AD /* game.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		A1794E9322BEE12800613FEE /* g_thing.c in Sources */ = {isa = PBXBuildFile; fileRef = A1794E9122BEDDA700613FEE /* g_thing.c */; };
 		A1B203C421D428E500D8D86D /* ref_gl1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA39C211118220048A3AD /* ref_gl1.dylib */; };
 		A1B203C521D428E500D8D86D /* ref_gl3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3BD21111B640048A3AD /* ref_gl3.dylib */; };
 		A1B203C621D428E500D8D86D /* ref_soft.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3DC21111CB50048A3AD /* ref_soft.dylib */; };
@@ -477,6 +478,8 @@
 		A15FA475211153E70048A3AD /* music */ = {isa = PBXFileReference; lastKnownFileType = folder; name = music; path = ../../../Dropbox/Files/quake2/music; sourceTree = "<group>"; };
 		A1794E8E22BD873900613FEE /* menu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = menu.h; sourceTree = "<group>"; };
 		A1794E8F22BD879700613FEE /* text.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = text.h; sourceTree = "<group>"; };
+		A1794E9022BEDD9D00613FEE /* pak.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pak.h; sourceTree = "<group>"; };
+		A1794E9122BEDDA700613FEE /* g_thing.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = g_thing.c; sourceTree = "<group>"; };
 		A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_polyset.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -692,6 +695,7 @@
 				A15FA1AC2110C5BC0048A3AD /* g_spawn.c */,
 				A15FA1B32110C5BC0048A3AD /* g_svcmds.c */,
 				A15FA1B52110C5BC0048A3AD /* g_target.c */,
+				A1794E9122BEDDA700613FEE /* g_thing.c */,
 				A15FA2052110C5BC0048A3AD /* g_trigger.c */,
 				A15FA1A92110C5BC0048A3AD /* g_turret.c */,
 				A15FA1AB2110C5BC0048A3AD /* g_utils.c */,
@@ -730,6 +734,7 @@
 		A15FA1C12110C5BC0048A3AD /* header */ = {
 			isa = PBXGroup;
 			children = (
+				A1794E9022BEDD9D00613FEE /* pak.h */,
 				A15FA1C22110C5BC0048A3AD /* game.h */,
 				A15FA1C32110C5BC0048A3AD /* local.h */,
 				A1794E8E22BD873900613FEE /* menu.h */,
@@ -1515,6 +1520,7 @@
 				A15FA38C211115940048A3AD /* flyer.c in Sources */,
 				A15FA367211114990048A3AD /* g_ai.c in Sources */,
 				A15FA395211116F00048A3AD /* savegame.c in Sources */,
+				A1794E9322BEE12800613FEE /* g_thing.c in Sources */,
 				A15FA37F2111154C0048A3AD /* hover.c in Sources */,
 				A15FA383211115610048A3AD /* medic.c in Sources */,
 				A15FA377211114990048A3AD /* g_weapon.c in Sources */,

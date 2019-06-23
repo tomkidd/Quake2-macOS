@@ -29,6 +29,11 @@
 
 #include "../../common/header/shared.h"
 
+#ifdef __APPLE__
+#include <sys/syslimits.h>
+#define _MAX_PATH PATH_MAX
+#endif
+
 /* define GAME_INCLUDE so that game.h does not define the
    short, server-visible gclient_t and edict_t structures,
    because we define the full size ones in this file */
@@ -610,6 +615,21 @@ extern spawn_temp_t st;
 
 extern int sm_meat_index;
 extern int snd_fry;
+
+extern    int    noweapon_index;
+extern    int    jacket_armor_index;
+extern    int    combat_armor_index;
+extern    int    body_armor_index;
+extern    int    shells_index;
+extern    int    bullets_index;
+extern    int    grenades_index;
+extern    int    rockets_index;
+extern    int    cells_index;
+extern    int    slugs_index;
+extern    int fuel_index;
+extern    int    homing_index;
+extern    int    rl_index;
+extern    int    hml_index;
 
 extern int debristhisframe;
 extern int gibsthisframe;
@@ -1740,6 +1760,8 @@ struct edict_s
     float        starttime;
     float        endtime;
 
+    float        teleport_time;
+    
 	float last_sound_time;
 
 	int watertype;

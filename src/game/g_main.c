@@ -82,6 +82,57 @@ cvar_t *sv_maplist;
 
 cvar_t *gib_on;
 
+cvar_t    *actorchicken;
+cvar_t    *actorjump;
+cvar_t    *actorscram;
+cvar_t    *alert_sounds;
+cvar_t    *allow_download;
+cvar_t    *allow_fog;            // Set to 0 for no fog
+cvar_t    *bounce_bounce;
+cvar_t    *bounce_minv;
+cvar_t    *cd_loopcount;
+cvar_t    *cl_gun;
+cvar_t    *corpse_fade;
+cvar_t    *corpse_fadetime;
+cvar_t    *crosshair;
+cvar_t    *developer;
+cvar_t    *fmod_nomusic;
+cvar_t    *footstep_sounds;
+cvar_t    *fov;
+cvar_t    *gl_clear;
+cvar_t    *gl_driver;
+cvar_t    *gl_driver_fog;
+cvar_t    *hand;
+cvar_t    *jetpack_weenie;
+cvar_t    *joy_pitchsensitivity;
+cvar_t    *joy_yawsensitivity;
+cvar_t    *jump_kick;
+cvar_t    *lazarus_cd_loop;
+cvar_t    *lazarus_cl_gun;
+cvar_t    *lazarus_crosshair;
+cvar_t    *lazarus_gl_clear;
+cvar_t    *lazarus_joyp;
+cvar_t    *lazarus_joyy;
+cvar_t    *lazarus_pitch;
+cvar_t    *lazarus_yaw;
+cvar_t    *lights;
+cvar_t    *lightsmin;
+cvar_t    *m_pitch;
+cvar_t    *m_yaw;
+cvar_t    *monsterjump;
+cvar_t    *packet_fmod_playback;
+cvar_t    *player_vampire;
+cvar_t    *readout;
+cvar_t    *rocket_strafe;
+cvar_t    *rotate_distance;
+cvar_t    *s_primary;
+cvar_t    *shift_distance;
+cvar_t    *sv_maxgibs;
+cvar_t    *turn_rider;
+cvar_t    *vid_ref;
+cvar_t    *zoomrate;
+cvar_t    *zoomsnap;
+
 void SpawnEntities(char *mapname, char *entities, char *spawnpoint);
 void ClientThink(edict_t *ent, usercmd_t *cmd);
 qboolean ClientConnect(edict_t *ent, char *userinfo);
@@ -104,8 +155,49 @@ ShutdownGame(void)
 {
 	gi.dprintf("==== ShutdownGame ====\n");
 
+    if(!deathmatch->value && !coop->value) {
+        gi.cvar_forceset("m_pitch", va("%f",lazarus_pitch->value));
+        gi.cvar_forceset("cd_loopcount", va("%d",lazarus_cd_loop->value));
+        gi.cvar_forceset("gl_clear", va("%d", lazarus_gl_clear->value));
+    }
+    // Lazarus: Turn off fog if it's on
+    if(!dedicated->value)
+        Fog_Off();
+    // and shut down FMOD
+    FMOD_Shutdown();
+    
 	gi.FreeTags(TAG_LEVEL);
 	gi.FreeTags(TAG_GAME);
+}
+
+
+game_import_t RealFunc;
+int    max_modelindex;
+int    max_soundindex;
+
+
+int Debug_Modelindex (char *name)
+{
+    int    modelnum;
+    modelnum = RealFunc.modelindex(name);
+    if(modelnum > max_modelindex)
+    {
+        gi.dprintf("Model %03d %s\n",modelnum,name);
+        max_modelindex = modelnum;
+    }
+    return modelnum;
+}
+
+int Debug_Soundindex (char *name)
+{
+    int soundnum;
+    soundnum = RealFunc.soundindex(name);
+    if(soundnum > max_soundindex)
+    {
+        gi.dprintf("Sound %03d %s\n",soundnum,name);
+        max_soundindex = soundnum;
+    }
+    return soundnum;
 }
 
 /*
@@ -143,6 +235,24 @@ GetGameAPI(game_import_t *import)
 
 	/* Initalize the PRNG */
 	randk_seed();
+    
+    gl_driver = gi.cvar ("gl_driver", "", 0);
+    vid_ref = gi.cvar ("vid_ref", "", 0);
+    gl_driver_fog = gi.cvar ("gl_driver_fog", "opengl32", CVAR_NOSET | CVAR_ARCHIVE);
+    
+    Fog_Init();
+    
+    developer = gi.cvar("developer", "0", CVAR_SERVERINFO);
+    readout   = gi.cvar("readout", "0", CVAR_SERVERINFO);
+    if(readout->value)
+    {
+        max_modelindex = 0;
+        max_soundindex = 0;
+        RealFunc.modelindex = gi.modelindex;
+        gi.modelindex       = Debug_Modelindex;
+        RealFunc.soundindex = gi.soundindex;
+        gi.soundindex       = Debug_Soundindex;
+    }
 
 	return &globals;
 }
@@ -198,6 +308,38 @@ ClientEndServerFrames(void)
 
 		ClientEndServerFrame(ent);
 	}
+    
+    //reflection stuff -- modified from psychospaz' original code
+    if (level.num_reflectors)
+    {
+        ent = &g_edicts[0];
+        for (i=0 ; i<globals.num_edicts ; i++, ent++) //pointers, not as slow as you think
+        {
+            if (!ent->inuse)
+                continue;
+            if (!ent->s.modelindex)
+                continue;
+            //            if (ent->s.effects & EF_ROTATE)
+            //                continue;
+            if (ent->flags & FL_REFLECT)
+                continue;
+            if (!ent->client && (ent->svflags & SVF_NOCLIENT))
+                continue;
+            if (ent->client && !ent->client->chasetoggle && (ent->svflags & SVF_NOCLIENT))
+                continue;
+            if (ent->svflags&SVF_MONSTER && ent->solid!=SOLID_BBOX)
+                continue;
+            if ( (ent->solid == SOLID_BSP) && (ent->movetype != MOVETYPE_PUSHABLE))
+                continue;
+            if (ent->client && ent->client->resp.spectator)
+                continue;
+            if (ent->client && player_vampire->value)
+                continue;
+            if (ent->s.renderfx & RF_VAMPIRE)
+                continue;
+            AddReflection(ent);
+        }
+    }
 }
 
 /*
@@ -419,7 +561,14 @@ G_RunFrame(void)
 	int i;
 	edict_t *ent;
 
-	level.framenum++;
+    if(level.freeze)
+    {
+        level.freezeframes++;
+        if(level.freezeframes >= 300)
+            level.freeze = false;
+    } else
+        level.framenum++;
+    
 	level.time = level.framenum * FRAMETIME;
 
 	gibsthisframe = 0;
@@ -473,6 +622,10 @@ G_RunFrame(void)
 		G_RunEntity(ent);
 	}
 
+    // FMOD stuff:
+    if ( (level.num_3D_sounds > 0) && (game.maxclients == 1))
+        FMOD_UpdateListenerPos();
+    
 	/* see if it is time to end a deathmatch */
 	CheckDMRules();
 
