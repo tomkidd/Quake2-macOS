@@ -32,6 +32,11 @@
 //    void (*spawn)(edict_t *ent);
 //} spawn_t;
 
+#ifdef WESQ2
+int                NumSpawnedItems;
+SPAWNED_ITEM    SpawnedItem[MAX_SPAWNED_ITEMS];
+#endif
+
 void SP_item_health(edict_t *self);
 void SP_item_health_small(edict_t *self);
 void SP_item_health_large(edict_t *self);
@@ -147,6 +152,93 @@ void SP_turret_breach(edict_t *self);
 void SP_turret_base(edict_t *self);
 void SP_turret_driver(edict_t *self);
 
+// Lazarus
+void SP_crane_beam (edict_t *self);
+void SP_crane_hoist (edict_t *self);
+void SP_crane_hook (edict_t *self);
+void SP_crane_control (edict_t *self);
+void SP_crane_reset (edict_t *self);
+void SP_hint_path (edict_t *self);
+void SP_func_bobbingwater (edict_t *self);
+void SP_func_door_rot_dh (edict_t *self);
+void SP_func_door_swinging (edict_t *self);
+void SP_func_force_wall(edict_t *ent);
+void SP_func_monitor (edict_t *self);
+void SP_func_pendulum (edict_t *self);
+void SP_func_pivot (edict_t *self);
+void SP_func_pushable (edict_t *self);
+void SP_func_reflect (edict_t *self);
+void SP_func_rotating_dh (edict_t *self);
+void SP_func_trackchange (edict_t *self);
+void SP_func_tracktrain (edict_t *self);
+void SP_func_trainbutton (edict_t *self);
+void SP_func_vehicle (edict_t *self);
+void SP_info_train_start (edict_t *self);
+void SP_misc_light (edict_t *self);
+void SP_model_spawn (edict_t *self);
+void SP_model_train (edict_t *self);
+void SP_model_turret (edict_t *self);
+void SP_monster_makron (edict_t *self);
+void SP_path_track (edict_t *self);
+void SP_target_anger (edict_t *self);
+void SP_target_animation (edict_t *self);
+void SP_target_attractor (edict_t *self);
+void SP_target_CD (edict_t *self);
+void SP_target_change (edict_t *self);
+void SP_target_clone (edict_t *self);
+void SP_target_effect (edict_t *self);
+void SP_target_fade (edict_t *self);
+void SP_target_failure (edict_t *self);
+void SP_target_fog (edict_t *self);
+void SP_target_fountain (edict_t *self);
+void SP_target_lightswitch (edict_t *self);
+void SP_target_locator (edict_t *self);
+void SP_target_lock (edict_t *self);
+void SP_target_lock_clue (edict_t *self);
+void SP_target_lock_code (edict_t *self);
+void SP_target_lock_digit (edict_t *self);
+void SP_target_monitor (edict_t *ent);
+void SP_target_monsterbattle (edict_t *self);
+void SP_target_movewith (edict_t *self);
+void SP_target_precipitation (edict_t *self);
+void SP_target_rocks (edict_t *self);
+void SP_target_rotation (edict_t *self);
+void SP_target_set_effect (edict_t *self);
+void SP_target_skill (edict_t *self);
+void SP_target_sky (edict_t *self);
+void SP_target_playback (edict_t *self);
+void SP_target_text (edict_t *self);
+void SP_thing (edict_t *self);
+void SP_tremor_trigger_multiple (edict_t *self);
+void SP_trigger_bbox (edict_t *self);
+void SP_trigger_disguise (edict_t *self);
+void SP_trigger_fog (edict_t *self);
+void SP_trigger_inside (edict_t *self);
+void SP_trigger_look (edict_t *self);
+void SP_trigger_mass (edict_t *self);
+void SP_trigger_scales (edict_t *self);
+void SP_trigger_speaker (edict_t *self);
+void SP_trigger_switch (edict_t *self);
+void SP_trigger_teleporter (edict_t *self);
+void SP_trigger_transition (edict_t *self);
+// transition entities
+void SP_bolt (edict_t *self);
+void SP_debris (edict_t *self);
+void SP_gib (edict_t *self);
+void SP_gibhead (edict_t *self);
+void SP_grenade (edict_t *self);
+void SP_handgrenade (edict_t *self);
+void SP_rocket (edict_t *self);
+//
+// end Lazarus
+
+#ifdef WESQ2
+void SP_misc_bomb (edict_t *self);
+void SP_misc_ladder (edict_t *self);
+void SP_misc_tank1 (edict_t *self);
+void SP_misc_tank2 (edict_t *self);
+#endif
+
 spawn_t spawns[] = {
 	{"item_health", SP_item_health},
 	{"item_health_small", SP_item_health_small},
@@ -169,41 +261,15 @@ spawn_t spawns[] = {
 	{"func_conveyor", SP_func_conveyor},
 	{"func_areaportal", SP_func_areaportal},
 	{"func_clock", SP_func_clock},
+    {"func_reflect", SP_func_reflect},
 	{"func_wall", SP_func_wall},
 	{"func_object", SP_func_object},
 	{"func_timer", SP_func_timer},
 	{"func_explosive", SP_func_explosive},
 	{"func_killbox", SP_func_killbox},
 
-	{"trigger_always", SP_trigger_always},
-	{"trigger_once", SP_trigger_once},
-	{"trigger_multiple", SP_trigger_multiple},
-	{"trigger_relay", SP_trigger_relay},
-	{"trigger_push", SP_trigger_push},
-	{"trigger_hurt", SP_trigger_hurt},
-	{"trigger_key", SP_trigger_key},
-	{"trigger_counter", SP_trigger_counter},
-	{"trigger_elevator", SP_trigger_elevator},
-	{"trigger_gravity", SP_trigger_gravity},
-	{"trigger_monsterjump", SP_trigger_monsterjump},
+    {"func_reflect", SP_func_reflect},
 
-	{"target_temp_entity", SP_target_temp_entity},
-	{"target_speaker", SP_target_speaker},
-	{"target_explosion", SP_target_explosion},
-	{"target_changelevel", SP_target_changelevel},
-	{"target_secret", SP_target_secret},
-	{"target_goal", SP_target_goal},
-	{"target_splash", SP_target_splash},
-	{"target_spawner", SP_target_spawner},
-	{"target_blaster", SP_target_blaster},
-	{"target_crosslevel_trigger", SP_target_crosslevel_trigger},
-	{"target_crosslevel_target", SP_target_crosslevel_target},
-	{"target_laser", SP_target_laser},
-	{"target_help", SP_target_help},
-	{"target_lightramp", SP_target_lightramp},
-	{"target_earthquake", SP_target_earthquake},
-	{"target_character", SP_target_character},
-	{"target_string", SP_target_string},
 
 	{"worldspawn", SP_worldspawn},
 	{"viewthing", SP_viewthing},
@@ -265,7 +331,93 @@ spawn_t spawns[] = {
 	{"turret_base", SP_turret_base},
 	{"turret_driver", SP_turret_driver},
 
-	{NULL, NULL}
+    // Lazarus
+    {"crane_beam",   SP_crane_beam},
+    {"crane_hoist",  SP_crane_hoist},
+    {"crane_hook",   SP_crane_hook},
+    {"crane_control",SP_crane_control},
+    {"crane_reset",SP_crane_reset},
+    {"func_bobbingwater", SP_func_bobbingwater},
+    {"func_door_rot_dh", SP_func_door_rot_dh},
+    {"func_door_swinging", SP_func_door_swinging},
+    {"func_force_wall", SP_func_force_wall},
+    {"func_monitor", SP_func_monitor},
+    {"func_pendulum", SP_func_pendulum},
+    {"func_pivot", SP_func_pivot},
+    {"func_pushable", SP_func_pushable},
+    {"func_rotating_dh", SP_func_rotating_dh},
+    {"func_trackchange", SP_func_trackchange},
+    {"func_tracktrain", SP_func_tracktrain},
+    {"func_trainbutton", SP_func_trainbutton},
+    {"func_vehicle", SP_func_vehicle},
+    {"hint_path", SP_hint_path},
+    {"info_train_start", SP_info_train_start},
+    {"misc_light", SP_misc_light},
+    {"model_spawn",  SP_model_spawn},
+    {"model_train", SP_model_train},
+    {"model_turret", SP_model_turret},
+    {"monster_makron", SP_monster_makron},
+    {"path_track", SP_path_track},
+    {"target_anger", SP_target_anger},
+    {"target_attractor", SP_target_attractor},
+    {"target_bmodel_spawner", SP_target_clone},
+    {"target_cd", SP_target_CD},
+    {"target_change", SP_target_change},
+    {"target_clone", SP_target_clone},
+    {"target_effect", SP_target_effect},
+    {"target_fade", SP_target_fade},
+    {"target_failure", SP_target_failure},
+    {"target_fog", SP_target_fog},
+    {"target_fountain", SP_target_fountain},
+    {"target_lightswitch", SP_target_lightswitch},
+    {"target_locator", SP_target_locator},
+    {"target_lock", SP_target_lock},
+    {"target_lock_clue", SP_target_lock_clue},
+    {"target_lock_code", SP_target_lock_code},
+    {"target_lock_digit", SP_target_lock_digit},
+    {"target_monitor", SP_target_monitor},
+    {"target_monsterbattle", SP_target_monsterbattle},
+    {"target_movewith", SP_target_movewith},
+    {"target_precipitation", SP_target_precipitation},
+    {"target_rocks", SP_target_rocks},
+    {"target_rotation", SP_target_rotation},
+    {"target_set_effect", SP_target_set_effect},
+    {"target_skill", SP_target_skill},
+    {"target_sky", SP_target_sky},
+    {"target_playback", SP_target_playback},
+    {"target_text", SP_target_text},
+    {"thing", SP_thing},
+    {"tremor_trigger_multiple", SP_tremor_trigger_multiple},
+    {"trigger_bbox", SP_trigger_bbox},
+    {"trigger_disguise", SP_trigger_disguise},
+    {"trigger_fog", SP_trigger_fog},
+    {"trigger_inside", SP_trigger_inside},
+    {"trigger_look", SP_trigger_look},
+    {"trigger_mass", SP_trigger_mass},
+    {"trigger_scales", SP_trigger_scales},
+    {"trigger_speaker", SP_trigger_speaker},
+    {"trigger_switch", SP_trigger_switch},
+    {"trigger_teleporter", SP_trigger_teleporter},
+    {"trigger_transition", SP_trigger_transition},
+    // transition entities
+    {"bolt", SP_bolt},
+    {"debris", SP_debris},
+    {"gib", SP_gib},
+    {"gibhead", SP_gibhead},
+    {"grenade", SP_grenade},
+    {"hgrenade", SP_handgrenade},
+    {"rocket", SP_rocket},
+    {"homing rocket", SP_rocket},
+    // end Lazarus
+    
+#ifdef WESQ2
+    {"misc_bomb", SP_misc_bomb},
+    {"misc_ladder", SP_misc_ladder},
+    {"misc_tank1", SP_misc_tank1},
+    {"misc_tank2", SP_misc_tank2},
+#endif
+    
+    {NULL, NULL}
 };
 
 /*
@@ -290,6 +442,10 @@ ED_CallSpawn(edict_t *ent)
 		G_FreeEdict(ent);
 		return;
 	}
+
+    // Lazarus: Preserve original angles for movewith stuff
+    //          before G_SetMoveDir wipes 'em out
+    VectorCopy(ent->s.angles, ent->org_angles);
 
 	/* check item spawn functions */
 	for (i = 0, item = itemlist; i < game.num_items; i++, item++)
@@ -319,6 +475,7 @@ ED_CallSpawn(edict_t *ent)
 	}
 
 	gi.dprintf("%s doesn't have a spawn function\n", ent->classname);
+    G_FreeEdict(ent);
 }
 
 char *
@@ -534,7 +691,13 @@ G_FindTeams(void)
 			continue;
 		}
 
-		chain = e;
+        // Lazarus: some entities may have psuedo-teams that shouldn't be handled here
+        if (e->class_id == ENTITY_TARGET_CHANGE)
+            continue;
+        if (e->class_id == ENTITY_TARGET_CLONE)
+            continue;
+
+        chain = e;
 		e->teammaster = e;
 		c++;
 		c2++;
@@ -567,8 +730,196 @@ G_FindTeams(void)
 		}
 	}
 
-	gi.dprintf("%i teams with %i entities.\n", c, c2);
+    if(level.time < 2)
+        gi.dprintf("%i teams with %i entities.\n", c, c2);
 }
+
+void trans_ent_filename (char *);
+void ReadEdict (FILE *f, edict_t *ent);
+void LoadTransitionEnts()
+{
+    if(developer->value)
+        gi.dprintf("==== LoadTransitionEnts ====\n");
+    if(game.transition_ents)
+    {
+        char        t_file[_MAX_PATH];
+        int            i, j;
+        FILE        *f;
+        vec3_t        v_spawn;
+        edict_t        *ent;
+        edict_t        *spawn;
+        
+        VectorClear(v_spawn);
+        if(strlen(game.spawnpoint))
+        {
+            spawn = G_Find(NULL,FOFS(targetname),game.spawnpoint);
+            while(spawn)
+            {
+                if(spawn->class_id == ENTITY_INFO_PLAYER_START)
+                {
+                    VectorCopy(spawn->s.origin,v_spawn);
+                    break;
+                }
+                spawn = G_Find(spawn,FOFS(targetname),game.spawnpoint);
+            }
+        }
+        trans_ent_filename (t_file);
+        f = fopen(t_file,"rb");
+        if(!f)
+            gi.error("LoadTransitionEnts: Cannot open %s\n",t_file);
+        else
+        {
+            for(i=0; i<game.transition_ents; i++)
+            {
+                ent = G_Spawn();
+                ReadEdict(f,ent);
+                // Correction for monsters with health EXACTLY 0
+                // If we don't do this, spawn function will bring
+                // 'em back to life
+                if(ent->svflags & SVF_MONSTER)
+                {
+                    if(!ent->health)
+                    {
+                        ent->health = -1;
+                        ent->deadflag = DEAD_DEAD;
+                    }
+                    else if(ent->deadflag == DEAD_DEAD)
+                    {
+                        ent->health = min(ent->health,-1);
+                    }
+                }
+                VectorAdd(ent->s.origin,v_spawn,ent->s.origin);
+                VectorCopy(ent->s.origin,ent->s.old_origin);
+                ED_CallSpawn (ent);
+                if(ent->owner_id)
+                {
+                    if(ent->owner_id < 0)
+                    {
+                        ent->owner = &g_edicts[-ent->owner_id];
+                    }
+                    else
+                    {
+                        // We KNOW owners precede owned ents in the
+                        // list because of the way it was constructed
+                        ent->owner = NULL;
+                        for(j=game.maxclients+1; j<globals.num_edicts && !ent->owner; j++)
+                        {
+                            if(ent->owner_id == g_edicts[j].id)
+                                ent->owner = &g_edicts[j];
+                        }
+                    }
+                    ent->owner_id = 0;
+                }
+                ent->s.renderfx |= RF_IR_VISIBLE;
+            }
+            fclose(f);
+        }
+    }
+}
+
+#ifdef WESQ2
+/*
+ ==============
+ SpawnEntfileItems
+ ==============
+ */
+void SpawnEntfileItems()
+{
+    void GetEntFilename(char *);
+    char    filename[256];
+    FILE    *f;
+    int        result;
+    edict_t    *spawn;
+    
+    GetEntFilename(filename);
+    f = fopen(filename,"r");
+    if(!f) return;
+    NumSpawnedItems = 0;
+    while (1)
+    {
+        result = fscanf(f,"%s %f %f %f %f",
+                        SpawnedItem[NumSpawnedItems].classname,
+                        &SpawnedItem[NumSpawnedItems].origin[0],
+                        &SpawnedItem[NumSpawnedItems].origin[1],
+                        &SpawnedItem[NumSpawnedItems].origin[2],
+                        &SpawnedItem[NumSpawnedItems].angle     );
+        if(result != 5) break;
+        spawn = G_Spawn();
+        spawn->classname = gi.TagMalloc((strlen(SpawnedItem[NumSpawnedItems].classname)+1)*sizeof(char), TAG_LEVEL);
+        spawn->classname = SpawnedItem[NumSpawnedItems].classname;
+        VectorCopy(SpawnedItem[NumSpawnedItems].origin,spawn->s.origin);
+        spawn->s.angles[1] = SpawnedItem[NumSpawnedItems].angle;
+        ED_CallSpawn (spawn);
+        gi.unlinkentity (spawn);
+        KillBox (spawn);
+        gi.linkentity (spawn);
+        spawn->s.renderfx |= RF_IR_VISIBLE;
+        spawn->my_spawn = NumSpawnedItems+1;
+        NumSpawnedItems++;
+        if(NumSpawnedItems >= MAX_SPAWNED_ITEMS) break;
+    }
+    fclose(f);
+}
+/*
+ =================
+ ReadPeakPressures
+ 
+ Reads <mapname>.prs if it exists for peak pressure/temperature info and
+ charge locations
+ =================*/
+void ReadPeakPressures()
+{
+    
+    cvar_t    *game;
+    FILE    *f;
+    char    filename[256];
+    int        i;
+    
+    game = gi.cvar("game", "", CVAR_SERVERINFO| CVAR_LATCH);
+    strcpy(filename,game->string);
+    strcat(filename,"/maps/");
+    strcat(filename,level.mapname);
+    strcat(filename,".prs");
+    f = fopen(filename,"rt");
+    if(!f) return;
+    gNumCharges = 0;
+    gNumTargets = 0;
+    gTargetSpacing = 0;
+    if(PT) free(PT);
+    if(TNT) free(TNT);
+    fscanf(f,"%f %f %f",&gWorld[0],&gWorld[1],&gWorld[2]);
+    fscanf(f,"%d",&gNumCharges);
+    if(gNumCharges) {
+        edict_t    *bomb;
+        TNT = (EXPLOSIVE *)calloc(gNumCharges,sizeof(EXPLOSIVE));
+        for(i=0; i<gNumCharges; i++) {
+            fscanf(f,"%f %f %f %f %f",&TNT[i].loc[0],&TNT[i].loc[1],&TNT[i].loc[2],
+                   &TNT[i].weight,&TNT[i].delay);
+            bomb = G_Spawn();
+            bomb->classname = gi.TagMalloc((strlen("misc_bomb")+1)*sizeof(char), TAG_LEVEL);
+            bomb->classname = "misc_bomb";
+            VectorCopy(TNT[i].loc,bomb->s.origin);
+            ED_CallSpawn (bomb);
+            gi.unlinkentity (bomb);
+            KillBox (bomb);
+            gi.linkentity (bomb);
+            bomb->s.renderfx |= RF_IR_VISIBLE;
+            bomb->mass = (int)(TNT[i].weight);
+            bomb->dmg  = (int)(TNT[i].weight*DAMAGE_PER_POUND);
+        }
+    }
+    fscanf(f,"%f",&gTargetSpacing);
+    fscanf(f,"%d",&gNumTargets);
+    if(gNumTargets) {
+        PT = (PRESSURE_TEMP *)calloc(gNumTargets,sizeof(PRESSURE_TEMP));
+        for(i=0; i<gNumTargets; i++) {
+            fscanf(f,"%f %f %f %f %f",&PT[i].loc[0],&PT[i].loc[1],&PT[i].loc[2],
+                   &PT[i].pressure,&PT[i].temperature);
+        }
+    }
+    fclose(f);
+}
+#endif
 
 /*
  * Creates a server's entity / program execution context by
@@ -583,13 +934,19 @@ SpawnEntities(const char *mapname, char *entities, const char *spawnpoint)
 	int i;
 	float skill_level;
 	static qboolean monster_count_city3 = false;
+    extern int    max_modelindex;
+    extern int    max_soundindex;
+    extern int    lastgibframe;
 
 	if (!mapname || !entities || !spawnpoint)
 	{
 		return;
 	}
 
-	skill_level = floor(skill->value);
+    if(developer->value)
+        gi.dprintf("====== SpawnEntities ========\n");
+
+    skill_level = floor(skill->value);
 
 	if (skill_level < 0)
 	{
@@ -612,6 +969,13 @@ SpawnEntities(const char *mapname, char *entities, const char *spawnpoint)
 
 	memset(&level, 0, sizeof(level));
 	memset(g_edicts, 0, game.maxentities * sizeof(g_edicts[0]));
+    // Lazarus: these are used to track model and sound indices
+    //          in g_main.c:
+    max_modelindex = 0;
+    max_soundindex = 0;
+    
+    // Lazarus: last frame a gib was spawned in
+    lastgibframe = 0;
 
 	Q_strlcpy(level.mapname, mapname, sizeof(level.mapname));
 	Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
@@ -712,16 +1076,135 @@ SpawnEntities(const char *mapname, char *entities, const char *spawnpoint)
 		}
 
 		ED_CallSpawn(ent);
+        ent->s.renderfx |= RF_IR_VISIBLE;        //PGM
 	}
+
+#ifdef WESQ2
+    SpawnEntfileItems();
+    ReadPeakPressures();
+#endif
 
 	gi.dprintf("%i entities inhibited.\n", inhibit);
 
 	G_FindTeams();
 
+    // DWH
+    G_FindCraneParts();
+    
+    // Get origin offsets (mainly for brush models w/o origin brushes)
+    for (i=1, ent=g_edicts+i ; i < globals.num_edicts ; i++,ent++)
+    {
+        VectorAdd(ent->absmin,ent->absmax,ent->origin_offset);
+        VectorScale(ent->origin_offset,0.5,ent->origin_offset);
+        VectorSubtract(ent->origin_offset,ent->s.origin,ent->origin_offset);
+    }
+    
+    // end DWH
+    
 	PlayerTrail_Init();
+    
+    if(!deathmatch->value)
+        InitHintPaths();
+    
+    for(i=1, ent=g_edicts+i; i < globals.num_edicts; i++, ent++)
+    {
+        if(!ent->movewith)
+            continue;
+        if(ent->movewith_ent)
+            continue;
+        ent->movewith_ent = G_Find(NULL,FOFS(targetname),ent->movewith);
+        // Make sure that we can really "movewith" this guy. This check
+        // allows us to have movewith parent with same targetname as
+        // other entities
+        while(ent->movewith_ent &&
+              ( (ent->movewith_ent->class_id != ENTITY_FUNC_TRAIN)     &&
+               (ent->movewith_ent->class_id != ENTITY_MODEL_TRAIN)    &&
+               (ent->movewith_ent->class_id != ENTITY_FUNC_DOOR)      &&
+               (ent->movewith_ent->class_id != ENTITY_FUNC_VEHICLE)   &&
+               (ent->movewith_ent->class_id != ENTITY_FUNC_TRACKTRAIN)   ) )
+            ent->movewith_ent = G_Find(ent->movewith_ent,FOFS(targetname),ent->movewith);
+        if(ent->movewith_ent)
+            movewith_init(ent->movewith_ent);
+    }
+    
+    /*    for(i=1, ent=g_edicts+i; i < globals.num_edicts; i++, ent++)
+     {
+     gi.dprintf("%s:%s - movewith=%s, movewith_ent=%s:%s, movewith_next=%s:%s\n====================\n",
+     ent->classname, (ent->targetname ? ent->targetname : "noname"),
+     (ent->movewith ? ent->movewith : "N/A"),
+     (ent->movewith_ent ? ent->movewith_ent->classname : "N/A"),
+     (ent->movewith_ent ? (ent->movewith_ent->targetname ? ent->movewith_ent->targetname : "noname") : "N/A"),
+     (ent->movewith_next ? ent->movewith_next->classname : "N/A"),
+     (ent->movewith_next ? (ent->movewith_next->targetname ? ent->movewith_next->targetname : "noname") : "N/A"));
+     
+     } */
+    
+    if(game.transition_ents)
+        LoadTransitionEnts();
+    
+    actor_files();
 }
 
 /* =================================================================== */
+
+#ifdef WESQ2
+
+char *single_statusbar =
+"yb    -24 "
+
+// pressure
+"if 18 "
+"   xv 0 "
+"    num 5 19 "
+"    xv    90 "
+"   pic 18 "
+"endif "
+
+// temperature
+"if 20 "
+"   xv 200 "
+"    num 5 21 "
+"    xv 290 "
+"   pic 20 "
+"endif "
+
+// vehicle speed
+"if 22 "
+"    yb -90 "
+"    xv 128 "
+"    pic 22 "
+"endif "
+
+;
+
+char *dm_statusbar =
+"yb    -24 "
+
+// pressure
+"if 18 "
+"    xv    80 "
+"   pic 18 "
+"   xv 106 "
+"    num 5 19 "
+"endif "
+
+// temperature
+"if 20 "
+"    xv    220 "
+"   pic 20 "
+"   xv 246 "
+"    num 5 21 "
+"endif "
+
+// vehicle speed
+"if 22 "
+"    yb -90 "
+"    xv 128 "
+"    pic 22 "
+"endif "
+;
+
+#else
 
 char *single_statusbar =
 	"yb	-24 "
@@ -768,8 +1251,8 @@ char *single_statusbar =
 
 /* timer */
 	"if 9 "
-	"	xv	262 "
-	"	num	2	10 "
+	"	xv	230 "
+	"	num	4	10 "
 	"	xv	296 "
 	"	pic	9 "
 	"endif "
@@ -779,6 +1262,20 @@ char *single_statusbar =
 	"	xv	148 "
 	"	pic	11 "
 	"endif "
+
+    // vehicle speed
+    "if 22 "
+    "    yb -90 "
+    "    xv 128 "
+    "    pic 22 "
+    "endif "
+
+    // zoom
+    "if 23 "
+    "   yv 0 "
+    "   xv 0 "
+    "   pic 23 "
+    "endif "
 ;
 
 char *dm_statusbar =
@@ -826,8 +1323,8 @@ char *dm_statusbar =
 
 /* timer */
 	"if 9 "
-	"	xv	246 "
-	"	num	2	10 "
+	"	xv	230 "
+	"	num	4	10 "
 	"	xv	296 "
 	"	pic	9 "
 	"endif "
@@ -858,7 +1355,16 @@ char *dm_statusbar =
 	"xv 64 "
 	"stat_string 16 "
 	"endif "
+
+    // vehicle speed
+    "if 22 "
+    "    yb -90 "
+    "    xv 128 "
+    "    pic 22 "
+    "endif "
 ;
+
+#endif    // ifdef WESQ2
 
 /*QUAKED worldspawn (0 0 0) ?
  *
@@ -878,6 +1384,7 @@ SP_worldspawn(edict_t *ent)
 		return;
 	}
 
+    ent->class_id = ENTITY_WORLDSPAWN;
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
 	ent->inuse = true; /* since the world doesn't use G_Spawn() */
@@ -1037,47 +1544,82 @@ SP_worldspawn(edict_t *ent)
 	gi.modelindex("models/objects/gibs/skull/tris.md2");
 	gi.modelindex("models/objects/gibs/head2/tris.md2");
 
-	/* Setup light animation tables. 'a'
-	   is total darkness, 'z' is doublebright. */
+    gi.soundindex ("mud/mud_in2.wav");
+    gi.soundindex ("mud/mud_out1.wav");
+    gi.soundindex ("mud/mud_un1.wav");
+    gi.soundindex ("mud/wade_mud1.wav");
+    gi.soundindex ("mud/wade_mud2.wav");
+    
+    Lights();
+    
+    // Fog clipping - if "fogclip" is non-zero, force gl_clear to a good
+    // value for obscuring HOM with fog... "good" is driver-dependent
+    if(ent->fogclip)
+    {
+        if(gl_driver && !Q_stricmp(gl_driver->string,"3dfxgl"))
+            gi.cvar_forceset("gl_clear", "0");
+        else
+            gi.cvar_forceset("gl_clear", "1");
+    }
+    
+    // FMOD 3D sound attenuation:
+    if(ent->attenuation <= 0.)
+        ent->attenuation = 1.0;
+    
+    // FMOD 3D sound Doppler shift:
+    if(st.shift > 0)
+        ent->moveinfo.distance = st.shift;
+    else if(st.shift < 0)
+        ent->moveinfo.distance = 0.0;
+    else
+        ent->moveinfo.distance = 1.0;
+    
+    // cvar overrides for effects flags:
+    if(alert_sounds->value)
+        world->effects |= FX_WORLDSPAWN_ALERTSOUNDS;
+    if(corpse_fade->value)
+        world->effects |= FX_WORLDSPAWN_CORPSEFADE;
+    if(jump_kick->value)
+        world->effects |= FX_WORLDSPAWN_JUMPKICK;
+    if(footstep_sounds->value)
+        world->effects |= FX_WORLDSPAWN_STEPSOUNDS;
+    
+    if(deathmatch->value || coop->value)
+        qFMOD_Footsteps = false;
+    else if(world->effects & FX_WORLDSPAWN_STEPSOUNDS)
+    {
+        qFMOD_Footsteps = true;
+        FMOD_Init();
+    }
+    else
+        qFMOD_Footsteps = false;
+}
 
-	/* 0 normal */
-	gi.configstring(CS_LIGHTS + 0, "m");
+// Hud toggle ripped from TPP source
 
-	/* 1 FLICKER (first variety) */
-	gi.configstring(CS_LIGHTS + 1, "mmnmmommommnonmmonqnmmo");
+int nohud = 0;
 
-	/* 2 SLOW STRONG PULSE */
-	gi.configstring(CS_LIGHTS + 2, "abcdefghijklmnopqrstuvwxyzyxwvutsrqponmlkjihgfedcba");
+void Hud_On()
+{
+    if (deathmatch->value)
+        gi.configstring (CS_STATUSBAR, dm_statusbar);
+    else
+        gi.configstring (CS_STATUSBAR, single_statusbar);
+    nohud = 0;
+}
 
-	/* 3 CANDLE (first variety) */
-	gi.configstring(CS_LIGHTS + 3, "mmmmmaaaaammmmmaaaaaabcdefgabcdefg");
+void Hud_Off()
+{
+    gi.configstring (CS_STATUSBAR, NULL);
+    nohud = 1;
+}
 
-	/* 4 FAST STROBE */
-	gi.configstring(CS_LIGHTS + 4, "mamamamamama");
-
-	/* 5 GENTLE PULSE 1 */
-	gi.configstring(CS_LIGHTS + 5, "jklmnopqrstuvwxyzyxwvutsrqponmlkj");
-
-	/* 6 FLICKER (second variety) */
-	gi.configstring(CS_LIGHTS + 6, "nmonqnmomnmomomno");
-
-	/* 7 CANDLE (second variety) */
-	gi.configstring(CS_LIGHTS + 7, "mmmaaaabcdefgmmmmaaaammmaamm");
-
-	/* 8 CANDLE (third variety) */
-	gi.configstring(CS_LIGHTS + 8, "mmmaaammmaaammmabcdefaaaammmmabcdefmmmaaaa");
-
-	/* 9 SLOW STROBE (fourth variety) */
-	gi.configstring(CS_LIGHTS + 9, "aaaaaaaazzzzzzzz");
-
-	/* 10 FLUORESCENT FLICKER */
-	gi.configstring(CS_LIGHTS + 10, "mmamammmmammamamaaamammma");
-
-	/* 11 SLOW PULSE NOT FADE TO BLACK */
-	gi.configstring(CS_LIGHTS + 11, "abcdefghijklmnopqrrqponmlkjihgfedcba");
-
-	/* styles 32-62 are assigned by the light program for switchable lights */
-
-	/* 63 testing */
-	gi.configstring(CS_LIGHTS + 63, "a");
+void Cmd_ToggleHud ()
+{
+    if (deathmatch->value)
+        return;
+    if (nohud)
+        Hud_On();
+    else
+        Hud_Off();
 }

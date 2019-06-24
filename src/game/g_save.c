@@ -1,3 +1,4 @@
+// Do we need this file at all given yquake2's revamped save system? -tkidd
 
 #include "header/local.h"
 
