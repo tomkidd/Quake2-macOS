@@ -48,10 +48,13 @@ soldier_idle(edict_t *self)
 		return;
 	}
 
-	if (random() > 0.8)
-	{
-		gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
-	}
+    if(!(self->spawnflags & SF_MONSTER_AMBUSH))
+    {
+        if (random() > 0.8)
+        {
+            gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+        }
+    }
 }
 
 void
@@ -586,23 +589,37 @@ soldier_fire(edict_t *self, int flash_number)
 	{
 		VectorCopy(self->enemy->s.origin, end);
 		end[2] += self->enemy->viewheight;
-		VectorSubtract(end, start, aim);
-		vectoangles(aim, dir);
-		AngleVectors(dir, forward, right, up);
 
-		r = crandom() * 1000;
-		u = crandom() * 500;
-		VectorMA(start, 8192, forward, end);
-		VectorMA(end, r, right, end);
-		VectorMA(end, u, up, end);
-
-		VectorSubtract(end, start, aim);
-		VectorNormalize(aim);
-	}
+        // Lazarus fog reduction of accuracy
+        if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+        {
+            end[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+            end[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+            end[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        }
+        
+        VectorSubtract(end, start, aim);
+        // Lazarus: Accuracy is skill level dependent
+        if(skill->value < 3)
+        {
+            vectoangles(aim, dir);
+            AngleVectors(dir, forward, right, up);
+            
+            r = crandom()*(1000 - 333*skill->value);
+            u = crandom()*(500 - 167*skill->value);
+            VectorMA(start, 8192, forward, end);
+            VectorMA(end, r, right, end);
+            VectorMA(end, u, up, end);
+            
+            VectorSubtract(end, start, aim);
+        }
+        VectorNormalize(aim);
+    }
 
 	if (self->s.skinnum <= 1)
 	{
-		monster_fire_blaster(self, start, aim, 5, 600, flash_index, EF_BLASTER);
+        // Lazarus: make bolt speed skill level dependent
+        monster_fire_blaster (self, start, aim, 5, 600 + 100*skill->value, flash_index, EF_BLASTER);
 	}
 	else if (self->s.skinnum <= 3)
 	{
@@ -1170,6 +1187,14 @@ soldier_dead(edict_t *self)
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
 	gi.linkentity(self);
+    M_FlyCheck (self);
+    
+    // Lazarus monster fade
+    if(world->effects & FX_WORLDSPAWN_CORPSEFADE)
+    {
+        self->think=FadeDieSink;
+        self->nextthink=level.time+corpse_fadetime->value;
+    }
 }
 
 mframe_t soldier_frames_death1[] = {
@@ -1465,8 +1490,9 @@ soldier_die(edict_t *self, edict_t *inflictor /* unused */,
 {
 	int n;
 
+    self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
 	/* check for gib */
-	if (self->health <= self->gib_health)
+    if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB) )
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
 
@@ -1538,6 +1564,24 @@ soldier_die(edict_t *self, edict_t *inflictor /* unused */,
 	}
 }
 
+mframe_t soldier_frames_jump [] =
+{
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL
+};
+mmove_t soldier_move_jump = { FRAME_run01, FRAME_run08, soldier_frames_jump, soldier_run };
+
+void soldier_jump (edict_t *self)
+{
+    self->monsterinfo.currentmove = &soldier_move_jump;
+}
+
 void
 SP_monster_soldier_x(edict_t *self)
 {
@@ -1545,6 +1589,10 @@ SP_monster_soldier_x(edict_t *self)
 	{
 		return;
 	}
+
+    // Lazarus: special purpose skins
+    if ( self->style )
+        PatchMonsterModel("models/monsters/soldier/tris.md2");
 
 	self->s.modelindex = gi.modelindex("models/monsters/soldier/tris.md2");
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -1558,7 +1606,8 @@ SP_monster_soldier_x(edict_t *self)
 	sound_sight2 = gi.soundindex("soldier/solsrch1.wav");
 	sound_cock = gi.soundindex("infantry/infatck3.wav");
 
-	self->mass = 100;
+    if(!self->mass)
+        self->mass = 100;
 
 	self->pain = soldier_pain;
 	self->die = soldier_die;
@@ -1571,10 +1620,36 @@ SP_monster_soldier_x(edict_t *self)
 	self->monsterinfo.melee = NULL;
 	self->monsterinfo.sight = soldier_sight;
 
+    if(monsterjump->value)
+    {
+        self->monsterinfo.jump = soldier_jump;
+        self->monsterinfo.jumpup = 48;
+        self->monsterinfo.jumpdn = 160;
+    }
+    
+    // DWH
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    // end DWH
+    
 	gi.linkentity(self);
 
-	self->monsterinfo.stand(self);
-
+    if(!self->monsterinfo.flies)
+        self->monsterinfo.flies = 0.40;
+    
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&soldier_move_death1,
+            &soldier_move_death2,
+            &soldier_move_death3,
+            &soldier_move_death4,
+            &soldier_move_death5,
+            &soldier_move_death6,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
 	walkmonster_start(self);
 }
 
@@ -1595,17 +1670,24 @@ SP_monster_soldier_light(edict_t *self)
 		return;
 	}
 
-	SP_monster_soldier_x(self);
+    self->class_id = ENTITY_MONSTER_SOLDIER_LIGHT;
 
 	sound_pain_light = gi.soundindex("soldier/solpain2.wav");
 	sound_death_light = gi.soundindex("soldier/soldeth2.wav");
 	gi.modelindex("models/objects/laser/tris.md2");
 	gi.soundindex("misc/lasfly.wav");
 	gi.soundindex("soldier/solatck2.wav");
-
-	self->s.skinnum = 0;
-	self->health = 20;
-	self->gib_health = -30;
+    self->common_name = "Light Guard";
+    
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 20;
+    if(!self->gib_health)
+        self->gib_health = -30;
+    
+    // Lazarus: custom skins
+    self->s.skinnum = 0 + 6*self->style;
+    SP_monster_soldier_x (self);
 }
 
 /*
@@ -1625,15 +1707,23 @@ SP_monster_soldier(edict_t *self)
 		return;
 	}
 
-	SP_monster_soldier_x(self);
+    self->class_id = ENTITY_MONSTER_SOLDIER;
 
 	sound_pain = gi.soundindex("soldier/solpain1.wav");
 	sound_death = gi.soundindex("soldier/soldeth1.wav");
 	gi.soundindex("soldier/solatck1.wav");
 
-	self->s.skinnum = 2;
-	self->health = 30;
-	self->gib_health = -30;
+    self->common_name = "Shotgun Guard";
+    
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 30;
+    if(!self->gib_health)
+        self->gib_health = -30;
+    
+    // Lazarus: custom skins
+    self->s.skinnum = 2 + 6*self->style;
+    SP_monster_soldier_x (self);
 }
 
 /*
@@ -1653,13 +1743,21 @@ SP_monster_soldier_ss(edict_t *self)
 		return;
 	}
 
-	SP_monster_soldier_x(self);
+    self->class_id = ENTITY_MONSTER_SOLDIER_SS;
 
 	sound_pain_ss = gi.soundindex("soldier/solpain3.wav");
 	sound_death_ss = gi.soundindex("soldier/soldeth3.wav");
 	gi.soundindex("soldier/solatck3.wav");
 
-	self->s.skinnum = 4;
-	self->health = 40;
-	self->gib_health = -30;
+    self->common_name = "Machinegun Guard";
+    
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 40;
+    if(!self->gib_health)
+        self->gib_health = -30;
+    
+    // Lazarus: custom skins
+    self->s.skinnum = 4 + 6*self->style;
+    SP_monster_soldier_x (self);
 }

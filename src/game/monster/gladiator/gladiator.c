@@ -46,7 +46,8 @@ gladiator_idle(edict_t *self)
 		return;
 	}
 
-	gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+    if(!(self->spawnflags & SF_MONSTER_AMBUSH))
+        gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 void
@@ -266,6 +267,15 @@ GladiatorGun(edict_t *self)
 			forward, right, start);
 
 	/* calc direction to where we targted */
+
+    // Lazarus fog reduction of accuracy
+    if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+    {
+        self->pos1[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        self->pos1[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        self->pos1[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+    }
+    
 	VectorSubtract(self->pos1, start, dir);
 	VectorNormalize(dir);
 
@@ -295,22 +305,23 @@ mmove_t gladiator_move_attack_gun =
 void
 gladiator_attack(edict_t *self)
 {
-	float range;
-	vec3_t v;
-
-	if (!self)
-	{
-		return;
-	}
-
-	/* a small safe zone */
-	VectorSubtract(self->s.origin, self->enemy->s.origin, v);
-	range = VectorLength(v);
-
-	if (range <= (MELEE_DISTANCE + 32))
-	{
-		return;
-	}
+    /* Lazarus: What the hell is this? Why give the play a safe zone at all???
+//    float range;
+//    vec3_t v;
+//
+//    if (!self)
+//    {
+//        return;
+//    }
+//
+//    /* a small safe zone */
+//    VectorSubtract(self->s.origin, self->enemy->s.origin, v);
+//    range = VectorLength(v);
+//
+//    if (range <= (MELEE_DISTANCE + 32))
+//    {
+//        return;
+//    }
 
 	/* charge up the railgun */
 	gi.sound(self, CHAN_WEAPON, sound_gun, 1, ATTN_NORM, 0);
@@ -365,7 +376,7 @@ gladiator_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -419,6 +430,14 @@ gladiator_dead(edict_t *self)
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
 	gi.linkentity(self);
+    M_FlyCheck (self);
+    
+    // Lazarus monster fade
+    if(world->effects & FX_WORLDSPAWN_CORPSEFADE)
+    {
+        self->think=FadeDieSink;
+        self->nextthink=level.time+corpse_fadetime->value;
+    }
 }
 
 mframe_t gladiator_frames_death[] = {
@@ -466,8 +485,9 @@ gladiator_die(edict_t *self, edict_t *inflictor /* unused */,
 		return;
 	}
 
+    self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
 	/* check for gib */
-	if (self->health <= self->gib_health)
+    if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex( "misc/udeath.wav"), 1, ATTN_NORM, 0);
 
@@ -502,6 +522,21 @@ gladiator_die(edict_t *self, edict_t *inflictor /* unused */,
 	self->monsterinfo.currentmove = &gladiator_move_death;
 }
 
+//===========
+//PGM
+qboolean gladiator_blocked (edict_t *self, float dist)
+{
+    if(blocked_checkshot (self, 0.25 + (0.05 * skill->value) ))
+        return true;
+    
+    if(blocked_checkplat (self, dist))
+        return true;
+    
+    return false;
+}
+//PGM
+//===========
+
 /*
  * QUAKED monster_gladiator (1 .5 0) (-32 -32 -24) (32 32 64) Ambush Trigger_Spawn Sight
  */
@@ -518,6 +553,7 @@ SP_monster_gladiator(edict_t *self)
 		G_FreeEdict(self);
 		return;
 	}
+    self->class_id = ENTITY_MONSTER_GLADIATOR;
 
 	sound_pain1 = gi.soundindex("gladiator/pain.wav");
 	sound_pain2 = gi.soundindex("gladiator/gldpain2.wav");
@@ -532,13 +568,27 @@ SP_monster_gladiator(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
+
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/gladiatr/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/gladiatr/tris.md2");
 	VectorSet(self->mins, -32, -32, -24);
-	VectorSet(self->maxs, 32, 32, 64);
+    // Lazarus: Why so tall?
+    //    VectorSet (self->maxs, 32, 32, 64);
+    VectorSet (self->maxs, 32, 32, 48);
 
-	self->health = 400;
-	self->gib_health = -175;
-	self->mass = 400;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 400;
+    if(!self->gib_health)
+        self->gib_health = -175;
+    if(!self->mass)
+        self->mass = 400;
 
 	self->pain = gladiator_pain;
 	self->die = gladiator_die;
@@ -552,9 +602,26 @@ SP_monster_gladiator(edict_t *self)
 	self->monsterinfo.sight = gladiator_sight;
 	self->monsterinfo.idle = gladiator_idle;
 	self->monsterinfo.search = gladiator_search;
-
+    self->monsterinfo.blocked = gladiator_blocked;        // PGM
+    
+    // Lazarus
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    if(!self->monsterinfo.flies)
+        self->monsterinfo.flies = 0.05;
+    
 	gi.linkentity(self);
 	self->monsterinfo.currentmove = &gladiator_move_stand;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&gladiator_move_death,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
+    self->common_name = "Gladiator";
+    
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);

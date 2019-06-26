@@ -38,6 +38,13 @@ G_ProjectSource(vec3_t point, vec3_t distance, vec3_t forward,
 				distance[2];
 }
 
+void G_ProjectSource2 (vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t up, vec3_t result)
+{
+    result[0] = point[0] + forward[0] * distance[0] + right[0] * distance[1] + up[0] * distance[2];
+    result[1] = point[1] + forward[1] * distance[0] + right[1] * distance[1] + up[1] * distance[2];
+    result[2] = point[2] + forward[2] * distance[0] + right[2] * distance[1] + up[2] * distance[2];
+}
+
 /*
  * Searches all active entities for the next
  * one that holds the matching string at fieldofs
@@ -135,6 +142,49 @@ findradius(edict_t *from, vec3_t org, float rad)
 	}
 
 	return NULL;
+}
+
+/*
+ =================
+ findradius2
+ 
+ Returns entities that have origins within a spherical area
+ 
+ ROGUE - tweaks for performance for tesla specific code
+ only returns entities that can be damaged
+ only returns entities that are SVF_DAMAGEABLE
+ 
+ findradius2 (origin, radius)
+ =================
+ */
+edict_t *findradius2 (edict_t *from, vec3_t org, float rad)
+{
+    // rad must be positive
+    vec3_t    eorg;
+    int        j;
+    
+    if (!from)
+        from = g_edicts;
+    else
+        from++;
+    for ( ; from < &g_edicts[globals.num_edicts]; from++)
+    {
+        if (!from->inuse)
+            continue;
+        if (from->solid == SOLID_NOT)
+            continue;
+        if (!from->takedamage)
+            continue;
+        if (!(from->svflags & SVF_DAMAGEABLE))
+            continue;
+        for (j=0 ; j<3 ; j++)
+            eorg[j] = org[j] - (from->s.origin[j] + (from->mins[j] + from->maxs[j])*0.5);
+        if (VectorLength(eorg) > rad)
+            continue;
+        return from;
+    }
+    
+    return NULL;
 }
 
 /*
@@ -239,19 +289,21 @@ G_UseTargets(edict_t *ent, edict_t *activator)
 		t->message = ent->message;
 		t->target = ent->target;
 		t->killtarget = ent->killtarget;
+        t->noise_index = ent->noise_index;
 		return;
 	}
 
 	/* print the message */
 	if ((ent->message) && !(activator->svflags & SVF_MONSTER))
 	{
+        //        Lazarus - change so that noise_index < 0 means no sound
 		gi.centerprintf(activator, "%s", ent->message);
 
-		if (ent->noise_index)
+        if (ent->noise_index > 0)
 		{
 			gi.sound(activator, CHAN_AUTO, ent->noise_index, 1, ATTN_NORM, 0);
 		}
-		else
+        else if (ent->noise_index == 0)
 		{
 			gi.sound(activator, CHAN_AUTO, gi.soundindex(
 							"misc/talk1.wav"), 1, ATTN_NORM, 0);
@@ -299,9 +351,9 @@ G_UseTargets(edict_t *ent, edict_t *activator)
 		while ((t = G_Find(t, FOFS(targetname), ent->target)))
 		{
 			/* doors fire area portals in a specific way */
-			if (!Q_stricmp(t->classname, "func_areaportal") &&
-				(!Q_stricmp(ent->classname, "func_door") ||
-				 !Q_stricmp(ent->classname, "func_door_rotating")))
+            if ( (t->class_id == ENTITY_FUNC_AREAPORTAL) &&
+                ( (ent->class_id == ENTITY_FUNC_DOOR) ||
+                 (ent->class_id == ENTITY_FUNC_DOOR_ROTATING)) )
 			{
 				continue;
 			}
@@ -402,28 +454,45 @@ vectoyaw(vec3_t vec)
 
 	if (vec[PITCH] == 0)
 	{
-		yaw = 0;
-
-		if (vec[YAW] > 0)
+        if (vec[YAW] == 0)
+            yaw = 0;
+		else if (vec[YAW] > 0)
 		{
 			yaw = 90;
 		}
-		else if (vec[YAW] < 0)
-		{
-			yaw = -90;
+        else
+        {
+            yaw = 270;
 		}
 	}
 	else
 	{
-		yaw = (int)(atan2(vec[YAW], vec[PITCH]) * 180 / M_PI);
-
-		if (yaw < 0)
-		{
-			yaw += 360;
-		}
+        yaw = (int) (atan2(vec[YAW], vec[PITCH]) * 180 / M_PI);
+        if (yaw < 0)
+            yaw += 360;
 	}
 
 	return yaw;
+}
+
+float vectoyaw2 (vec3_t vec)
+{
+    float    yaw;
+    
+    if (vec[PITCH] == 0) {
+        if (vec[YAW] == 0)
+            yaw = 0;
+        else if (vec[YAW] > 0)
+            yaw = 90;
+        else
+            yaw = 270;
+    } else {
+        yaw = (atan2(vec[YAW], vec[PITCH]) * 180 / M_PI);
+        if (yaw < 0)
+            yaw += 360;
+    }
+    
+    return yaw;
 }
 
 void
@@ -457,7 +526,7 @@ vectoangles(vec3_t value1, vec3_t angles)
 		}
 		else
 		{
-			yaw = -90;
+			yaw = 270;
 		}
 
 		if (yaw < 0)
@@ -479,6 +548,43 @@ vectoangles(vec3_t value1, vec3_t angles)
 	angles[ROLL] = 0;
 }
 
+void vectoangles2 (vec3_t value1, vec3_t angles)
+{
+    float    forward;
+    float    yaw, pitch;
+    
+    if (value1[1] == 0 && value1[0] == 0)
+    {
+        yaw = 0;
+        if (value1[2] > 0)
+            pitch = 90;
+        else
+            pitch = 270;
+    }
+    else
+    {
+        // PMM - fixed to correct for pitch of 0
+        if (value1[0])
+            yaw = (atan2(value1[1], value1[0]) * 180 / M_PI);
+        else if (value1[1] > 0)
+            yaw = 90;
+        else
+            yaw = 270;
+        
+        if (yaw < 0)
+            yaw += 360;
+        
+        forward = sqrt (value1[0]*value1[0] + value1[1]*value1[1]);
+        pitch = (atan2(value1[2], forward) * 180 / M_PI);
+        if (pitch < 0)
+            pitch += 360;
+    }
+    
+    angles[PITCH] = -pitch;
+    angles[YAW] = yaw;
+    angles[ROLL] = 0;
+}
+
 char *
 G_CopyString(char *in)
 {
@@ -496,6 +602,7 @@ G_InitEdict(edict_t *e)
 	e->classname = "noclass";
 	e->gravity = 1.0;
 	e->s.number = e - g_edicts;
+    e->org_movetype = -1;
 }
 
 /*
@@ -534,6 +641,10 @@ G_Spawn(void)
 	}
 
 	globals.num_edicts++;
+
+    if(developer->value && readout->value)
+        gi.dprintf("num_edicts = %d\n",globals.num_edicts);
+    
 	G_InitEdict(e);
 	return e;
 }
@@ -544,6 +655,20 @@ G_Spawn(void)
 void
 G_FreeEdict(edict_t *ed)
 {
+    // Lazarus - if part of a movewith chain, remove from
+    // the chain and repair broken links
+    if(ed->movewith) {
+        edict_t    *e;
+        edict_t    *parent=NULL;
+        int        i;
+        
+        for(i=1; i<globals.num_edicts && !parent; i++) {
+            e = g_edicts + i;
+            if(e->movewith_next == ed) parent=e;
+        }
+        if(parent) parent->movewith_next = ed->movewith_next;
+    }
+    
 	gi.unlinkentity(ed); /* unlink from world */
 
 	if (deathmatch->value || coop->value)
@@ -561,6 +686,19 @@ G_FreeEdict(edict_t *ed)
 		}
 	}
 
+    // Lazarus: actor muzzle flash
+    if (ed->flash)
+    {
+        memset (ed->flash, 0, sizeof(*ed));
+        ed->flash->classname = "freed";
+        ed->flash->freetime  = level.time;
+        ed->flash->inuse     = false;
+    }
+    
+    // Lazarus: reflections
+    if (!(ed->flags & FL_REFLECT))
+        DeleteReflection(ed,-1);
+    
 	memset(ed, 0, sizeof(*ed));
 	ed->classname = "freed";
 	ed->freetime = level.time;
@@ -577,6 +715,10 @@ G_TouchTriggers(edict_t *ent)
 	{
 		return;
 	}
+
+    // Lazarus: nothing touches anything if game is frozen
+    if (level.freeze)
+        return;
 
 	/* dead things don't activate triggers! */
 	if ((ent->client || (ent->svflags & SVF_MONSTER)) && (ent->health <= 0))
@@ -602,6 +744,9 @@ G_TouchTriggers(edict_t *ent)
 		{
 			continue;
 		}
+        
+        if (ent->client && ent->client->spycam && !(hit->svflags & SVF_TRIGGER_CAMOWNER))
+            continue;
 
 		hit->touch(hit, ent, NULL, NULL);
 	}
@@ -687,4 +832,287 @@ KillBox(edict_t *ent)
 	}
 
 	return true; /* all clear */
+}
+
+void AnglesNormalize(vec3_t vec)
+{
+    while(vec[0] > 180)
+        vec[0] -= 360;
+    while(vec[0] < -180)
+        vec[0] += 360;
+    while(vec[1] > 360)
+        vec[1] -= 360;
+    while(vec[1] < 0)
+        vec[1] += 360;
+}
+
+float SnapToEights(float x)
+{
+    x *= 8.0;
+    if (x > 0.0)
+        x += 0.5;
+    else
+        x -= 0.5;
+    return 0.125 * (int)x;
+}
+
+
+/* Lazarus - added functions */
+
+void stuffcmd(edict_t *pent, char *pszCommand)
+{
+    gi.WriteByte(svc_stufftext);
+    gi.WriteString(pszCommand);
+    gi.unicast(pent, true);
+}
+
+qboolean point_infront (edict_t *self, vec3_t point)
+{
+    vec3_t    vec;
+    float    dot;
+    vec3_t    forward;
+    
+    AngleVectors (self->s.angles, forward, NULL, NULL);
+    VectorSubtract (point, self->s.origin, vec);
+    VectorNormalize (vec);
+    dot = DotProduct (vec, forward);
+    
+    if (dot > 0.3)
+        return true;
+    return false;
+}
+
+float AtLeast(float x, float dx)
+{
+    float xx;
+    
+    xx = (float)(floor(x/dx - 0.5)+1.)*dx;
+    if(xx < x) xx += dx;
+    return xx;
+}
+
+edict_t    *LookingAt(edict_t *ent, int filter, vec3_t endpos, float *range)
+{
+    edict_t        *who;
+    edict_t        *trigger[MAX_EDICTS];
+    edict_t        *ignore;
+    trace_t        tr;
+    vec_t        r;
+    vec3_t      end, forward, start;
+    vec3_t        dir, entp, mins, maxs;
+    int            i, num;
+    
+    if(!ent->client) {
+        if(endpos) VectorClear(endpos);
+        if(range) *range = 0;
+        return NULL;
+    }
+    VectorClear(end);
+    if(ent->client->chasetoggle)
+    {
+        AngleVectors(ent->client->v_angle, forward, NULL, NULL);
+        VectorCopy(ent->client->chasecam->s.origin,start);
+        ignore = ent->client->chasecam;
+    }
+    else if(ent->client->spycam)
+    {
+        AngleVectors(ent->client->ps.viewangles, forward, NULL, NULL);
+        VectorCopy(ent->s.origin,start);
+        ignore = ent->client->spycam;
+    }
+    else
+    {
+        AngleVectors(ent->client->v_angle, forward, NULL, NULL);
+        VectorCopy(ent->s.origin, start);
+        start[2] += ent->viewheight;
+        ignore = ent;
+    }
+    
+    VectorMA(start, 8192, forward, end);
+    
+    /* First check for looking directly at a pickup item */
+    VectorSet(mins,-4096,-4096,-4096);
+    VectorSet(maxs, 4096, 4096, 4096);
+    num = gi.BoxEdicts (mins, maxs, trigger, MAX_EDICTS, AREA_TRIGGERS);
+    for (i=0 ; i<num ; i++)
+    {
+        who = trigger[i];
+        if (!who->inuse)
+            continue;
+        if (!who->item)
+            continue;
+        if (!visible(ent,who))
+            continue;
+        if (!infront(ent,who))
+            continue;
+        VectorSubtract(who->s.origin,start,dir);
+        r = VectorLength(dir);
+        VectorMA(start, r, forward, entp);
+        if(entp[0] < who->s.origin[0] - 17) continue;
+        if(entp[1] < who->s.origin[1] - 17) continue;
+        if(entp[2] < who->s.origin[2] - 17) continue;
+        if(entp[0] > who->s.origin[0] + 17) continue;
+        if(entp[1] > who->s.origin[1] + 17) continue;
+        if(entp[2] > who->s.origin[2] + 17) continue;
+        if(endpos)
+            VectorCopy(who->s.origin,endpos);
+        if(range)
+            *range = r;
+        return who;
+    }
+    
+    tr = gi.trace (start, NULL, NULL, end, ignore, MASK_SHOT);
+    if (tr.fraction == 1.0)
+    {
+        // too far away
+        gi.sound (ent, CHAN_AUTO, gi.soundindex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
+        return NULL;
+    }
+    if(!tr.ent)
+    {
+        // no hit
+        gi.sound (ent, CHAN_AUTO, gi.soundindex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
+        return NULL;
+    }
+    if(!tr.ent->classname)
+    {
+        // should never happen
+        gi.sound (ent, CHAN_AUTO, gi.soundindex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
+        return NULL;
+    }
+    
+    if((strstr(tr.ent->classname,"func_") != NULL) && (filter & LOOKAT_NOBRUSHMODELS))
+    {
+        // don't hit on brush models
+        gi.sound (ent, CHAN_AUTO, gi.soundindex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
+        return NULL;
+    }
+    if( (tr.ent == world) && (filter & LOOKAT_NOWORLD))
+    {
+        // world brush
+        gi.sound (ent, CHAN_AUTO, gi.soundindex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
+        return NULL;
+    }
+    if(endpos) {
+        endpos[0] = tr.endpos[0];
+        endpos[1] = tr.endpos[1];
+        endpos[2] = tr.endpos[2];
+    }
+    if(range) {
+        VectorSubtract(tr.endpos,start,start);
+        *range = VectorLength(start);
+    }
+    return tr.ent;
+}
+
+void GameDirRelativePath(char *filename, char *output)
+{
+    cvar_t    *basedir, *gamedir;
+    
+    basedir = gi.cvar("basedir", "", 0);
+    gamedir = gi.cvar("gamedir", "", 0);
+    if(strlen(gamedir->string))
+        sprintf(output,"%s/%s/%s",basedir->string,gamedir->string,filename);
+    else
+        sprintf(output,"%s/%s",basedir->string,filename);
+    
+}
+
+/* Lazarus: G_UseTarget is similar to G_UseTargets, but only triggers
+ a single target rather than all entities matching target
+ criteria. It *does*, however, kill all killtargets */
+
+void Think_Delay_Single (edict_t *ent)
+{
+    G_UseTarget (ent, ent->activator, ent->target_ent);
+    G_FreeEdict (ent);
+}
+
+void G_UseTarget (edict_t *ent, edict_t *activator, edict_t *target)
+{
+    edict_t        *t;
+    
+    //
+    // check for a delay
+    //
+    if (ent->delay)
+    {
+        // create a temp object to fire at a later time
+        t = G_Spawn();
+        t->classname = "DelayedUse";
+        t->nextthink = level.time + ent->delay;
+        t->think = Think_Delay_Single;
+        t->activator = activator;
+        t->target_ent = target;
+        if (!activator)
+            gi.dprintf ("Think_Delay_Single with no activator\n");
+        t->message = ent->message;
+        t->target = ent->target;
+        t->killtarget = ent->killtarget;
+        t->noise_index = ent->noise_index;
+        return;
+    }
+    
+    
+    //
+    // print the message
+    //
+    if ((ent->message) && !(activator->svflags & SVF_MONSTER))
+    {
+        gi.centerprintf (activator, "%s", ent->message);
+        if (ent->noise_index > 0)
+            gi.sound (activator, CHAN_AUTO, ent->noise_index, 1, ATTN_NORM, 0);
+        else if (ent->noise_index == 0)
+            gi.sound (activator, CHAN_AUTO, gi.soundindex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
+    }
+    
+    //
+    // kill killtargets
+    //
+    if (ent->killtarget)
+    {
+        t = NULL;
+        while ((t = G_Find (t, FOFS(targetname), ent->killtarget)))
+        {
+            // Lazarus: remove killtargeted monsters from total_monsters
+            if(t->svflags & SVF_MONSTER) {
+                if(!t->dmgteam || strcmp(t->dmgteam,"player"))
+                    if(!(t->monsterinfo.aiflags & AI_GOOD_GUY))
+                        level.total_monsters--;
+            }
+            G_FreeEdict (t);
+            if (!ent->inuse)
+            {
+                gi.dprintf("entity was removed while using killtargets\n");
+                return;
+            }
+        }
+    }
+    
+    //
+    // fire target
+    //
+    if (target)
+    {
+        // doors fire area portals in a specific way
+        if ( (target->class_id == ENTITY_FUNC_AREAPORTAL) &&
+            ((ent->class_id == ENTITY_FUNC_DOOR) ||
+             (ent->class_id == ENTITY_FUNC_DOOR_ROTATING)))
+            return;
+        
+        if (target == ent)
+        {
+            gi.dprintf ("WARNING: Entity used itself.\n");
+        }
+        else
+        {
+            if (target->use)
+                target->use (target, ent, activator);
+        }
+        if (!ent->inuse)
+        {
+            gi.dprintf("entity was removed while using target\n");
+            return;
+        }
+    }
 }

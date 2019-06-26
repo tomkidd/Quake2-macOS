@@ -442,7 +442,7 @@ parasite_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+        self->s.skinnum |= 1;
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -533,7 +533,14 @@ parasite_drain_attack(edict_t *self)
 
 	VectorCopy(self->enemy->s.origin, end);
 
-	tr = gi.trace(start, NULL, NULL, end, self, MASK_SHOT);
+    // Lazarus: Original code can foul up if parasite is near and facing a solid.
+    // "start" may be embedded in the solid, since it is outside the parasite's
+    // bbox. In this case cable will appear to go through a solid.
+    //    tr = gi.trace (start, NULL, NULL, end, self, MASK_SHOT);
+    VectorCopy (self->s.origin,offset);
+    offset[2] += 6;
+    tr = gi.trace (offset, NULL, NULL, end, self, MASK_SHOT);
+    // end Lazarus fix
 
 	if (tr.ent != self->enemy)
 	{
@@ -664,6 +671,14 @@ parasite_dead(edict_t *self)
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
 	gi.linkentity(self);
+    M_FlyCheck (self);
+    
+    // Lazarus monster fade
+    if(world->effects & FX_WORLDSPAWN_CORPSEFADE)
+    {
+        self->think=FadeDieSink;
+        self->nextthink=level.time+corpse_fadetime->value;
+    }
 }
 
 mframe_t parasite_frames_death[] = {
@@ -691,8 +706,9 @@ parasite_die(edict_t *self, edict_t *inflictor /* unused */,
 {
 	int n;
 
+    self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
 	/* check for gib */
-	if (self->health <= self->gib_health)
+    if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
 
@@ -726,6 +742,24 @@ parasite_die(edict_t *self, edict_t *inflictor /* unused */,
 	self->monsterinfo.currentmove = &parasite_move_death;
 }
 
+mframe_t parasite_frames_jump [] =
+{
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL,
+    ai_move, 0, NULL
+};
+mmove_t parasite_move_jump = { FRAME_run01, FRAME_run08, parasite_frames_jump, parasite_run };
+
+void parasite_jump (edict_t *self)
+{
+    self->monsterinfo.currentmove = &parasite_move_jump;
+}
+
 /*
  * QUAKED monster_parasite (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
  */
@@ -742,6 +776,7 @@ SP_monster_parasite(edict_t *self)
 		G_FreeEdict(self);
 		return;
 	}
+    self->class_id = ENTITY_MONSTER_PARASITE;
 
 	sound_pain1 = gi.soundindex("parasite/parpain1.wav");
 	sound_pain2 = gi.soundindex("parasite/parpain2.wav");
@@ -755,15 +790,26 @@ SP_monster_parasite(edict_t *self)
 	sound_scratch = gi.soundindex("parasite/paridle2.wav");
 	sound_search = gi.soundindex("parasite/parsrch1.wav");
 
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/parasite/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/parasite/tris.md2");
 	VectorSet(self->mins, -16, -16, -24);
 	VectorSet(self->maxs, 16, 16, 24);
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
-	self->health = 175;
-	self->gib_health = -50;
-	self->mass = 250;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 175;
+    if(!self->gib_health)
+        self->gib_health = -50;
+    if(!self->mass)
+        self->mass = 250;
 
 	self->pain = parasite_pain;
 	self->die = parasite_die;
@@ -775,9 +821,30 @@ SP_monster_parasite(edict_t *self)
 	self->monsterinfo.sight = parasite_sight;
 	self->monsterinfo.idle = parasite_idle;
 
-	gi.linkentity(self);
+    // Lazarus
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    if(!self->monsterinfo.flies)
+        self->monsterinfo.flies = 0.35;
+    if(monsterjump->value)
+    {
+        self->monsterinfo.jump = parasite_jump;
+        self->monsterinfo.jumpup = 32;
+        self->monsterinfo.jumpdn = 160;
+    }
+    
+    gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &parasite_move_stand;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&parasite_move_death,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
+    self->common_name = "Parasite";
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);

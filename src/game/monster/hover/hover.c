@@ -574,6 +574,15 @@ hover_fire_blaster(edict_t *self)
 
 	VectorCopy(self->enemy->s.origin, end);
 	end[2] += self->enemy->viewheight;
+
+    // Lazarus fog reduction of accuracy
+    if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+    {
+        end[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        end[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        end[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+    }
+    
 	VectorSubtract(end, start, dir);
 
 	monster_fire_blaster(self, start, dir, 1, 1000, MZ2_HOVER_BLASTER_1, effect);
@@ -652,7 +661,7 @@ hover_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -734,7 +743,7 @@ hover_die(edict_t *self, edict_t *inflictor /* unused */,
 	}
 
 	/* check for gib */
-	if (self->health <= self->gib_health)
+    if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex(
 						"misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -799,6 +808,7 @@ SP_monster_hover(edict_t *self)
 		G_FreeEdict(self);
 		return;
 	}
+    self->class_id = ENTITY_MONSTER_HOVER;
 
 	sound_pain1 = gi.soundindex("hover/hovpain1.wav");
 	sound_pain2 = gi.soundindex("hover/hovpain2.wav");
@@ -814,13 +824,25 @@ SP_monster_hover(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
+
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/hover/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/hover/tris.md2");
 	VectorSet(self->mins, -24, -24, -24);
 	VectorSet(self->maxs, 24, 24, 32);
 
-	self->health = 240;
-	self->gib_health = -100;
-	self->mass = 150;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 240;
+    if(!self->gib_health)
+        self->gib_health = -100;
+    if(!self->mass)
+        self->mass = 150;
 
 	self->pain = hover_pain;
 	self->die = hover_die;
@@ -832,9 +854,22 @@ SP_monster_hover(edict_t *self)
 	self->monsterinfo.sight = hover_sight;
 	self->monsterinfo.search = hover_search;
 
+    // Lazarus
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    
 	gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &hover_move_stand;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&hover_move_death1,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
+    self->common_name = "Icarus";
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	flymonster_start(self);

@@ -592,7 +592,7 @@ supertank_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+        self->s.skinnum |= 1;
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -651,6 +651,12 @@ supertankRocket(edict_t *self)
 	vec3_t dir;
 	vec3_t vec;
 	int flash_number;
+    int        rocketSpeed;
+    
+    if((self->spawnflags & SF_MONSTER_SPECIAL))
+        rocketSpeed = 400; // DWH: Homing rockets are tougher if slow
+    else
+        rocketSpeed = 500 + (100 * skill->value);    // PGM rock & roll.... :)
 
 	if (!self)
 	{
@@ -676,10 +682,20 @@ supertankRocket(edict_t *self)
 
 	VectorCopy(self->enemy->s.origin, vec);
 	vec[2] += self->enemy->viewheight;
+
+    // Lazarus fog reduction of accuracy
+    if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+    {
+        vec[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        vec[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        vec[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+    }
+    
 	VectorSubtract(vec, start, dir);
 	VectorNormalize(dir);
 
-	monster_fire_rocket(self, start, dir, 50, 500, flash_number, (self->spawnflags & SF_MONSTER_SPECIAL ? self->enemy : NULL));
+    monster_fire_rocket (self, start, dir, 50, rocketSpeed, flash_number,
+                         (self->spawnflags & SF_MONSTER_SPECIAL ? self->enemy : NULL) );
 }
 
 void
@@ -711,6 +727,15 @@ supertankMachineGun(edict_t *self)
 		VectorCopy(self->enemy->s.origin, vec);
 		VectorMA(vec, 0, self->enemy->velocity, vec);
 		vec[2] += self->enemy->viewheight;
+
+        // Lazarus fog reduction of accuracy
+        if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+        {
+            vec[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+            vec[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+            vec[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        }
+        
 		VectorSubtract(vec, start, forward);
 		VectorNormalize(forward);
 	}
@@ -845,6 +870,9 @@ BossExplode(edict_t *self)
 	gi.WritePosition(org);
 	gi.multicast(self->s.origin, MULTICAST_PVS);
 
+    if (level.num_reflectors)
+        ReflectExplosion (TE_EXPLOSION1, self->s.origin);
+    
 	self->nextthink = level.time + 0.1;
 }
 
@@ -858,6 +886,7 @@ supertank_die(edict_t *self, edict_t *inflictor /* unused */,
 		return;
 	}
 
+    self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
@@ -881,6 +910,14 @@ SP_monster_supertank(edict_t *self)
 		G_FreeEdict(self);
 		return;
 	}
+    self->class_id = ENTITY_MONSTER_SUPERTANK;
+    
+    // Lazarus: special purpose skins
+    if ( (self->spawnflags & SF_MONSTER_SPECIAL) && self->style )
+    {
+        PatchMonsterModel("models/monsters/boss1/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
 
 	sound_pain1 = gi.soundindex("bosstank/btkpain1.wav");
 	sound_pain2 = gi.soundindex("bosstank/btkpain2.wav");
@@ -893,13 +930,25 @@ SP_monster_supertank(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
+
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/boss1/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/boss1/tris.md2");
 	VectorSet(self->mins, -64, -64, 0);
 	VectorSet(self->maxs, 64, 64, 112);
 
-	self->health = 1500;
-	self->gib_health = -500;
-	self->mass = 800;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 1500;
+    if(!self->gib_health)
+        self->gib_health = -500;
+    if(!self->mass)
+        self->mass = 800;
 
 	self->pain = supertank_pain;
 	self->die = supertank_die;
@@ -912,9 +961,23 @@ SP_monster_supertank(edict_t *self)
 	self->monsterinfo.melee = NULL;
 	self->monsterinfo.sight = NULL;
 
+    // Lazarus
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    
 	gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &supertank_move_stand;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&supertank_move_death,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
+    self->common_name = "Supertank";
+    
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);

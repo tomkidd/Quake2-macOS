@@ -13,6 +13,9 @@
 		A1323A1F21CC8FB000E20D6D /* glimp_sdl.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A1721CC8FB000E20D6D /* glimp_sdl.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A1323A2021CC8FB000E20D6D /* vid.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A1821CC8FB000E20D6D /* vid.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A1323A2421CC8FF700E20D6D /* miniz.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A2121CC8FF700E20D6D /* miniz.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		A14C3A1F22C40618001F604A /* actor.c in Sources */ = {isa = PBXBuildFile; fileRef = A14C3A1C22C40618001F604A /* actor.c */; };
+		A14C3A2022C40618001F604A /* actor_weap.c in Sources */ = {isa = PBXBuildFile; fileRef = A14C3A1D22C40618001F604A /* actor_weap.c */; };
+		A14C3A2122C40618001F604A /* actor.h in Headers */ = {isa = PBXBuildFile; fileRef = A14C3A1E22C40618001F604A /* actor.h */; };
 		A15FA367211114990048A3AD /* g_ai.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1AE2110C5BC0048A3AD /* g_ai.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA368211114990048A3AD /* g_chase.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1AA2110C5BC0048A3AD /* g_chase.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA369211114990048A3AD /* g_cmds.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1B42110C5BC0048A3AD /* g_cmds.c */; settings = {COMPILER_FLAGS = "-w"; }; };
@@ -255,6 +258,9 @@
 		A1323A2121CC8FF700E20D6D /* miniz.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = miniz.c; sourceTree = "<group>"; };
 		A1323A2221CC8FF700E20D6D /* minizconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = minizconf.h; sourceTree = "<group>"; };
 		A1323A2321CC8FF700E20D6D /* miniz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = miniz.h; sourceTree = "<group>"; };
+		A14C3A1C22C40618001F604A /* actor.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = actor.c; sourceTree = "<group>"; };
+		A14C3A1D22C40618001F604A /* actor_weap.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = actor_weap.c; sourceTree = "<group>"; };
+		A14C3A1E22C40618001F604A /* actor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = actor.h; sourceTree = "<group>"; };
 		A15FA1742110C5BB0048A3AD /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		A15FA1752110C5BB0048A3AD /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		A15FA1772110C5BC0048A3AD /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -639,6 +645,16 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		A14C3A1B22C40618001F604A /* actor */ = {
+			isa = PBXGroup;
+			children = (
+				A14C3A1C22C40618001F604A /* actor.c */,
+				A14C3A1D22C40618001F604A /* actor_weap.c */,
+				A14C3A1E22C40618001F604A /* actor.h */,
+			);
+			path = actor;
+			sourceTree = "<group>";
+		};
 		A15FA1782110C5BC0048A3AD /* src */ = {
 			isa = PBXGroup;
 			children = (
@@ -799,6 +815,7 @@
 		A15FA1C52110C5BC0048A3AD /* monster */ = {
 			isa = PBXGroup;
 			children = (
+				A14C3A1B22C40618001F604A /* actor */,
 				A15FA1FC2110C5BC0048A3AD /* berserker */,
 				A15FA2022110C5BC0048A3AD /* boss2 */,
 				A15FA1F02110C5BC0048A3AD /* boss3 */,
@@ -1373,6 +1390,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A14C3A2122C40618001F604A /* actor.h in Headers */,
 				A1794F4422BF1EC200613FEE /* fmod.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1571,6 +1589,7 @@
 				A15FA370211114990048A3AD /* g_phys.c in Sources */,
 				A1794E9D22BF1D7B00613FEE /* g_lock.c in Sources */,
 				A15FA391211115D70048A3AD /* weapon.c in Sources */,
+				A14C3A1F22C40618001F604A /* actor.c in Sources */,
 				A1794E9722BF1CDE00613FEE /* g_crane.c in Sources */,
 				A15FA374211114990048A3AD /* g_trigger.c in Sources */,
 				A15FA393211115D70048A3AD /* hud.c in Sources */,
@@ -1612,6 +1631,7 @@
 				A15FA3862111156E0048A3AD /* float.c in Sources */,
 				A15FA36F211114990048A3AD /* g_monster.c in Sources */,
 				A15FA375211114990048A3AD /* g_turret.c in Sources */,
+				A14C3A2022C40618001F604A /* actor_weap.c in Sources */,
 				A15FA372211114990048A3AD /* g_svcmds.c in Sources */,
 				A15FA36D211114990048A3AD /* g_main.c in Sources */,
 				A1794F4222BF1E6B00613FEE /* g_save.c in Sources */,

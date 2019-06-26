@@ -54,7 +54,8 @@ floater_idle(edict_t *self)
 		return;
 	}
 
-	gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+    if(!(self->spawnflags & SF_MONSTER_AMBUSH))
+        gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 void floater_dead(edict_t *self);
@@ -88,6 +89,15 @@ floater_fire_blaster(edict_t *self)
 	}
 
 	AngleVectors(self->s.angles, forward, right, NULL);
+
+    // Lazarus fog reduction of accuracy
+    if(self->monsterinfo.visibility < FOG_CANSEEGOOD)
+    {
+        end[0] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        end[1] += crandom() * 640 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+        end[2] += crandom() * 320 * (FOG_CANSEEGOOD - self->monsterinfo.visibility);
+    }
+    
 	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_FLOAT_BLASTER_1],
 			forward, right, start);
 
@@ -712,7 +722,7 @@ floater_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -786,6 +796,7 @@ SP_monster_floater(edict_t *self)
 		G_FreeEdict(self);
 		return;
 	}
+    self->class_id = ENTITY_MONSTER_FLOATER;
 
 	sound_attack2 = gi.soundindex("floater/fltatck2.wav");
 	sound_attack3 = gi.soundindex("floater/fltatck3.wav");
@@ -801,13 +812,25 @@ SP_monster_floater(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
+
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/float/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/float/tris.md2");
 	VectorSet(self->mins, -24, -24, -24);
 	VectorSet(self->maxs, 24, 24, 32);
 
-	self->health = 200;
-	self->gib_health = -80;
-	self->mass = 300;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 200;
+    if(!self->gib_health)
+        self->gib_health = -80;
+    if(!self->mass)
+        self->mass = 300;
 
 	self->pain = floater_pain;
 	self->die = floater_die;
@@ -820,16 +843,33 @@ SP_monster_floater(edict_t *self)
 	self->monsterinfo.sight = floater_sight;
 	self->monsterinfo.idle = floater_idle;
 
+    // Lazarus
+    if(self->powerarmor) {
+        self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
+        self->monsterinfo.power_armor_power = self->powerarmor;
+    }
+    self->common_name = "Technician";
+    
 	gi.linkentity(self);
 
-	if (random() <= 0.5)
-	{
-		self->monsterinfo.currentmove = &floater_move_stand1;
-	}
-	else
-	{
-		self->monsterinfo.currentmove = &floater_move_stand2;
-	}
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&floater_move_death,
+            NULL};
+        if(!M_SetDeath(self,(mmove_t **)&deathmoves))
+            self->monsterinfo.currentmove = &floater_move_stand1;
+    }
+    else
+    {
+        if (random() <= 0.5)
+        {
+            self->monsterinfo.currentmove = &floater_move_stand1;
+        }
+        else
+        {
+            self->monsterinfo.currentmove = &floater_move_stand2;
+        }
+    }
 
 	self->monsterinfo.scale = MODEL_SCALE;
 

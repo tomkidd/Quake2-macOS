@@ -324,7 +324,7 @@ flipper_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->health < (self->max_health / 2))
 	{
-		self->s.skinnum = 1;
+		self->s.skinnum |= 1;
 	}
 
 	if (level.time < self->pain_debounce_time)
@@ -361,12 +361,20 @@ flipper_dead(edict_t *self)
 		return;
 	}
 
-	VectorSet(self->mins, -16, -16, -24);
-	VectorSet(self->maxs, 16, 16, -8);
+//    VectorSet(self->mins, -16, -16, -24);
+//    VectorSet(self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
 	gi.linkentity(self);
+    M_FlyCheck (self);
+    
+    // Lazarus monster fade
+    if(world->effects & FX_WORLDSPAWN_CORPSEFADE)
+    {
+        self->think=FadeDieSink;
+        self->nextthink=level.time+corpse_fadetime->value;
+    }
 }
 
 mframe_t flipper_frames_death[] = {
@@ -464,7 +472,7 @@ flipper_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /*
 	}
 
 	/* check for gib */
-	if (self->health <= self->gib_health)
+    if (self->health <= self->gib_health && !(self->spawnflags & SF_MONSTER_NOGIB))
 	{
 		gi.sound(self, CHAN_VOICE, gi.soundindex( "misc/udeath.wav"), 1, ATTN_NORM, 0);
 
@@ -514,6 +522,8 @@ SP_monster_flipper(edict_t *self)
 		G_FreeEdict(self);
 		return;
 	}
+    self->class_id = ENTITY_MONSTER_FLIPPER;
+    self->spawnflags |= SF_MONSTER_KNOWS_MIRRORS;
 
 	sound_pain1 = gi.soundindex("flipper/flppain1.wav");
 	sound_pain2 = gi.soundindex("flipper/flppain2.wav");
@@ -526,13 +536,25 @@ SP_monster_flipper(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
+
+    // Lazarus: special purpose skins
+    if ( self->style )
+    {
+        PatchMonsterModel("models/monsters/flipper/tris.md2");
+        self->s.skinnum = self->style * 2;
+    }
+    
 	self->s.modelindex = gi.modelindex("models/monsters/flipper/tris.md2");
 	VectorSet(self->mins, -16, -16, 0);
 	VectorSet(self->maxs, 16, 16, 32);
 
-	self->health = 50;
-	self->gib_health = -30;
-	self->mass = 100;
+    // Lazarus: mapper-configurable health
+    if(!self->health)
+        self->health = 50;
+    if(!self->gib_health)
+        self->gib_health = -30;
+    if(!self->mass)
+        self->mass = 100;
 
 	self->pain = flipper_pain;
 	self->die = flipper_die;
@@ -546,6 +568,16 @@ SP_monster_flipper(edict_t *self)
 	gi.linkentity(self);
 
 	self->monsterinfo.currentmove = &flipper_move_stand;
+    if(!self->monsterinfo.flies)
+        self->monsterinfo.flies = 0.90;
+    if(self->health < 0)
+    {
+        mmove_t    *deathmoves[] = {&flipper_move_death,
+            NULL};
+        M_SetDeath(self,(mmove_t **)&deathmoves);
+    }
+    self->common_name = "Barracuda Shark";
+    
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	swimmonster_start(self);
