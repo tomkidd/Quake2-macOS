@@ -16,6 +16,9 @@
 		A14C3A1F22C40618001F604A /* actor.c in Sources */ = {isa = PBXBuildFile; fileRef = A14C3A1C22C40618001F604A /* actor.c */; };
 		A14C3A2022C40618001F604A /* actor_weap.c in Sources */ = {isa = PBXBuildFile; fileRef = A14C3A1D22C40618001F604A /* actor_weap.c */; };
 		A14C3A2122C40618001F604A /* actor.h in Headers */ = {isa = PBXBuildFile; fileRef = A14C3A1E22C40618001F604A /* actor.h */; };
+		A14C3A2722C41DBD001F604A /* menu.c in Sources */ = {isa = PBXBuildFile; fileRef = A14C3A2522C41DBD001F604A /* menu.c */; };
+		A14C3A2822C41DBD001F604A /* chase.c in Sources */ = {isa = PBXBuildFile; fileRef = A14C3A2622C41DBD001F604A /* chase.c */; };
+		A14C3A2A22C41FC2001F604A /* text.c in Sources */ = {isa = PBXBuildFile; fileRef = A14C3A2922C41FC1001F604A /* text.c */; };
 		A15FA367211114990048A3AD /* g_ai.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1AE2110C5BC0048A3AD /* g_ai.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA368211114990048A3AD /* g_chase.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1AA2110C5BC0048A3AD /* g_chase.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA369211114990048A3AD /* g_cmds.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1B42110C5BC0048A3AD /* g_cmds.c */; settings = {COMPILER_FLAGS = "-w"; }; };
@@ -261,6 +264,10 @@
 		A14C3A1C22C40618001F604A /* actor.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = actor.c; sourceTree = "<group>"; };
 		A14C3A1D22C40618001F604A /* actor_weap.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = actor_weap.c; sourceTree = "<group>"; };
 		A14C3A1E22C40618001F604A /* actor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = actor.h; sourceTree = "<group>"; };
+		A14C3A2222C41D24001F604A /* majbitch.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = majbitch.c; sourceTree = "<group>"; };
+		A14C3A2522C41DBD001F604A /* menu.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = menu.c; sourceTree = "<group>"; };
+		A14C3A2622C41DBD001F604A /* chase.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = chase.c; sourceTree = "<group>"; };
+		A14C3A2922C41FC1001F604A /* text.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = text.c; sourceTree = "<group>"; };
 		A15FA1742110C5BB0048A3AD /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		A15FA1752110C5BB0048A3AD /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		A15FA1772110C5BC0048A3AD /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -769,6 +776,7 @@
 				A15FA1B22110C5BC0048A3AD /* g_weapon.c */,
 				A1794F4922BF1FD700613FEE /* g_wes.c */,
 				A15FA1C12110C5BC0048A3AD /* header */,
+				A14C3A2222C41D24001F604A /* majbitch.c */,
 				A15FA1C52110C5BC0048A3AD /* monster */,
 				A15FA2062110C5BC0048A3AD /* player */,
 				A15FA1B72110C5BC0048A3AD /* savegame */,
@@ -1026,8 +1034,11 @@
 		A15FA2062110C5BC0048A3AD /* player */ = {
 			isa = PBXGroup;
 			children = (
+				A14C3A2922C41FC1001F604A /* text.c */,
+				A14C3A2622C41DBD001F604A /* chase.c */,
 				A15FA2092110C5BC0048A3AD /* client.c */,
 				A15FA20A2110C5BC0048A3AD /* hud.c */,
+				A14C3A2522C41DBD001F604A /* menu.c */,
 				A15FA2072110C5BC0048A3AD /* trail.c */,
 				A15FA20B2110C5BC0048A3AD /* view.c */,
 				A15FA2082110C5BC0048A3AD /* weapon.c */,
@@ -1594,6 +1605,7 @@
 				A15FA374211114990048A3AD /* g_trigger.c in Sources */,
 				A15FA393211115D70048A3AD /* hud.c in Sources */,
 				A15FA37D211115420048A3AD /* tank.c in Sources */,
+				A14C3A2722C41DBD001F604A /* menu.c in Sources */,
 				A15FA38C211115940048A3AD /* flyer.c in Sources */,
 				A15FA367211114990048A3AD /* g_ai.c in Sources */,
 				A15FA395211116F00048A3AD /* savegame.c in Sources */,
@@ -1613,11 +1625,13 @@
 				A15FA389211115830048A3AD /* boss31.c in Sources */,
 				A15FA38D211115AD0048A3AD /* berserker.c in Sources */,
 				A15FA36E211114990048A3AD /* g_misc.c in Sources */,
+				A14C3A2A22C41FC2001F604A /* text.c in Sources */,
 				A15FA397211117BE0048A3AD /* rand.c in Sources */,
 				A1794E9922BF1D3300613FEE /* g_jetpack.c in Sources */,
 				A1794F4022BF1E6B00613FEE /* g_reflect.c in Sources */,
 				A15FA369211114990048A3AD /* g_cmds.c in Sources */,
 				A15FA36C211114990048A3AD /* g_items.c in Sources */,
+				A14C3A2822C41DBD001F604A /* chase.c in Sources */,
 				A15FA392211115D70048A3AD /* client.c in Sources */,
 				A15FA390211115D70048A3AD /* trail.c in Sources */,
 				A15FA38F211115BC0048A3AD /* boss2.c in Sources */,
