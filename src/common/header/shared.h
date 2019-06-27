@@ -102,6 +102,7 @@ typedef unsigned char byte;
 #define MAX_CLIENTS 256             /* absolute limit */
 #define MAX_EDICTS 1024             /* must change protocol to increase more */
 #define MAX_LIGHTSTYLES 256
+
 #ifdef Q2MP4_ENGINE_MOD        //Knightmare- Ding-Dong, Index: Overflow is dead!
 #define    MAX_MODELS            8192    // these are sent over the net as shorts
 #define    MAX_SOUNDS            8192    // so they cannot be blindly increased
@@ -109,6 +110,7 @@ typedef unsigned char byte;
 #define MAX_MODELS 256              /* these are sent over the net as bytes */
 #define MAX_SOUNDS 256              /* so they cannot be blindly increased */
 #endif
+
 #define MAX_IMAGES 256
 #define MAX_ITEMS 256
 #define MAX_GENERAL (MAX_CLIENTS * 2)       /* general config strings */
@@ -1191,6 +1193,32 @@ typedef struct
 
 size_t verify_fread(void *, size_t, size_t, FILE *);
 size_t verify_fwrite(void *, size_t, size_t, FILE *);
+
+// was this moved to files.h for a reason? -tkidd
+typedef struct
+{
+    int        ident;
+    int        version;
+    
+    int        skinwidth;
+    int        skinheight;
+    int        framesize;    // byte size of each frame
+    
+    int        num_skins;
+    int        num_xyz;
+    int        num_st;        // greater than num_xyz for seams
+    int        num_tris;
+    int        num_glcmds;    // dwords in strip/fan command list
+    int        num_frames;
+    
+    int        ofs_skins;    // each skin is a MAX_SKINNAME string
+    int        ofs_st;        // byte offset from start for stverts
+    int        ofs_tris;    // offset for dtriangles
+    int        ofs_frames;    // offset for first frame
+    int        ofs_glcmds;
+    int        ofs_end;    // end of file
+    
+} dmdl_t;
 
 
 typedef enum

@@ -53,7 +53,12 @@ P_ProjectSource(gclient_t *client, vec3_t point, vec3_t distance,
 
 	VectorCopy(distance, _distance);
 
-	if (client->pers.hand == LEFT_HANDED)
+    // DWH
+    if (client->zoomed)
+        _distance[2] += 8;
+    // end DWH
+
+    if (client->pers.hand == LEFT_HANDED)
 	{
 		_distance[1] *= -1;
 	}
@@ -101,11 +106,23 @@ PlayerNoise(edict_t *who, vec3_t where, int type)
 	{
 		return;
 	}
+    
+    if (who->flags & FL_DISGUISED)
+    {
+        if (type == PNOISE_WEAPON)
+        {
+            level.disguise_violator = who;
+            level.disguise_violation_framenum = level.framenum + 5;
+        }
+        else
+            return;
+    }
 
 	if (!who->mynoise)
 	{
 		noise = G_Spawn();
 		noise->classname = "player_noise";
+        noise->class_id = ENTITY_PLAYER_NOISE;
 		VectorSet(noise->mins, -8, -8, -8);
 		VectorSet(noise->maxs, 8, 8, 8);
 		noise->owner = who;
@@ -114,6 +131,7 @@ PlayerNoise(edict_t *who, vec3_t where, int type)
 
 		noise = G_Spawn();
 		noise->classname = "player_noise";
+        noise->class_id = ENTITY_PLAYER_NOISE;
 		VectorSet(noise->mins, -8, -8, -8);
 		VectorSet(noise->maxs, 8, 8, 8);
 		noise->owner = who;
@@ -170,14 +188,18 @@ Pickup_Weapon(edict_t *ent, edict_t *other)
 		/* give them some ammo with it */
 		ammo = FindItem(ent->item->ammo);
 
-		if ((int)dmflags->value & DF_INFINITE_AMMO)
-		{
-			Add_Ammo(other, ammo, 1000);
-		}
-		else
-		{
-			Add_Ammo(other, ammo, ammo->quantity);
-		}
+        // Lazarus: blaster doesn't use ammo
+        if (ent->item->ammo)
+        {
+            if ((int)dmflags->value & DF_INFINITE_AMMO)
+            {
+                Add_Ammo(other, ammo, 1000);
+            }
+            else
+            {
+                Add_Ammo(other, ammo, ammo->quantity);
+            }
+        }
 
 		if (!(ent->spawnflags & DROPPED_PLAYER_ITEM))
 		{
@@ -202,11 +224,15 @@ Pickup_Weapon(edict_t *ent, edict_t *other)
 
 	if ((other->client->pers.weapon != ent->item) &&
 		(other->client->pers.inventory[index] == 1) &&
-		(!deathmatch->value ||
-		 (other->client->pers.weapon == FindItem("blaster"))))
+        ( !deathmatch->value || other->client->pers.weapon == FindItem("blaster") ||
+         other->client->pers.weapon == FindItem("No weapon") ) )
 	{
 		other->client->newweapon = ent->item;
 	}
+
+    // If rocket launcher, give the HML (but no ammo).
+    if (index == rl_index)
+        other->client->pers.inventory[hml_index] = other->client->pers.inventory[index];
 
 	return true;
 }
@@ -239,7 +265,7 @@ ChangeWeapon(edict_t *ent)
 	ent->client->machinegun_shots = 0;
 
 	/* set visible model */
-	if (ent->s.modelindex == 255)
+    if (ent->s.modelindex == MAX_MODELS-1)
 	{
 		if (ent->client->pers.weapon)
 		{
@@ -269,15 +295,23 @@ ChangeWeapon(edict_t *ent)
 		ent->client->ps.gunindex = 0;
 		return;
 	}
-
-	ent->client->weaponstate = WEAPON_ACTIVATING;
-	ent->client->ps.gunframe = 0;
-	ent->client->ps.gunindex = gi.modelindex(
-			ent->client->pers.weapon->view_model);
-
-	ent->client->anim_priority = ANIM_PAIN;
-
-	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
+    
+    ent->client->weaponstate = WEAPON_ACTIVATING;
+    ent->client->ps.gunframe = 0;
+    
+    // DWH: Don't display weapon if in 3rd person
+    if(!ent->client->chasetoggle)
+        ent->client->ps.gunindex = gi.modelindex(ent->client->pers.weapon->view_model);
+    
+    ent->client->anim_priority = ANIM_PAIN;
+ 
+    // DWH: change weapon model index if necessary
+    if(ITEM_INDEX(ent->client->pers.weapon) == noweapon_index)
+        ent->s.modelindex2 = 0;
+    else
+        ent->s.modelindex2 = MAX_MODELS-1;
+    
+    if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
 	{
 		ent->s.frame = FRAME_crpain1;
 		ent->client->anim_end = FRAME_crpain4;
@@ -292,49 +326,54 @@ ChangeWeapon(edict_t *ent)
 void
 NoAmmoWeaponChange(edict_t *ent)
 {
-	if (ent->client->pers.inventory[ITEM_INDEX(FindItem("slugs"))] &&
+    if ( ent->client->pers.inventory[slugs_index] &&
 		ent->client->pers.inventory[ITEM_INDEX(FindItem("railgun"))])
 	{
 		ent->client->newweapon = FindItem("railgun");
 		return;
 	}
 
-	if (ent->client->pers.inventory[ITEM_INDEX(FindItem("cells"))] &&
+    if ( ent->client->pers.inventory[cells_index] &&
 		ent->client->pers.inventory[ITEM_INDEX(FindItem("hyperblaster"))])
 	{
 		ent->client->newweapon = FindItem("hyperblaster");
 		return;
 	}
 
-	if (ent->client->pers.inventory[ITEM_INDEX(FindItem("bullets"))] &&
+    if ( ent->client->pers.inventory[bullets_index] &&
 		ent->client->pers.inventory[ITEM_INDEX(FindItem("chaingun"))])
 	{
 		ent->client->newweapon = FindItem("chaingun");
 		return;
 	}
 
-	if (ent->client->pers.inventory[ITEM_INDEX(FindItem("bullets"))] &&
+    if ( ent->client->pers.inventory[bullets_index] &&
 		ent->client->pers.inventory[ITEM_INDEX(FindItem("machinegun"))])
 	{
 		ent->client->newweapon = FindItem("machinegun");
 		return;
 	}
 
-	if ((ent->client->pers.inventory[ITEM_INDEX(FindItem("shells"))] > 1) &&
+    if ( ent->client->pers.inventory[shells_index] > 1 &&
 		ent->client->pers.inventory[ITEM_INDEX(FindItem("super shotgun"))])
 	{
 		ent->client->newweapon = FindItem("super shotgun");
 		return;
 	}
 
-	if (ent->client->pers.inventory[ITEM_INDEX(FindItem("shells"))] &&
+    if ( ent->client->pers.inventory[shells_index] &&
 		ent->client->pers.inventory[ITEM_INDEX(FindItem("shotgun"))])
 	{
 		ent->client->newweapon = FindItem("shotgun");
 		return;
 	}
 
-	ent->client->newweapon = FindItem("blaster");
+    // DWH: Dude may not HAVE a blaster
+    //ent->client->newweapon = FindItem ("blaster");
+    if ( ent->client->pers.inventory[ITEM_INDEX(FindItem("blaster"))] )
+        ent->client->newweapon = FindItem("blaster");
+    else
+        ent->client->newweapon = FindItem ("No Weapon");
 }
 
 /*
@@ -355,6 +394,20 @@ Think_Weapon(edict_t *ent)
 		ChangeWeapon(ent);
 	}
 
+    // Lazarus: Don't fire if game is frozen
+    if (level.freeze)
+        return;
+    
+    if (ent->flags & FL_TURRET_OWNER)
+    {
+        if ( ((ent->client->latched_buttons|ent->client->buttons) & BUTTONS_ATTACK) )
+        {
+            ent->client->latched_buttons &= ~BUTTONS_ATTACK;
+            turret_breach_fire(ent->turret);
+        }
+        return;
+    }
+    
 	/* call active weapon think routine */
 	if (ent->client->pers.weapon && ent->client->pers.weapon->weaponthink)
 	{
@@ -377,22 +430,54 @@ Think_Weapon(edict_t *ent)
  * Make the weapon ready if there is ammo
  */
 void
-Use_Weapon(edict_t *ent, gitem_t *item)
+Use_Weapon (edict_t *ent, gitem_t *in_item)
 {
 	int ammo_index;
 	gitem_t *ammo_item;
+    int            index;
+    gitem_t        *item;
+    int            current_weapon_index;
 
 	if (!ent || !item)
 	{
 		return;
 	}
 
+    item  = in_item;
+    index = ITEM_INDEX(item);
+    current_weapon_index = ITEM_INDEX(ent->client->pers.weapon);
+    
 	/* see if we're already using it */
-	if (item == ent->client->pers.weapon)
-	{
-		return;
-	}
-
+    if ( (index == current_weapon_index) ||
+        ( (index == rl_index)  && (current_weapon_index == hml_index) ) ||
+        ( (index == hml_index) && (current_weapon_index == rl_index)  )    )
+    {
+        if(current_weapon_index == rl_index)
+        {
+            if(ent->client->pers.inventory[homing_index] > 0)
+            {
+                item = FindItem("homing missile launcher");
+                index = hml_index;
+            }
+            else
+            {
+                return;
+            }
+        }
+        else if(current_weapon_index == hml_index)
+        {
+            if(ent->client->pers.inventory[rockets_index] > 0)
+            {
+                item = FindItem("rocket launcher");
+                index = rl_index;
+            }
+            else
+                return;
+        }
+        else
+            return;
+    }
+    
 	if (item->ammo && !g_select_empty->value && !(item->flags & IT_AMMO))
 	{
 		ammo_item = FindItem(item->ammo);
@@ -400,6 +485,17 @@ Use_Weapon(edict_t *ent, gitem_t *item)
 
 		if (!ent->client->pers.inventory[ammo_index])
 		{
+            // Lazarus: If player is attempting to switch to RL and doesn't have rockets,
+            //          but DOES have homing missiles, switch to HML
+            if(index == rl_index)
+            {
+                if( (ent->client->pers.inventory[homing_index] > 0) &&
+                   (ent->client->pers.inventory[hml_index]    > 0)    )
+                {
+                    ent->client->newweapon = FindItem("homing missile launcher");
+                    return;
+                }
+            }
 			gi.cprintf(ent, PRINT_HIGH, "No %s for %s.\n",
 					ammo_item->pickup_name, item->pickup_name);
 			return;
@@ -443,8 +539,24 @@ Drop_Weapon(edict_t *ent, gitem_t *item)
 		return;
 	}
 
+    // Lazarus: Don't drop rocket launcher if current weapon is homing missile launcher
+    if (index == rl_index)
+    {
+        int    current_weapon_index;
+        current_weapon_index = ITEM_INDEX(ent->client->pers.weapon);
+        if(current_weapon_index == hml_index)
+        {
+            gi.cprintf (ent, PRINT_HIGH, "Can't drop current weapon\n");
+            return;
+        }
+    }
+    
 	Drop_Item(ent, item);
 	ent->client->pers.inventory[index]--;
+
+    // Lazarus: if dropped weapon is RL, decrement HML inventory also
+    if (item->weapmodel == WEAP_ROCKETLAUNCHER)
+        ent->client->pers.inventory[hml_index] = ent->client->pers.inventory[index];
 }
 
 /*
@@ -463,7 +575,7 @@ Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST,
 		return;
 	}
 
-	if (ent->deadflag || (ent->s.modelindex != 255)) /* VWep animations screw up corpses */
+	if (ent->deadflag || (ent->s.modelindex != MAX_MODELS-1)) /* VWep animations screw up corpses */
 	{
 		return;
 	}
@@ -534,11 +646,21 @@ Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST,
 
 	if (ent->client->weaponstate == WEAPON_READY)
 	{
-		if (((ent->client->latched_buttons |
-			  ent->client->buttons) & BUTTON_ATTACK))
-		{
-			ent->client->latched_buttons &= ~BUTTON_ATTACK;
-
+        // Lazarus: Head off firing 2nd homer NOW, so firing animations aren't played
+        if ( ((ent->client->latched_buttons|ent->client->buttons) & BUTTONS_ATTACK) )
+        {
+            if(ent->client->ammo_index == homing_index)
+            {
+                if(ent->client->homing_rocket && ent->client->homing_rocket->inuse)
+                {
+                    ent->client->latched_buttons &= ~BUTTONS_ATTACK;
+                    ent->client->buttons &= ~BUTTONS_ATTACK;
+                }
+            }
+        }
+        
+        if ( ((ent->client->latched_buttons|ent->client->buttons) & BUTTONS_ATTACK) )
+        {
 			if ((!ent->client->ammo_index) ||
 				(ent->client->pers.inventory[ent->client->ammo_index] >=
 				 ent->client->pers.weapon->quantity))
@@ -571,6 +693,7 @@ Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST,
 
 				NoAmmoWeaponChange(ent);
 			}
+            ent->client->latched_buttons &= ~BUTTONS_ATTACK;
 		}
 		else
 		{
@@ -671,7 +794,7 @@ weapon_grenade_fire(edict_t *ent, qboolean held)
 
 	ent->client->grenade_time = level.time + 1.0;
 
-	if (ent->deadflag || (ent->s.modelindex != 255)) /* VWep animations screw up corpses */
+	if (ent->deadflag || (ent->s.modelindex != MAX_MODELS-1)) /* VWep animations screw up corpses */
 	{
 		return;
 	}
@@ -718,10 +841,9 @@ Weapon_Grenade(edict_t *ent)
 
 	if (ent->client->weaponstate == WEAPON_READY)
 	{
-		if (((ent->client->latched_buttons |
-			  ent->client->buttons) & BUTTON_ATTACK))
+        if ( ((ent->client->latched_buttons|ent->client->buttons) & BUTTONS_ATTACK) )
 		{
-			ent->client->latched_buttons &= ~BUTTON_ATTACK;
+            ent->client->latched_buttons &= ~BUTTONS_ATTACK;
 
 			if (ent->client->pers.inventory[ent->client->ammo_index])
 			{
@@ -789,7 +911,7 @@ Weapon_Grenade(edict_t *ent)
 				ent->client->grenade_blew_up = true;
 			}
 
-			if (ent->client->buttons & BUTTON_ATTACK)
+            if (ent->client->buttons & BUTTONS_ATTACK)
 			{
 				return;
 			}
@@ -1011,6 +1133,21 @@ Weapon_RocketLauncher(edict_t *ent)
 			fire_frames, Weapon_RocketLauncher_Fire);
 }
 
+void Weapon_HomingMissileLauncher_Fire (edict_t *ent)
+{
+    ent->client->pers.fire_mode = 1;
+    Weapon_RocketLauncher_Fire (ent);
+    ent->client->pers.fire_mode = 0;
+}
+
+void Weapon_HomingMissileLauncher (edict_t *ent)
+{
+    static int    pause_frames[]    = {25, 33, 42, 50, 0};
+    static int    fire_frames[]    = {5, 0};
+    
+    Weapon_Generic (ent, 4, 12, 50, 54, pause_frames, fire_frames, Weapon_HomingMissileLauncher_Fire);
+}
+
 /* ====================================================================== */
 
 /* BLASTER / HYPERBLASTER */
@@ -1114,7 +1251,7 @@ Weapon_HyperBlaster_Fire(edict_t *ent)
 
 	ent->client->weapon_sound = gi.soundindex("weapons/hyprbl1a.wav");
 
-	if (!(ent->client->buttons & BUTTON_ATTACK))
+    if (!(ent->client->buttons & BUTTONS_ATTACK))
 	{
 		ent->client->ps.gunframe++;
 	}
@@ -1134,8 +1271,8 @@ Weapon_HyperBlaster_Fire(edict_t *ent)
 		else
 		{
 			rotation = (ent->client->ps.gunframe - 5) * 2 * M_PI / 6;
-			offset[0] = -4 * sin(rotation);
-			offset[1] = 0;
+            offset[1] = -4 * sin(rotation);
+            offset[0] = 0;
 			offset[2] = 4 * cos(rotation);
 
 			if ((ent->client->ps.gunframe == 6) ||
@@ -1230,7 +1367,7 @@ Machinegun_Fire(edict_t *ent)
 		return;
 	}
 
-	if (!(ent->client->buttons & BUTTON_ATTACK))
+    if (!(ent->client->buttons & BUTTONS_ATTACK))
 	{
 		ent->client->machinegun_shots = 0;
 		ent->client->ps.gunframe++;
@@ -1369,14 +1506,14 @@ Chaingun_Fire(edict_t *ent)
 	}
 
 	if ((ent->client->ps.gunframe == 14) &&
-		!(ent->client->buttons & BUTTON_ATTACK))
+		!(ent->client->buttons & BUTTONS_ATTACK))
 	{
 		ent->client->ps.gunframe = 32;
 		ent->client->weapon_sound = 0;
 		return;
 	}
 	else if ((ent->client->ps.gunframe == 21) &&
-			 (ent->client->buttons & BUTTON_ATTACK) &&
+			 (ent->client->buttons & BUTTONS_ATTACK) &&
 			 ent->client->pers.inventory[ent->client->ammo_index])
 	{
 		ent->client->ps.gunframe = 15;
@@ -1416,7 +1553,7 @@ Chaingun_Fire(edict_t *ent)
 	}
 	else if (ent->client->ps.gunframe <= 14)
 	{
-		if (ent->client->buttons & BUTTON_ATTACK)
+		if (ent->client->buttons & BUTTONS_ATTACK)
 		{
 			shots = 2;
 		}
@@ -1820,4 +1957,63 @@ Weapon_BFG(edict_t *ent)
 
 	Weapon_Generic(ent, 8, 32, 55, 58, pause_frames,
 			fire_frames, weapon_bfg_fire);
+}
+
+//======================================================================
+void Weapon_Null(edict_t *ent)
+{
+    if (ent->client->newweapon)
+        ChangeWeapon(ent);
+}
+//======================================================================
+void kick_attack (edict_t * ent )
+{
+    vec3_t        start;
+    vec3_t        forward, right;
+    vec3_t        offset;
+    int            damage = 10;
+    int            kick = 300;
+    trace_t        tr;
+    vec3_t        end;
+    
+    if(ent->client->quad_framenum > level.framenum)
+    {
+        damage *= 4;
+        kick *= 4;
+    }
+    
+    AngleVectors (ent->client->v_angle, forward, right, NULL);
+    
+    VectorScale (forward, 0, ent->client->kick_origin);
+    
+    VectorSet(offset, 0, 0,  ent->viewheight-20);
+    P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
+    
+    VectorMA( start, 25, forward, end );
+    
+    tr = gi.trace (ent->s.origin, NULL, NULL, end, ent, MASK_SHOT);
+    
+    // don't need to check for water
+    if (!((tr.surface) && (tr.surface->flags & SURF_SKY)))
+    {
+        if (tr.fraction < 1.0)
+        {
+            if (tr.ent->takedamage)
+            {
+                if ( tr.ent->health <= 0 )
+                    return;
+                
+                if (((tr.ent != ent) && ((deathmatch->value && ((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS))) || coop->value) && OnSameTeam (tr.ent, ent)))
+                    return;
+                // zucc stop powerful upwards kicking
+                //forward[2] = 0;
+                
+                // glass fx
+                T_Damage (tr.ent, ent, ent, forward, tr.endpos, tr.plane.normal, damage, kick, 0, MOD_KICK );
+                gi.sound(ent, CHAN_WEAPON, gi.soundindex("weapons/kick.wav"), 1, ATTN_NORM, 0);
+                PlayerNoise(ent, ent->s.origin, PNOISE_SELF);
+                ent->client->jumping = 0; // only 1 jumpkick per jump
+            }
+        }
+    }
 }
