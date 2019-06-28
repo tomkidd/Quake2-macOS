@@ -220,7 +220,6 @@
 		A1794F1022BF1DDB00613FEE /* g_pendulum.c in Sources */ = {isa = PBXBuildFile; fileRef = A1794EBA22BF1DDB00613FEE /* g_pendulum.c */; };
 		A1794F3C22BF1DDB00613FEE /* g_newai.c in Sources */ = {isa = PBXBuildFile; fileRef = A1794EFB22BF1DDB00613FEE /* g_newai.c */; };
 		A1794F4022BF1E6B00613FEE /* g_reflect.c in Sources */ = {isa = PBXBuildFile; fileRef = A1794F3D22BF1E6A00613FEE /* g_reflect.c */; };
-		A1794F4222BF1E6B00613FEE /* g_save.c in Sources */ = {isa = PBXBuildFile; fileRef = A1794F3F22BF1E6B00613FEE /* g_save.c */; };
 		A1794F4422BF1EC200613FEE /* fmod.h in Headers */ = {isa = PBXBuildFile; fileRef = A1794F4322BF1EC200613FEE /* fmod.h */; };
 		A1794F4622BF1F3F00613FEE /* g_fog.c in Sources */ = {isa = PBXBuildFile; fileRef = A1794F4522BF1F3F00613FEE /* g_fog.c */; };
 		A1794F4822BF1F8D00613FEE /* g_tracktrain.c in Sources */ = {isa = PBXBuildFile; fileRef = A1794F4722BF1F8D00613FEE /* g_tracktrain.c */; };
@@ -1648,7 +1647,6 @@
 				A14C3A2022C40618001F604A /* actor_weap.c in Sources */,
 				A15FA372211114990048A3AD /* g_svcmds.c in Sources */,
 				A15FA36D211114990048A3AD /* g_main.c in Sources */,
-				A1794F4222BF1E6B00613FEE /* g_save.c in Sources */,
 				A15FA38E211115B50048A3AD /* insane.c in Sources */,
 				A1794EA122BF1DBC00613FEE /* g_mtrain.c in Sources */,
 				A1794F4622BF1F3F00613FEE /* g_fog.c in Sources */,

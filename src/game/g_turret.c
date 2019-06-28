@@ -94,46 +94,48 @@ void infantry_stand(edict_t *self);
 void monster_use(edict_t *self, edict_t *other, edict_t *activator);
 qboolean FindTarget(edict_t *self);
 
-void
-AnglesNormalize(vec3_t vec)
-{
-	while (vec[0] > 360)
-	{
-		vec[0] -= 360;
-	}
+// lazarus moved these to g_utils.c -tkidd
 
-	while (vec[0] < 0)
-	{
-		vec[0] += 360;
-	}
+//void
+//AnglesNormalize(vec3_t vec)
+//{
+//    while (vec[0] > 360)
+//    {
+//        vec[0] -= 360;
+//    }
+//
+//    while (vec[0] < 0)
+//    {
+//        vec[0] += 360;
+//    }
+//
+//    while (vec[1] > 360)
+//    {
+//        vec[1] -= 360;
+//    }
+//
+//    while (vec[1] < 0)
+//    {
+//        vec[1] += 360;
+//    }
+//}
 
-	while (vec[1] > 360)
-	{
-		vec[1] -= 360;
-	}
-
-	while (vec[1] < 0)
-	{
-		vec[1] += 360;
-	}
-}
-
-float
-SnapToEights(float x)
-{
-	x *= 8.0;
-
-	if (x > 0.0)
-	{
-		x += 0.5;
-	}
-	else
-	{
-		x -= 0.5;
-	}
-
-	return 0.125 * (int)x;
-}
+//float
+//SnapToEights(float x)
+//{
+//    x *= 8.0;
+//
+//    if (x > 0.0)
+//    {
+//        x += 0.5;
+//    }
+//    else
+//    {
+//        x -= 0.5;
+//    }
+//
+//    return 0.125 * (int)x;
+//}
 
 void
 turret_blocked(edict_t *self, edict_t *other)
