@@ -1144,7 +1144,8 @@ InitClientPersistant(gclient_t *client, int style)
     client->homing_rocket = NULL;
     SelectStartWeapon (client, style);
     
-	client->pers.weapon = item;
+    // this appears to be gumming up the works -tkidd
+//    client->pers.weapon = item;
 
 	client->pers.health = 100;
 	client->pers.max_health = 100;
