@@ -258,6 +258,95 @@ InitGame(void)
 	/* dm map list */
 	sv_maplist = gi.cvar("sv_maplist", "", 0);
 
+    // Lazarus
+    actorchicken = gi.cvar("actorchicken", "1", CVAR_SERVERINFO|CVAR_LATCH);
+    actorjump = gi.cvar("actorjump", "1", CVAR_SERVERINFO|CVAR_LATCH);
+    actorscram = gi.cvar("actorscram", "1", CVAR_SERVERINFO|CVAR_LATCH);
+    alert_sounds = gi.cvar("alert_sounds", "0", CVAR_SERVERINFO|CVAR_LATCH);
+    allow_fog = gi.cvar ("allow_fog", "1", CVAR_ARCHIVE);
+    cd_loopcount = gi.cvar("cd_loopcount","4",0);
+    cl_gun = gi.cvar("cl_gun", "1", 0);
+    corpse_fade = gi.cvar("corpse_fade", "0", CVAR_SERVERINFO|CVAR_LATCH);
+    corpse_fadetime = gi.cvar("corpse_fadetime", "20", 0);
+    crosshair = gi.cvar("crosshair", "1", 0);
+    fmod_nomusic = gi.cvar("fmod_nomusic", "0", CVAR_ARCHIVE);
+    footstep_sounds = gi.cvar("footstep_sounds", "0", CVAR_SERVERINFO|CVAR_LATCH);
+    fov = gi.cvar("fov", "90", 0);
+    hand = gi.cvar("hand", "0", 0);
+    jetpack_weenie = gi.cvar("jetpack_weenie", "0", CVAR_SERVERINFO);
+    joy_pitchsensitivity = gi.cvar("joy_pitchsensitivity", "1", 0);
+    joy_yawsensitivity = gi.cvar("joy_yawsensitivity", "-1", 0);
+    jump_kick = gi.cvar("jump_kick", "0", CVAR_SERVERINFO|CVAR_LATCH);
+    lights = gi.cvar("lights", "1", 0);
+    lightsmin = gi.cvar("lightsmin", "a", CVAR_SERVERINFO);
+    m_pitch = gi.cvar("m_pitch", "0.022", 0);
+    m_yaw = gi.cvar("m_yaw", "0.022", 0);
+    monsterjump = gi.cvar("monsterjump", "1", CVAR_SERVERINFO|CVAR_LATCH);
+    packet_fmod_playback = gi.cvar("packet_fmod_playback", "0", CVAR_SERVERINFO);
+    player_vampire = gi.cvar("player_vampire", "0", CVAR_SERVERINFO|CVAR_LATCH);
+    rocket_strafe = gi.cvar("rocket_strafe", "0", 0);
+    s_primary = gi.cvar("s_primary", "0", 0);
+    sv_maxgibs = gi.cvar("sv_maxgibs", "20", CVAR_SERVERINFO);
+    turn_rider = gi.cvar("turn_rider", "1", CVAR_SERVERINFO);
+    zoomrate = gi.cvar("zoomrate", "80", CVAR_ARCHIVE);
+    zoomsnap = gi.cvar("zoomsnap", "20", CVAR_ARCHIVE);
+    
+    // shift_ and rotate_distance only used for debugging stuff - this is the distance
+    // an entity will be moved by "item_left", "item_right", etc.
+    shift_distance = gi.cvar("shift_distance", "1", CVAR_SERVERINFO);
+    rotate_distance = gi.cvar("rotate_distance", "1", CVAR_SERVERINFO);
+    
+    // GL stuff
+    gl_clear = gi.cvar("gl_clear", "0", 0);
+    
+    // Lazarus saved cvars that we may or may not manipulate, but need to
+    // restore to original values upon map exit.
+    lazarus_cd_loop = gi.cvar("lazarus_cd_loop", "0", 0);
+    lazarus_gl_clear= gi.cvar("lazarus_gl_clear","0", 0);
+    lazarus_pitch   = gi.cvar("lazarus_pitch",   "0", 0);
+    lazarus_yaw     = gi.cvar("lazarus_yaw",     "0", 0);
+    lazarus_joyp    = gi.cvar("lazarus_joyp",    "0", 0);
+    lazarus_joyy    = gi.cvar("lazarus_joyy",    "0", 0);
+    lazarus_cl_gun  = gi.cvar("lazarus_cl_gun",  "0", 0);
+    lazarus_crosshair = gi.cvar("lazarus_crosshair", "0", 0);
+    
+    if(lazarus_gl_clear->value)
+        gi.cvar_forceset("gl_clear",         va("%d",lazarus_gl_clear->value));
+    else
+        gi.cvar_forceset("lazarus_gl_clear", va("%d",gl_clear->value));
+    
+    if(!deathmatch->value && !coop->value) {
+        if(lazarus_pitch->value) {
+            gi.cvar_forceset("cd_loopcount",         va("%d",(int)(lazarus_cd_loop->value)));
+            gi.cvar_forceset("m_pitch",              va("%f",lazarus_pitch->value));
+            gi.cvar_forceset("m_yaw",                va("%f",lazarus_yaw->value));
+            gi.cvar_forceset("cl_gun",               va("%d",(int)(lazarus_cl_gun->value)));
+            gi.cvar_forceset("crosshair",            va("%d",(int)(lazarus_crosshair->value)));
+        } else {
+            gi.cvar_forceset("lazarus_cd_loop",        va("%d",(int)(cd_loopcount->value)));
+            gi.cvar_forceset("lazarus_pitch",          va("%f",m_pitch->value));
+            gi.cvar_forceset("lazarus_yaw",            va("%f",m_yaw->value));
+            gi.cvar_forceset("lazarus_joyp",           va("%f",joy_pitchsensitivity->value));
+            gi.cvar_forceset("lazarus_joyy",           va("%f",joy_yawsensitivity->value));
+            gi.cvar_forceset("lazarus_cl_gun",         va("%d",(int)(cl_gun->value)));
+            gi.cvar_forceset("lazarus_crosshair",      va("%d",(int)(crosshair->value)));
+        }
+    }
+    
+    tpp = gi.cvar ("tpp", "0", CVAR_ARCHIVE);
+    tpp_auto = gi.cvar ("tpp_auto", "1", 0);
+    crossh = gi.cvar ("crossh", "1", 0);
+    allow_download = gi.cvar("allow_download", "0", 0);
+    
+    // If this is an SP game and "readout" is not set, force allow_download off
+    // so we don't get the annoying "Refusing to download path with .." messages
+    // due to misc_actor sounds.
+    if(allow_download->value && !readout->value && !deathmatch->value)
+        gi.cvar_forceset("allow_download", "0");
+    
+    bounce_bounce = gi.cvar("bounce_bounce", "0.5", 0);
+    bounce_minv   = gi.cvar("bounce_minv",   "60",  0);
+    
 	/* items */
 	InitItems();
 
@@ -274,6 +363,10 @@ InitGame(void)
 	game.maxclients = maxclients->value;
 	game.clients = gi.TagMalloc(game.maxclients * sizeof(game.clients[0]), TAG_GAME);
 	globals.num_edicts = game.maxclients + 1;
+
+    // removing footstep stuff for now -tkidd
+    //    if(footstep_sounds->value)
+    //        ReadTextureSurfaceAssignments();
 }
 
 /* ========================================================= */
@@ -739,6 +832,8 @@ ReadClient(FILE *f, gclient_t *client, short save_ver)
 
 	fread(client, sizeof(*client), 1, f);
 
+    client->pers.spawn_landmark = false;
+    client->pers.spawn_levelchange = false;
 	for (field = clientfields; field->name; field++)
 	{
 		if (field->save_ver <= save_ver)
@@ -773,6 +868,12 @@ WriteGame(const char *filename, qboolean autosave)
 	char str_game[32];
 	char str_os[32];
 	char str_arch[32];
+
+    if(developer->value)
+        gi.dprintf ("==== WriteGame ====\n");
+    
+    if (!autosave)
+        game.transition_ents = 0;
 
 	if (!autosave)
 	{
@@ -831,6 +932,9 @@ ReadGame(const char *filename)
 
 	short save_ver = 0;
 
+    if(developer->value)
+        gi.dprintf ("==== ReadGame ====\n");
+    
 	gi.FreeTags(TAG_GAME);
 
 	f = Q_fopen(filename, "rb");
@@ -1013,6 +1117,9 @@ WriteLevel(const char *filename)
 	edict_t *ent;
 	FILE *f;
 
+    if(developer->value)
+        gi.dprintf ("==== WriteLevel ====\n");
+    
 	f = Q_fopen(filename, "wb");
 
 	if (!f)
@@ -1037,9 +1144,34 @@ WriteLevel(const char *filename)
 			continue;
 		}
 
-		fwrite(&i, sizeof(i), 1, f);
-		WriteEdict(f, ent);
-	}
+        if (ent->class_id == ENTITY_TARGET_PLAYBACK)
+        {
+            edict_t    e;
+            memcpy(&e,ent,sizeof(edict_t));
+            // removed as per kmq2 -tkidd
+            //            if(FMOD_IsPlaying(ent))
+            //            {
+            //                e.think = target_playback_delayed_restart;
+            //                e.nextthink = level.time + 1.0;
+            //                // A misuse of groundentity_linkcount, but
+            //                // maybe nobody is watching.
+            //                e.groundentity_linkcount = g_edicts[1].linkcount;
+            //            }
+            //            else
+            //            {
+            e.think = NULL;
+            e.nextthink = 0;
+            //            }
+            e.stream = NULL;
+            fwrite (&i, sizeof(i), 1, f);
+            WriteEdict (f, &e);
+        }
+        else
+        {
+            fwrite (&i, sizeof(i), 1, f);
+            WriteEdict (f, ent);
+        }        
+    }
 
 	i = -1;
 	fwrite(&i, sizeof(i), 1, f);
@@ -1096,6 +1228,7 @@ ReadLevelLocals(FILE *f)
  * this function is called, no clients
  * are connected to the server.
  */
+void LoadTransitionEnts();
 void
 ReadLevel(const char *filename)
 {
@@ -1103,6 +1236,9 @@ ReadLevel(const char *filename)
 	FILE *f;
 	int i;
 	edict_t *ent;
+
+    if(developer->value)
+        gi.dprintf ("==== ReadLevel ====\n");
 
 	f = Q_fopen(filename, "rb");
 
@@ -1178,13 +1314,17 @@ ReadLevel(const char *filename)
 			continue;
 		}
 
-		/* fire any cross-level triggers */
-		if (ent->classname)
-		{
-			if (strcmp(ent->classname, "target_crosslevel_target") == 0)
-			{
-				ent->nextthink = level.time + ent->delay;
-			}
-		}
-	}
+        /* fire any cross-level triggers */
+        if (ent->class_id == ENTITY_TARGET_CROSSLEVEL_TARGET)
+        {
+            ent->nextthink = level.time + ent->delay;
+        }
+    }
+
+    // DWH: Load transition entities
+    if(game.transition_ents)
+    {
+        LoadTransitionEnts();
+        actor_files();
+    }
 }
