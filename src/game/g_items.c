@@ -29,6 +29,10 @@
 #define HEALTH_IGNORE_MAX 1
 #define HEALTH_TIMED 2
 
+#define NO_STUPID_SPINNING  4
+#define NO_DROPTOFLOOR      8
+#define SHOOTABLE           16
+
 qboolean Pickup_Weapon(edict_t *ent, edict_t *other);
 void Use_Weapon(edict_t *ent, gitem_t *inv);
 void Drop_Weapon(edict_t *ent, gitem_t *inv);
@@ -44,6 +48,8 @@ void Weapon_Grenade(edict_t *ent);
 void Weapon_GrenadeLauncher(edict_t *ent);
 void Weapon_Railgun(edict_t *ent);
 void Weapon_BFG(edict_t *ent);
+void Weapon_HomingMissileLauncher (edict_t *ent);
+void Weapon_Null(edict_t *ent);
 
 gitem_armor_t jacketarmor_info = {25, 50, .30, .00, ARMOR_JACKET};
 gitem_armor_t combatarmor_info = {50, 100, .60, .30, ARMOR_COMBAT};
@@ -67,9 +73,27 @@ static int power_screen_index;
 static int power_shield_index;
 
 void Use_Quad(edict_t *ent, gitem_t *item);
+void Use_Stasis (edict_t *ent, gitem_t *item);
 static int quad_drop_timeout_hack;
 
 /* ====================================================================== */
+
+// Lazarus: damageable pickups
+void item_die(edict_t *self,edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+{
+    gi.WriteByte (svc_temp_entity);
+    gi.WriteByte (TE_EXPLOSION1);
+    gi.WritePosition (self->s.origin);
+    gi.multicast (self->s.origin, MULTICAST_PVS);
+    
+    if (level.num_reflectors)
+        ReflectExplosion (TE_EXPLOSION1, self->s.origin);
+    
+    if (!(self->spawnflags & DROPPED_ITEM) && (deathmatch->value))
+        SetRespawn (self, 30);
+    else
+        G_FreeEdict (self);
+}
 
 gitem_t *
 GetItemByIndex(int index)
@@ -170,7 +194,15 @@ DoRespawn(edict_t *ent)
 	}
 
 	ent->svflags &= ~SVF_NOCLIENT;
-	ent->solid = SOLID_TRIGGER;
+    if(ent->spawnflags & SHOOTABLE) {
+        ent->solid = SOLID_BBOX;
+        ent->clipmask |= MASK_MONSTERSOLID;
+        if(!ent->health)
+            ent->health = 20;
+        ent->takedamage = DAMAGE_YES;
+        ent->die = item_die;
+    } else
+        ent->solid = SOLID_TRIGGER;
 	gi.linkentity(ent);
 
 	/* send an effect */
@@ -218,8 +250,39 @@ Pickup_Powerup(edict_t *ent, edict_t *other)
 		return false;
 	}
 
+    // Lazarus: Don't allow more than one of some items
+#ifdef FLASHLIGHT_MOD
+    if( !Q_stricmp(ent->classname,"item_flashlight")   && quantity >= 1 ) return false;
+#endif
+#ifdef JETPACK_MOD
+    if( !Q_stricmp(ent->classname,"item_jetpack") )
+    {
+        gitem_t *fuel;
+        
+        if( quantity >= 1 )
+            return false;
+        
+        fuel = FindItem("fuel");
+        if(ent->count < 0)
+        {
+            other->client->jetpack_infinite = true;
+            Add_Ammo(other,fuel,10000);
+        }
+        else
+        {
+            other->client->jetpack_infinite = false;
+            Add_Ammo(other,fuel,ent->count);
+        }
+    }
+#endif
+    
 	other->client->pers.inventory[ITEM_INDEX(ent->item)]++;
 
+#ifdef FLASHLIGHT_MOD
+    // DON'T Instant-use flashlight
+    if (ent->item->use == Use_Flashlight) return true;
+#endif
+    
 	if (deathmatch->value)
 	{
 		if (!(ent->spawnflags & DROPPED_ITEM))
@@ -227,6 +290,11 @@ Pickup_Powerup(edict_t *ent, edict_t *other)
 			SetRespawn(ent, ent->item->quantity);
 		}
 
+#ifdef JETPACK_MOD
+        // DON'T Instant-use Jetpack
+        if(ent->item->use == Use_Jet) return true;
+#endif
+        
 		if (((int)dmflags->value & DF_INSTANT_ITEMS) ||
 			((ent->item->use == Use_Quad) &&
 			 (ent->spawnflags & DROPPED_PLAYER_ITEM)))
@@ -252,6 +320,35 @@ Drop_General(edict_t *ent, gitem_t *item)
 	ent->client->pers.inventory[ITEM_INDEX(item)]--;
 	ValidateSelectedItem(ent);
 }
+
+#ifdef JETPACK_MOD
+void Drop_Jetpack (edict_t *ent, gitem_t *item)
+{
+    if(ent->client->jetpack)
+        gi.cprintf(ent,PRINT_HIGH,"Cannot drop jetpack in use\n");
+    else
+    {
+        edict_t    *dropped;
+        
+        dropped = Drop_Item (ent, item);
+        if(ent->client->jetpack_infinite)
+        {
+            dropped->count = -1;
+            ent->client->pers.inventory[fuel_index] = 0;
+            ent->client->jetpack_infinite = false;
+        }
+        else
+        {
+            dropped->count = ent->client->pers.inventory[fuel_index];
+            if(dropped->count > 500)
+                dropped->count = 500;
+            ent->client->pers.inventory[fuel_index] -= dropped->count;
+        }
+        ent->client->pers.inventory[ITEM_INDEX(item)]--;
+        ValidateSelectedItem (ent);
+    }
+}
+#endif
 
 /* ====================================================================== */
 
@@ -329,6 +426,9 @@ Pickup_Bandolier(edict_t *ent, edict_t *other)
 	{
 		other->client->pers.max_slugs = 75;
 	}
+
+    if (other->client->pers.max_fuel  < 1500)
+        other->client->pers.max_fuel  = 1500;
 
 	item = FindItem("Bullets");
 
@@ -408,6 +508,9 @@ Pickup_Pack(edict_t *ent, edict_t *other)
 	{
 		other->client->pers.max_slugs = 100;
 	}
+
+    if (other->client->pers.max_fuel  < 2000)
+        other->client->pers.max_fuel  = 2000;
 
 	item = FindItem("Bullets");
 
@@ -713,6 +816,10 @@ Add_Ammo(edict_t *ent, gitem_t *item, int count)
 	{
 		max = ent->client->pers.max_slugs;
 	}
+    else if (item->tag == AMMO_FUEL)
+        max = ent->client->pers.max_fuel;
+    else if (item->tag == AMMO_HOMING_MISSILES)
+        max = ent->client->pers.max_homing_missiles;
 	else
 	{
 		return false;
@@ -773,7 +880,7 @@ Pickup_Ammo(edict_t *ent, edict_t *other)
 	{
 		if ((other->client->pers.weapon != ent->item) &&
 			(!deathmatch->value ||
-			 (other->client->pers.weapon == FindItem("blaster"))))
+			 (other->client->pers.weapon == FindItem("blaster")) || other->client->pers.weapon == FindItem("No weapon")))
 		{
 			other->client->newweapon = ent->item;
 		}
@@ -1086,7 +1193,7 @@ Use_PowerArmor(edict_t *ent, gitem_t *item)
 	}
 	else
 	{
-		index = ITEM_INDEX(FindItem("cells"));
+        index = cells_index;
 
 		if (!ent->client->pers.inventory[index])
 		{
@@ -1238,6 +1345,8 @@ Touch_Item(edict_t *ent, edict_t *other, cplane_t *plane /* unused */, csurface_
 		return;
 	}
 
+    DeleteReflection(ent,-1);
+    
 	if (!((coop->value) &&
 		  (ent->item->flags & IT_STAY_COOP)) ||
 		(ent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)))
@@ -1329,6 +1438,16 @@ Drop_Item(edict_t *ent, gitem_t *item)
 	dropped->touch = drop_temp_touch;
 	dropped->owner = ent;
 
+    // Lazarus: for monster-dropped health
+    dropped->count = item->quantity;
+    if(item->pickup == Pickup_Health)
+    {
+        if(item->quantity == 2)
+            dropped->style |= HEALTH_IGNORE_MAX;
+        if(item->quantity == 100)
+            dropped->style |= HEALTH_IGNORE_MAX | HEALTH_TIMED;
+    }
+
 	if (ent->client)
 	{
 		trace_t trace;
@@ -1343,8 +1462,16 @@ Drop_Item(edict_t *ent, gitem_t *item)
 	}
 	else
 	{
+        // Lazarus: throw the dropped item a bit farther than the default
+        trace_t    trace;
+        
 		AngleVectors(ent->s.angles, forward, right, NULL);
-		VectorCopy(ent->s.origin, dropped->s.origin);
+        //        VectorCopy (ent->s.origin, dropped->s.origin);
+        VectorSet(offset, 24, 0, -16);
+        G_ProjectSource (ent->s.origin, offset, forward, right, dropped->s.origin);
+        trace = gi.trace (ent->s.origin, dropped->mins, dropped->maxs,
+                          dropped->s.origin, ent, CONTENTS_SOLID);
+        VectorCopy (trace.endpos, dropped->s.origin);
 	}
 
 	VectorScale(forward, 100, dropped->velocity);
@@ -1376,7 +1503,16 @@ Use_Item(edict_t *ent, edict_t *other /* unused */, edict_t *activator /* unused
 	}
 	else
 	{
-		ent->solid = SOLID_TRIGGER;
+        // Lazarus:
+        if(ent->spawnflags & SHOOTABLE) {
+            ent->solid = SOLID_BBOX;
+            ent->clipmask |= MASK_MONSTERSOLID;
+            if(!ent->health)
+                ent->health = 20;
+            ent->takedamage = DAMAGE_YES;
+            ent->die = item_die;
+        } else
+            ent->solid = SOLID_TRIGGER;
 		ent->touch = Touch_Item;
 	}
 
@@ -1411,24 +1547,50 @@ droptofloor(edict_t *ent)
 		gi.setmodel(ent, ent->item->world_model);
 	}
 
-	ent->solid = SOLID_TRIGGER;
-	ent->movetype = MOVETYPE_TOSS;
+
+    // Lazarus:
+    // origin_offset is wrong - absmin and absmax weren't set soon enough.
+    // Fortunately we KNOW what the "offset" is - nada.
+    VectorClear(ent->origin_offset);
+    
+    if(ent->spawnflags & SHOOTABLE) {
+        ent->solid = SOLID_BBOX;
+        ent->clipmask |= MASK_MONSTERSOLID;
+        if(!ent->health)
+            ent->health = 20;
+        ent->takedamage = DAMAGE_YES;
+        ent->die = item_die;
+    } else
+        ent->solid = SOLID_TRIGGER;
+
+    // Lazarus:
+    if(ent->movewith)
+        ent->movetype = MOVETYPE_PUSH;
+    else if(ent->spawnflags & NO_DROPTOFLOOR)
+        ent->movetype = MOVETYPE_NONE;
+    else
+        ent->movetype = MOVETYPE_TOSS;
 	ent->touch = Touch_Item;
 
-	v = tv(0, 0, -128);
-	VectorAdd(ent->s.origin, v, dest);
-
-	tr = gi.trace(ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
-
-	if (tr.startsolid)
-	{
-		gi.dprintf("droptofloor: %s startsolid at %s\n", ent->classname,
-				vtos(ent->s.origin));
-		G_FreeEdict(ent);
-		return;
-	}
-
-	VectorCopy(tr.endpos, ent->s.origin);
+    // Lazarus:
+    if(!(ent->spawnflags & NO_DROPTOFLOOR)) {
+        v = tv(0, 0, -128);
+        VectorAdd(ent->s.origin, v, dest);
+        
+        tr = gi.trace(ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
+        
+        if (tr.startsolid)
+        {
+            gi.dprintf("droptofloor: %s startsolid at %s\n", ent->classname,
+                       vtos(ent->s.origin));
+            G_FreeEdict(ent);
+            return;
+        }
+        
+        tr.endpos[2] += 1;
+        ent->mins[2] -= 1;
+        VectorCopy(tr.endpos, ent->s.origin);
+    }
 
 	if (ent->team)
 	{
@@ -1586,13 +1748,19 @@ SpawnItem(edict_t *ent, gitem_t *item)
 
 	PrecacheItem(item);
 
-	if (ent->spawnflags)
-	{
-		if (strcmp(ent->classname, "key_power_cube") != 0)
+    // Lazarus: added several spawnflags, plus gave ALL keys trigger_spawn and no_touch
+    // capabilities
+    if ( ( (item->flags & IT_KEY) && (ent->spawnflags & ~31) ) ||
+        (!(item->flags & IT_KEY) && (ent->spawnflags & ~28) )    )
+//    if (ent->spawnflags)
+    {
+//        if (strcmp(ent->classname, "key_power_cube") != 0)
 		{
-			ent->spawnflags = 0;
-			gi.dprintf("%s at %s has invalid spawnflags set\n",
-					ent->classname, vtos(ent->s.origin));
+            gi.dprintf("%s at %s has invalid spawnflags set (%d)\n", ent->classname, vtos(ent->s.origin), ent->spawnflags);
+            if (item->flags & IT_KEY)
+                ent->spawnflags &= 31;
+            else
+                ent->spawnflags &= 28;
 		}
 	}
 
@@ -1652,12 +1820,27 @@ SpawnItem(edict_t *ent, gitem_t *item)
 		item->drop = NULL;
 	}
 
+    // Lazarus: flashlight - get level-wide cost for use
+    if(strcmp(ent->classname, "item_flashlight") == 0)
+        level.flashlight_cost = ent->count;
+    
 	ent->item = item;
 	ent->nextthink = level.time + 2 * FRAMETIME; /* items start after other solids */
 	ent->think = droptofloor;
 	ent->s.effects = item->world_model_flags;
 	ent->s.renderfx = RF_GLOW;
 
+    // Lazarus:
+    if(item->pickup == Pickup_Health)
+    {
+        ent->count = item->quantity;
+        ent->style = item->tag;
+    }
+    if(ent->spawnflags & NO_STUPID_SPINNING) {
+        ent->s.effects &= ~EF_ROTATE;
+        ent->s.renderfx &= ~RF_GLOW;
+    }
+    
 	if (ent->model)
 	{
 		gi.modelindex(ent->model);
@@ -1803,16 +1986,41 @@ static const gitem_t gameitemlist[] = {
 		"misc/power2.wav misc/power1.wav"
 	},
 
+#ifdef FLASHLIGHT_MOD
+#if FLASHLIGHT_USE != POWERUP_USE_ITEM
+    {
+        "item_flashlight",
+        Pickup_Powerup,
+        Use_Flashlight,
+        Drop_General,
+        NULL,
+        "items/pkup.wav",
+        "models/items/f_light/tris.md2", EF_ROTATE,
+        NULL,
+        "p_flash",
+        "Flashlight",
+        2,
+        60,
+        NULL,
+        IT_POWERUP,
+        0,
+        NULL,
+        0,
+        ""
+    },
+#endif
+#endif
+    
 	/* weapon_blaster (.3 .3 1) (-16 -16 -16) (16 16 16)
 	   always owned, never in the world */
 	{
 		"weapon_blaster",
-		NULL,
+        Pickup_Weapon,
 		Use_Weapon,
-		NULL,
+        Drop_Weapon,
 		Weapon_Blaster,
 		"misc/w_pkup.wav",
-		NULL, 0,
+        "models/weapons/g_blast/tris.md2", EF_ROTATE,
 		"models/weapons/v_blast/tris.md2",
 		"w_blaster",
 		"Blaster",
@@ -2046,6 +2254,51 @@ static const gitem_t gameitemlist[] = {
 		"sprites/s_bfg1.sp2 sprites/s_bfg2.sp2 sprites/s_bfg3.sp2 weapons/bfg__f1y.wav weapons/bfg__l1a.wav weapons/bfg__x1b.wav weapons/bfg_hum.wav"
 	},
 
+    /*QUAKED weapon_hml (.3 .3 1) (-16 -16 -16) (16 16 16)
+     */
+    {
+        "weapon_hml",
+        NULL,
+        Use_Weapon,
+        NULL,
+        Weapon_HomingMissileLauncher,
+        NULL,
+        NULL, EF_ROTATE,
+        "models/weapons/v_homing/tris.md2",
+        /* icon */        NULL,
+        /* pickup */    "Homing Missile Launcher",
+        0,
+        1,
+        "homing missiles",
+        IT_WEAPON|IT_STAY_COOP,
+        WEAP_ROCKETLAUNCHER,
+        NULL,
+        0,
+        /* precache */ "models/objects/rocket/tris.md2 weapons/rockfly.wav weapons/rocklf1a.wav weapons/rocklr1b.wav models/objects/debris2/tris.md2"
+    },
+    
+    // Lazarus: No weapon - we HAVE to have a weapon
+    {
+        "weapon_null",
+        NULL,
+        Use_Weapon,
+        NULL,
+        Weapon_Null,
+        "misc/w_pkup.wav",
+        NULL, 0,
+        NULL,
+        NULL,
+        "No Weapon",
+        0,
+        0,
+        NULL,
+        IT_WEAPON|IT_STAY_COOP,
+        WEAP_NONE,
+        NULL,
+        0,
+        ""
+    },
+    
 	/* QUAKED ammo_shells (.3 .3 1) (-16 -16 -16) (16 16 16) */
 	{
 		"ammo_shells",
@@ -2112,6 +2365,30 @@ static const gitem_t gameitemlist[] = {
 		""
 	},
 
+    /*QUAKED ammo_fuel (.3 .3 1) (-16 -16 -16) (16 16 16)
+     */
+    {
+        "ammo_fuel",
+        Pickup_Ammo,
+        NULL,
+        Drop_Ammo,
+        NULL,
+        "misc/am_pkup.wav",
+        "models/items/ammo/fuel/medium/tris.md2", 0,
+        NULL,
+        /* icon */        "a_fuel",
+        /* pickup */    "fuel",
+        /* width */        4,
+        500,
+        NULL,
+        IT_AMMO,
+        0,
+        NULL,
+        AMMO_FUEL,
+        /* precache */ ""
+    },
+    
+    
 	/* QUAKED ammo_rockets (.3 .3 1) (-16 -16 -16) (16 16 16) */
 	{
 		"ammo_rockets",
@@ -2156,7 +2433,30 @@ static const gitem_t gameitemlist[] = {
 		""
 	},
 
-	/* QUAKED item_quad (.3 .3 1) (-16 -16 -16) (16 16 16) */
+    /*QUAKED ammo_homing_missiles (.3 .3 1) (-16 -16 -16) (16 16 16)
+     */
+    {
+        "ammo_homing_missiles",
+        Pickup_Ammo,
+        NULL,
+        Drop_Ammo,
+        NULL,
+        "misc/am_pkup.wav",
+        "models/items/ammo/homing/medium/tris.md2", 0,
+        NULL,
+        /* icon */        "a_homing",
+        /* pickup */    "homing missiles",
+        /* width */        3,
+        5,
+        NULL,
+        IT_AMMO,
+        0,
+        NULL,
+        AMMO_HOMING_MISSILES,
+        /* precache */ ""
+    },
+
+    /* QUAKED item_quad (.3 .3 1) (-16 -16 -16) (16 16 16) */
 	{
 		"item_quad",
 		Pickup_Powerup,
@@ -2356,7 +2656,51 @@ static const gitem_t gameitemlist[] = {
 		""
 	},
 
-	/* QUAKED key_data_cd (0 .5 .8) (-16 -16 -16) (16 16 16)
+#ifdef JETPACK_MOD
+    {
+        "item_jetpack",
+        Pickup_Powerup,
+        Use_Jet,
+        Drop_Jetpack,
+        NULL,
+        "items/pkup.wav",
+        "models/items/jet/tris.md2", EF_ROTATE,
+        NULL,
+        "p_jet",
+        "Jetpack",
+        2,
+        600,
+        "fuel",
+        IT_POWERUP,
+        0,
+        NULL,
+        0,
+        "jetpack/activate.wav jetpack/rev1.wav jetpack/revrun.wav jetpack/running.wav jetpack/shutdown.wav jetpack/stutter.wav"
+    },
+#endif
+    
+    {
+        "item_freeze",
+        Pickup_Powerup,
+        Use_Stasis,
+        Drop_General,
+        NULL,
+        "items/pkup.wav",
+        "models/items/stasis/tris.md2", EF_ROTATE,
+        NULL,
+        "p_freeze",
+        "Stasis Generator",
+        2,
+        30,
+        NULL,
+        IT_POWERUP,
+        0,
+        NULL,
+        0,
+        "items/stasis_start.wav items/stasis.wav items/stasis_stop.wav"
+    },
+
+    /* QUAKED key_data_cd (0 .5 .8) (-16 -16 -16) (16 16 16)
 	   key for computer centers */
 	{
 		"key_data_cd",
@@ -2562,26 +2906,114 @@ static const gitem_t gameitemlist[] = {
 		""
 	},
 
-	{
-		NULL,
-		Pickup_Health,
-		NULL,
-		NULL,
-		NULL,
-		"items/pkup.wav",
-		NULL, 0,
-		NULL,
-		"i_health",
-		"Health",
-		3,
-		0,
-		NULL,
-		0,
-		0,
-		NULL,
-		0,
-		"items/s_health.wav items/n_health.wav items/l_health.wav items/m_health.wav"
-	},
+    /*
+     {
+     NULL,
+     Pickup_Health,
+     NULL,
+     NULL,
+     NULL,
+     "items/pkup.wav",
+     NULL, 0,
+     NULL,
+     "i_health",
+     "Health",
+     3,
+     0,
+     NULL,
+     0,
+     0,
+     NULL,
+     0,
+     "items/s_health.wav items/n_health.wav items/l_health.wav items/m_health.wav"
+     },
+     */
+    // Lazarus: Dunno what adding actual health models might end up fouling up, but
+    // we'll give it a try for now. This will allow monsters to give up health.
+    
+    {
+        "item_health_small",
+        Pickup_Health,
+        NULL,
+        NULL,
+        NULL,
+        "items/s_health.wav",
+        "models/items/healing/stimpack/tris.md2", 0,
+        NULL,
+        "i_health",
+        "Health",
+        3,
+        2,
+        NULL,
+        0,
+        0,
+        NULL,
+        HEALTH_IGNORE_MAX,
+        "items/s_health.wav"
+    },
+    
+    {
+        "item_health",
+        Pickup_Health,
+        NULL,
+        NULL,
+        NULL,
+        "items/n_health.wav",
+        "models/items/healing/medium/tris.md2", 0,
+        NULL,
+        "i_health",
+        "Health",
+        3,
+        10,
+        NULL,
+        0,
+        0,
+        NULL,
+        0,
+        "items/n_health.wav"
+    },
+    
+    {
+        "item_health_large",
+        Pickup_Health,
+        NULL,
+        NULL,
+        NULL,
+        "items/l_health.wav",
+        "models/items/healing/large/tris.md2", 0,
+        NULL,
+        "i_health",
+        "Health",
+        3,
+        25,
+        NULL,
+        0,
+        0,
+        NULL,
+        0,
+        "items/l_health.wav"
+    },
+    
+    {
+        "item_health_mega",
+        Pickup_Health,
+        NULL,
+        NULL,
+        NULL,
+        "items/m_health.wav",
+        "models/items/mega_h/tris.md2", 0,
+        NULL,
+        "i_health",
+        "Health",
+        3,
+        100,
+        NULL,
+        0,
+        0,
+        NULL,
+        HEALTH_IGNORE_MAX | HEALTH_TIMED,
+        "items/m_health.wav"
+    },
 
 	/* end of list marker */
 	{NULL}
@@ -2606,9 +3038,11 @@ SP_item_health(edict_t *self)
 		return;
 	}
 
+    self->class_id = ENTITY_ITEM_HEALTH;
 	self->model = "models/items/healing/medium/tris.md2";
 	self->count = 10;
-	SpawnItem(self, FindItem("Health"));
+    //    SpawnItem (self, FindItem ("Health"));
+    SpawnItem (self, FindItemByClassname ("item_health"));
 	gi.soundindex("items/n_health.wav");
 }
 
@@ -2629,9 +3063,11 @@ SP_item_health_small(edict_t *self)
 		return;
 	}
 
+    self->class_id = ENTITY_ITEM_HEALTH_SMALL;
 	self->model = "models/items/healing/stimpack/tris.md2";
 	self->count = 2;
-	SpawnItem(self, FindItem("Health"));
+    //    SpawnItem (self, FindItem ("Health"));
+    SpawnItem (self, FindItemByClassname ("item_health_small"));
 	self->style = HEALTH_IGNORE_MAX;
 	gi.soundindex("items/s_health.wav");
 }
@@ -2653,9 +3089,11 @@ SP_item_health_large(edict_t *self)
 		return;
 	}
 
+    self->class_id = ENTITY_ITEM_HEALTH_LARGE;
 	self->model = "models/items/healing/large/tris.md2";
 	self->count = 25;
-	SpawnItem(self, FindItem("Health"));
+    //    SpawnItem (self, FindItem ("Health"));
+    SpawnItem (self, FindItemByClassname ("item_health_large"));
 	gi.soundindex("items/l_health.wav");
 }
 
@@ -2676,9 +3114,11 @@ SP_item_health_mega(edict_t *self)
 		return;
 	}
 
+    self->class_id = ENTITY_ITEM_HEALTH_MEGA;
 	self->model = "models/items/mega_h/tris.md2";
 	self->count = 100;
-	SpawnItem(self, FindItem("Health"));
+    //    SpawnItem (self, FindItem ("Health"));
+    SpawnItem (self, FindItemByClassname ("item_health_mega"));
 	gi.soundindex("items/m_health.wav");
 	self->style = HEALTH_IGNORE_MAX | HEALTH_TIMED;
 }
@@ -2706,9 +3146,102 @@ SetItemNames(void)
 		gi.configstring(CS_ITEMS + i, it->pickup_name);
 	}
 
+    noweapon_index     = ITEM_INDEX(FindItem("No Weapon"));
 	jacket_armor_index = ITEM_INDEX(FindItem("Jacket Armor"));
 	combat_armor_index = ITEM_INDEX(FindItem("Combat Armor"));
 	body_armor_index = ITEM_INDEX(FindItem("Body Armor"));
 	power_screen_index = ITEM_INDEX(FindItem("Power Screen"));
 	power_shield_index = ITEM_INDEX(FindItem("Power Shield"));
+    shells_index       = ITEM_INDEX(FindItem("shells"));
+    bullets_index      = ITEM_INDEX(FindItem("bullets"));
+    grenades_index     = ITEM_INDEX(FindItem("Grenades"));
+    rockets_index      = ITEM_INDEX(FindItem("rockets"));
+    cells_index        = ITEM_INDEX(FindItem("cells"));
+    slugs_index        = ITEM_INDEX(FindItem("slugs"));
+    fuel_index         = ITEM_INDEX(FindItem("fuel"));
+    homing_index       = ITEM_INDEX(FindItem("homing missiles"));
+    rl_index           = ITEM_INDEX(FindItem("rocket launcher"));
+    hml_index          = ITEM_INDEX(FindItem("Homing Missile Launcher"));
+}
+
+/*
+ ==================
+ Use_Flashlight
+ ==================
+ */
+void Use_Flashlight ( edict_t *ent, gitem_t *item )
+{
+    if(!ent->client->flashlight)
+    {
+        if(ent->client->pers.inventory[ITEM_INDEX(FindItem(FLASHLIGHT_ITEM))] < level.flashlight_cost)
+        {
+            gi.cprintf(ent,PRINT_HIGH,"Flashlight requires %s\n",FLASHLIGHT_ITEM);
+            return;
+        }
+#if FLASHLIGHT_USE != POWERUP_USE_ITEM
+        /*  Lazarus: We never "use up" the flashlight
+         ent->client->pers.inventory[ITEM_INDEX(item)]--; */
+        ValidateSelectedItem (ent);
+#endif
+    }
+    if(ent->client->flashlight ^= 1)
+        ent->client->flashlight_time = level.time + FLASHLIGHT_DRAIN;
+}
+
+#ifdef JETPACK_MOD
+//==============================================================================
+void Use_Jet ( edict_t *ent, gitem_t *item )
+{
+    if(ent->client->jetpack)
+    {
+        // Currently on... turn it off and store remaining time
+        ent->client->jetpack = false;
+        ent->client->jetpack_framenum  = 0;
+        // Force frame. While using the jetpack ClientThink forces the frame to
+        // stand20 when it really SHOULD be jump2. This is fine, but if we leave
+        // it at that then the player cycles through the wrong frames to complete
+        // his "jump" when the jetpack is turned off. The same thing is done in
+        // ClientThink when jetpack timer expires.
+        ent->s.frame = 67;
+        gi.sound(ent,CHAN_GIZMO,gi.soundindex("jetpack/shutdown.wav"), 1, ATTN_NORM, 0);
+    }
+    else
+    {
+        // Currently off. Turn it on, and add time, if any, remaining
+        // from last jetpack.
+        if( ent->client->pers.inventory[ITEM_INDEX(item)] )
+        {
+            ent->client->jetpack = true;
+            // Lazarus: Never remove jetpack from inventory (unless dropped)
+            // ent->client->pers.inventory[ITEM_INDEX(item)]--;
+            ValidateSelectedItem (ent);
+            ent->client->jetpack_framenum = level.framenum;
+            ent->client->jetpack_activation = level.framenum;
+        }
+        else if(ent->client->pers.inventory[fuel_index] > 0)
+        {
+            ent->client->jetpack = true;
+            ent->client->jetpack_framenum = level.framenum;
+            ent->client->jetpack_activation = level.framenum;
+        }
+        else
+            return;  // Shouldn't have been able to get here, but I'm a pessimist
+        gi.sound( ent, CHAN_GIZMO, gi.soundindex("jetpack/activate.wav"), 1, ATTN_NORM, 0);
+    }
+}
+#endif
+
+// Lazarus: Stasis field generator
+void Use_Stasis ( edict_t *ent, gitem_t *item )
+{
+    if(ent->client->jetpack)
+    {
+        gi.dprintf("Cannot use stasis generator while using jetpack\n");
+        return;
+    }
+    ent->client->pers.inventory[ITEM_INDEX(item)]--;
+    ValidateSelectedItem (ent);
+    level.freeze = true;
+    level.freezeframes = 0;
+    gi.sound(ent, CHAN_ITEM, gi.soundindex("items/stasis_start.wav"), 1, ATTN_NORM, 0);
 }

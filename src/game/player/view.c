@@ -686,7 +686,7 @@ SV_CalcBlend(edict_t *ent)
         float alpha;
         
         // Turn off fade for dead software players or they won't see menu
-        if((ent->health <= 0) && (stricmp(vid_ref->string,"gl")))
+        if((ent->health <= 0) && (Q_stricmp(vid_ref->string,"gl")))
             ent->client->fadein = 0;
         
         if(ent->client->fadein > level.framenum)
@@ -828,8 +828,9 @@ P_FallingDamage(edict_t *ent)
 
 	if (delta < 15)
 	{
-        if (!(ent->watertype & CONTENTS_MUD) && !ent->vehicle && !ent->turret && ent->groundentity)
-            FootStep(ent);
+        // removing footstep stuff for now -tkidd
+//        if (!(ent->watertype & CONTENTS_MUD) && !ent->vehicle && !ent->turret && ent->groundentity)
+//            FootStep(ent);
 		return;
 	}
 
@@ -1232,7 +1233,8 @@ G_SetClientEvent(edict_t *ent)
     {
         if (!ent->waterlevel && ( xyspeed > 225) && !ent->vehicle)
         {
-            FootStep(ent);
+            // removing footstep stuff for now -tkidd
+//            FootStep(ent);
         }
         else if( ent->in_mud && (ent->waterlevel == 1) && (xyspeed > 40))
         {
@@ -1246,51 +1248,53 @@ G_SetClientEvent(edict_t *ent)
         }
         else if( world->effects & FX_WORLDSPAWN_STEPSOUNDS )
         {
-            if(  ( (ent->waterlevel == 1) || (ent->waterlevel == 2) ) && ( xyspeed > 100 ) )
-                if ( (int)(current_client->bobtime+bobmove) != bobcycle )
-                    FootStep(ent);
+            // removing footstep stuff for now -tkidd
+//            if(  ( (ent->waterlevel == 1) || (ent->waterlevel == 2) ) && ( xyspeed > 100 ) )
+//                if ( (int)(current_client->bobtime+bobmove) != bobcycle )
+//                    FootStep(ent);
         }
     }
     else
     {
-        if(world->effects & FX_WORLDSPAWN_STEPSOUNDS)
-        {
-            if( (level.framenum % 5) == 0)
-            {
-                if(!ent->waterlevel && (ent->movetype != MOVETYPE_NOCLIP) && (fabs(ent->velocity[2]) > 50))
-                {
-                    vec3_t    end, forward;
-                    trace_t    tr;
-                    AngleVectors(ent->s.angles,forward,NULL,NULL);
-                    VectorMA(ent->s.origin,2,forward,end);
-                    tr = gi.trace(ent->s.origin,ent->mins,ent->maxs,end,ent,CONTENTS_LADDER);
-                    if(tr.fraction < 1.0)
-                    {
-                        int    r;
-                        r = rand() & 1 + ent->client->leftfoot*2;
-                        ent->client->leftfoot = 1 - ent->client->leftfoot;
-                        if(qFMOD_Footsteps)
-                        {
-                            switch (r){
-                                case 0: PlayFootstep(ent,FOOTSTEP_LADDER1); break;
-                                case 1: PlayFootstep(ent,FOOTSTEP_LADDER3); break;
-                                case 2: PlayFootstep(ent,FOOTSTEP_LADDER2); break;
-                                case 3: PlayFootstep(ent,FOOTSTEP_LADDER4); break;
-                            }
-                        }
-                        else
-                        {
-                            switch (r){
-                                case 0:    gi.sound(ent,CHAN_VOICE,gi.soundindex("player/pl_ladder1.wav"),1.0,ATTN_NORM,0); break;
-                                case 1: gi.sound(ent,CHAN_VOICE,gi.soundindex("player/pl_ladder3.wav"),1.0,ATTN_NORM,0); break;
-                                case 2:    gi.sound(ent,CHAN_VOICE,gi.soundindex("player/pl_ladder2.wav"),1.0,ATTN_NORM,0); break;
-                                case 3:    gi.sound(ent,CHAN_VOICE,gi.soundindex("player/pl_ladder4.wav"),1.0,ATTN_NORM,0); break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // removing footstep stuff for now -tkidd
+//        if(world->effects & FX_WORLDSPAWN_STEPSOUNDS)
+//        {
+//            if( (level.framenum % 5) == 0)
+//            {
+//                if(!ent->waterlevel && (ent->movetype != MOVETYPE_NOCLIP) && (fabs(ent->velocity[2]) > 50))
+//                {
+//                    vec3_t    end, forward;
+//                    trace_t    tr;
+//                    AngleVectors(ent->s.angles,forward,NULL,NULL);
+//                    VectorMA(ent->s.origin,2,forward,end);
+//                    tr = gi.trace(ent->s.origin,ent->mins,ent->maxs,end,ent,CONTENTS_LADDER);
+//                    if(tr.fraction < 1.0)
+//                    {
+//                        int    r;
+//                        r = rand() & 1 + ent->client->leftfoot*2;
+//                        ent->client->leftfoot = 1 - ent->client->leftfoot;
+//                        if(qFMOD_Footsteps)
+//                        {
+//                            switch (r){
+//                                case 0: PlayFootstep(ent,FOOTSTEP_LADDER1); break;
+//                                case 1: PlayFootstep(ent,FOOTSTEP_LADDER3); break;
+//                                case 2: PlayFootstep(ent,FOOTSTEP_LADDER2); break;
+//                                case 3: PlayFootstep(ent,FOOTSTEP_LADDER4); break;
+//                            }
+//                        }
+//                        else
+//                        {
+//                            switch (r){
+//                                case 0:    gi.sound(ent,CHAN_VOICE,gi.soundindex("player/pl_ladder1.wav"),1.0,ATTN_NORM,0); break;
+//                                case 1: gi.sound(ent,CHAN_VOICE,gi.soundindex("player/pl_ladder3.wav"),1.0,ATTN_NORM,0); break;
+//                                case 2:    gi.sound(ent,CHAN_VOICE,gi.soundindex("player/pl_ladder2.wav"),1.0,ATTN_NORM,0); break;
+//                                case 3:    gi.sound(ent,CHAN_VOICE,gi.soundindex("player/pl_ladder4.wav"),1.0,ATTN_NORM,0); break;
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
     }
 }
 

@@ -1037,7 +1037,7 @@ Cmd_Use_f(edict_t *ent)
 	index = ITEM_INDEX(it);
 
 #ifdef JETPACK_MOD
-    if(!stricmp(s,"jetpack"))
+    if(!Q_stricmp(s,"jetpack"))
     {
         // Special case - turns on/off
         if(!ent->client->jetpack)
@@ -1059,7 +1059,7 @@ Cmd_Use_f(edict_t *ent)
         return;
     }
 #endif
-    if (!stricmp(s,"stasis generator"))
+    if (!Q_stricmp(s,"stasis generator"))
     {
         // Special case - turn freeze off if already on
         if(level.freeze)
@@ -1254,7 +1254,7 @@ Cmd_InvUse_f(edict_t *ent)
 	}
 
 #ifdef JETPACK_MOD
-    if(!stricmp(it->classname,"item_jetpack"))
+    if(!Q_stricmp(it->classname,"item_jetpack"))
     {
         if(!ent->client->jetpack)
         {
@@ -2417,11 +2417,12 @@ void Cmd_Identify_f (edict_t *ent)
 #endif
 
 
-void Restart_FMOD(edict_t *self)
-{
-    FMOD_Init();
-    G_FreeEdict(self);
-}
+// removed as per kmq2 -tkidd
+//void Restart_FMOD(edict_t *self)
+//{
+//    FMOD_Init();
+//    G_FreeEdict(self);
+//}
 
 void
 ClientCommand(edict_t *ent)
@@ -2774,38 +2775,39 @@ ClientCommand(edict_t *ent)
             gi.dprintf("syntax: entlist <filename>\n");
         }
     }
-    else if(!Q_stricmp(cmd, "playsound"))
-    {
-        vec3_t    pos = {0, 0, 0};
-        vec3_t    vel = {0, 0, 0};
-        if(s_primary->value)
-        {
-            gi.dprintf("target_playback requires s_primary be set to 0.\n"
-                       "At the console type:\n"
-                       "s_primary 0;sound_restart\n");
-            return;
-        }
-        if(parm)
-        {
-            edict_t *temp;
-            
-            strlwr(parm);
-            temp = G_Spawn();
-            temp->message = parm;
-            temp->volume = 255;
-            
-            if( strstr(parm,".mod") ||
-               strstr(parm,".s3m") ||
-               strstr(parm,".xm")  ||
-               strstr(parm,".mid")   )
-                temp->spawnflags |= 8;
-            
-            FMOD_PlaySound(temp);
-            G_FreeEdict(temp);
-        }
-        else
-            gi.dprintf("syntax: playsound <soundfile>, path relative to gamedir\n");
-    }
+    // removed as per kmq2 -tkidd
+//    else if(!Q_stricmp(cmd, "playsound"))
+//    {
+//        vec3_t    pos = {0, 0, 0};
+//        vec3_t    vel = {0, 0, 0};
+//        if(s_primary->value)
+//        {
+//            gi.dprintf("target_playback requires s_primary be set to 0.\n"
+//                       "At the console type:\n"
+//                       "s_primary 0;sound_restart\n");
+//            return;
+//        }
+//        if(parm)
+//        {
+//            edict_t *temp;
+//
+//            strlwr(parm);
+//            temp = G_Spawn();
+//            temp->message = parm;
+//            temp->volume = 255;
+//
+//            if( strstr(parm,".mod") ||
+//               strstr(parm,".s3m") ||
+//               strstr(parm,".xm")  ||
+//               strstr(parm,".mid")   )
+//                temp->spawnflags |= 8;
+//
+//            FMOD_PlaySound(temp);
+//            G_FreeEdict(temp);
+//        }
+//        else
+//            gi.dprintf("syntax: playsound <soundfile>, path relative to gamedir\n");
+//    }
     else if(!Q_stricmp(cmd, "properties"))
     {
         if(parm) {
@@ -2923,16 +2925,17 @@ ClientCommand(edict_t *ent)
             gi.dprintf("syntax: whereis <classname>\n");
     }
     
-    else if(!Q_stricmp(cmd,"sound_restart"))
-    {
-        // replacement for snd_restart to get around DirectSound/FMOD problem
-        edict_t    *temp;
-        FMOD_Shutdown();
-        stuffcmd(ent,"snd_restart\n");
-        temp = G_Spawn();
-        temp->think = Restart_FMOD;
-        temp->nextthink = level.time + 2;
-    }
+    // removed as per kmq2 -tkidd
+//    else if(!Q_stricmp(cmd,"sound_restart"))
+//    {
+//        // replacement for snd_restart to get around DirectSound/FMOD problem
+//        edict_t    *temp;
+//        FMOD_Shutdown();
+//        stuffcmd(ent,"snd_restart\n");
+//        temp = G_Spawn();
+//        temp->think = Restart_FMOD;
+//        temp->nextthink = level.time + 2;
+//    }
     
 #ifdef WESQ2
     else {

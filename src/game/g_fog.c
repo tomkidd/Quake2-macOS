@@ -529,7 +529,7 @@ void Fog(vec3_t viewpoint)
 	if(deathmatch->value || coop->value)
 		return;
 
-	if(stricmp(vid_ref->string,"gl"))
+	if(Q_stricmp(vid_ref->string,"gl"))
 	{
 		last_software_frame = level.framenum;
 		level.active_fog = 0;
@@ -957,7 +957,7 @@ void SetChromakey()
 	if(!gl_driver || !vid_ref)
 		return;
 
-	if(stricmp(vid_ref->string,"gl"))
+	if(Q_stricmp(vid_ref->string,"gl"))
 		return;
 
 	if(!strcmp(gl_driver->string,"3dfxgl"))

@@ -421,8 +421,9 @@ void InitGame (void)
 	game.clients = gi.TagMalloc (game.maxclients * sizeof(game.clients[0]), TAG_GAME);
 	globals.num_edicts = game.maxclients+1;
 
-	if(footstep_sounds->value)
-		ReadTextureSurfaceAssignments();
+    // removing footstep stuff for now -tkidd
+//    if(footstep_sounds->value)
+//        ReadTextureSurfaceAssignments();
 }
 
 //=========================================================
@@ -874,19 +875,20 @@ void WriteLevel (char *filename)
 		{
 			edict_t	e;
 			memcpy(&e,ent,sizeof(edict_t));
-			if(FMOD_IsPlaying(ent))
-			{
-				e.think = target_playback_delayed_restart;
-				e.nextthink = level.time + 1.0;
-				// A misuse of groundentity_linkcount, but
-				// maybe nobody is watching.
-				e.groundentity_linkcount = g_edicts[1].linkcount;
-			}
-			else
-			{
+            // removed as per kmq2 -tkidd
+//            if(FMOD_IsPlaying(ent))
+//            {
+//                e.think = target_playback_delayed_restart;
+//                e.nextthink = level.time + 1.0;
+//                // A misuse of groundentity_linkcount, but
+//                // maybe nobody is watching.
+//                e.groundentity_linkcount = g_edicts[1].linkcount;
+//            }
+//            else
+//            {
 				e.think = NULL;
 				e.nextthink = 0;
-			}
+//            }
 			e.stream = NULL;
 			fwrite (&i, sizeof(i), 1, f);
 			WriteEdict (f, &e);

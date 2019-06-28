@@ -25,6 +25,7 @@
  */
 
 #include "header/local.h"
+#include <sys/stat.h>
 
 int debristhisframe;
 int gibsthisframe;
@@ -4382,7 +4383,7 @@ int PatchDeadSoldier ()
         for(k=0; k<numitems && !data; k++)
         {
             fread(&pakitem,1,sizeof(pak_item_t),fpak);
-            if(!stricmp(pakitem.name,DEADSOLDIER_MODEL))
+            if(!Q_stricmp(pakitem.name,DEADSOLDIER_MODEL))
             {
                 fseek(fpak,pakitem.start,SEEK_SET);
                 fread(&model, sizeof(dmdl_t), 1, fpak);
@@ -4431,15 +4432,15 @@ int PatchDeadSoldier ()
     
     // save new model
     sprintf (outfilename, "%s/models", gamedir->string);    // make some dirs if needed
-    _mkdir (outfilename);
+    mkdir (outfilename, 0755); // this might only work on the Mac/UNIX -tkidd
     strcat (outfilename,"/deadbods");
-    _mkdir (outfilename);
+    mkdir (outfilename, 0755); // this might only work on the Mac/UNIX -tkidd
     strcat (outfilename,"/dude");
-    _mkdir (outfilename);
+    mkdir (outfilename, 0755); // this might only work on the Mac/UNIX -tkidd
     sprintf (outfilename, "%s/%s", gamedir->string, DEADSOLDIER_MODEL);
     p = strstr(outfilename,"/tris.md2");
     *p = 0;
-    _mkdir (outfilename);
+    mkdir (outfilename, 0755); // this might only work on the Mac/UNIX -tkidd
     
     sprintf (outfilename, "%s/%s", gamedir->string, DEADSOLDIER_MODEL);
     

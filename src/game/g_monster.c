@@ -1125,12 +1125,122 @@ swimmonster_start(edict_t *self)
 	monster_start(self);
 }
 
+//ROGUE
+
+void stationarymonster_start_go (edict_t *self);
+
+void stationarymonster_triggered_spawn (edict_t *self)
+{
+    KillBox (self);
+    
+    self->solid = SOLID_BBOX;
+    self->movetype = MOVETYPE_NONE;
+    self->svflags &= ~SVF_NOCLIENT;
+    self->air_finished = level.time + 12;
+    gi.linkentity (self);
+    
+    // FIXME - why doesn't this happen with real monsters?
+    self->spawnflags &= ~SF_MONSTER_TRIGGER_SPAWN;
+    
+    stationarymonster_start_go (self);
+    
+    if (self->enemy && !(self->spawnflags & SF_MONSTER_SIGHT) && !(self->enemy->flags & FL_NOTARGET))
+    {
+        if(!(self->enemy->flags & FL_DISGUISED))        // PGM
+            FoundTarget (self);
+        else // PMM - just in case, make sure to clear the enemy so FindTarget doesn't get confused
+            self->enemy = NULL;
+    }
+    else
+    {
+        self->enemy = NULL;
+    }
+}
+
+void stationarymonster_triggered_spawn_use (edict_t *self, edict_t *other, edict_t *activator)
+{
+    // we have a one frame delay here so we don't telefrag the guy who activated us
+    self->think = stationarymonster_triggered_spawn;
+    self->nextthink = level.time + FRAMETIME;
+    if (activator->client)
+        self->enemy = activator;
+    // Lazarus: Add 'em
+    if(!(self->monsterinfo.aiflags & AI_GOOD_GUY))
+        level.total_monsters++;
+    self->use = monster_use;
+}
+
+void stationarymonster_triggered_start (edict_t *self)
+{
+    self->solid = SOLID_NOT;
+    self->movetype = MOVETYPE_NONE;
+    self->svflags |= SVF_NOCLIENT;
+    self->nextthink = 0;
+    self->use = stationarymonster_triggered_spawn_use;
+}
+
+void stationarymonster_start_go (edict_t *self)
+{
+    // PGM - only turrets use this, so remove the error message. They're supposed to be in solid.
+    
+    //    if (!M_walkmove (self, 0, 0))
+    //        gi.dprintf ("%s in solid at %s\n", self->classname, vtos(self->s.origin));
+    
+    if (!self->yaw_speed)
+        self->yaw_speed = 20;
+    //    self->viewheight = 25;
+    
+    monster_start_go (self);
+    
+    if (self->spawnflags & SF_MONSTER_TRIGGER_SPAWN)
+        stationarymonster_triggered_start (self);
+}
+
+void stationarymonster_start (edict_t *self)
+{
+    self->think = stationarymonster_start_go;
+    monster_start (self);
+}
+
+// Following functions unique to Lazarus
+
+void InitiallyDead (edict_t *self)
+{
+    int    damage;
+    
+    if(self->max_health > 0)
+        return;
+    
+    //    gi.dprintf("InitiallyDead on %s at %s\n",self->classname,vtos(self->s.origin));
+    
+    // initially dead bad guys shouldn't count against totals
+    if((self->max_health <= 0) && !(self->monsterinfo.aiflags & AI_GOOD_GUY))
+    {
+        level.total_monsters--;
+        if(self->deadflag != DEAD_DEAD)
+            level.killed_monsters--;
+    }
+    if(self->deadflag != DEAD_DEAD)
+    {
+        damage = 1 - self->health;
+        self->health = 1;
+        T_Damage (self, world, world, vec3_origin, self->s.origin, vec3_origin, damage, 0, DAMAGE_NO_ARMOR, 0);
+        if(self->svflags & SVF_MONSTER)
+        {
+            self->svflags |= SVF_DEADMONSTER;
+            self->think = monster_think;
+            self->nextthink = level.time + FRAMETIME;
+        }
+    }
+    gi.linkentity(self);
+}
+
+
+
 #define MAX_SKINS        16
 #define MAX_SKINNAME    64
 
 #include "header/pak.h"
-
-// end tkidd
 
 int PatchMonsterModel (char *modelname)
 {
@@ -1412,4 +1522,118 @@ int PatchMonsterModel (char *modelname)
     gi.dprintf ("PatchMonsterModel: Saved %s\n", outfilename);
     free (data);
     return 1;
+}
+
+void HintTestNext (edict_t *self, edict_t *hint)
+{
+    edict_t        *next=NULL;
+    edict_t        *e;
+    vec3_t        dir;
+    
+    self->monsterinfo.aiflags &= ~AI_HINT_TEST;
+    if(self->goalentity == hint)
+        self->goalentity = NULL;
+    if(self->movetarget == hint)
+        self->movetarget = NULL;
+    if(self->monsterinfo.pathdir == 1)
+    {
+        if(hint->hint_chain)
+            next = hint->hint_chain;
+        else
+            self->monsterinfo.pathdir = -1;
+    }
+    if(self->monsterinfo.pathdir == -1)
+    {
+        e = hint_path_start[hint->hint_chain_id];
+        while(e)
+        {
+            if(e->hint_chain == hint)
+            {
+                next = e;
+                break;
+            }
+            e = e->hint_chain;
+        }
+    }
+    if(!next)
+    {
+        self->monsterinfo.pathdir = 1;
+        next = hint->hint_chain;
+    }
+    if(next)
+    {
+        self->hint_chain_id = next->hint_chain_id;
+        VectorSubtract(next->s.origin, self->s.origin, dir);
+        self->ideal_yaw = vectoyaw(dir);
+        self->goalentity = self->movetarget = next;
+        self->monsterinfo.pausetime = 0;
+        self->monsterinfo.aiflags = AI_HINT_TEST;
+        // run for it
+        self->monsterinfo.run (self);
+        gi.dprintf("%s (%s): Reached hint_path %s,\nsearching for hint_path %s at %s. %s\n",
+                   self->classname, (self->targetname ? self->targetname : "<noname>"),
+                   (hint->targetname ? hint->targetname : "<noname>"),
+                   (next->targetname ? next->targetname : "<noname>"),
+                   vtos(next->s.origin),
+                   (visible(self,next) ? "I see it." : "I don't see it."));
+    }
+    else
+    {
+        self->monsterinfo.pausetime = level.time + 100000000;
+        self->monsterinfo.stand (self);
+        gi.dprintf("%s (%s): Error finding next/previous hint_path from %s at %s.\n",
+                   self->classname, (self->targetname ? self->targetname : "<noname>"),
+                   (hint->targetname ? hint->targetname : "<noname>"),
+                   vtos(hint->s.origin));
+    }
+}
+
+int HintTestStart (edict_t *self)
+{
+    edict_t    *e;
+    edict_t    *hint=NULL;
+    float    dist;
+    vec3_t    dir;
+    int        i;
+    float    bestdistance=99999;
+    
+    if(!hint_paths_present)
+        return 0;
+    
+    for(i=game.maxclients+1; i<globals.num_edicts; i++)
+    {
+        e = &g_edicts[i];
+        if(!e->inuse)
+            continue;
+        if(e->class_id != ENTITY_HINT_PATH)
+            continue;
+        if(!visible(self,e))
+            continue;
+        if(!canReach(self,e))
+            continue;
+        VectorSubtract(e->s.origin,self->s.origin,dir);
+        dist = VectorLength(dir);
+        if(dist < bestdistance)
+        {
+            hint = e;
+            bestdistance = dist;
+        }
+    }
+    if(hint)
+    {
+        self->hint_chain_id = hint->hint_chain_id;
+        if(!self->monsterinfo.pathdir)
+            self->monsterinfo.pathdir = 1;
+        VectorSubtract(hint->s.origin, self->s.origin, dir);
+        self->ideal_yaw = vectoyaw(dir);
+        self->enemy = self->oldenemy = NULL;
+        self->goalentity = self->movetarget = hint;
+        self->monsterinfo.pausetime = 0;
+        self->monsterinfo.aiflags = AI_HINT_TEST;
+        // run for it
+        self->monsterinfo.run (self);
+        return 1;
+    }
+    else
+        return -1;
 }

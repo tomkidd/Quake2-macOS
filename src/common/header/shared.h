@@ -1463,7 +1463,10 @@ typedef enum
 #define _mkdir mkdir
 #endif
 
-
+#ifdef __APPLE__
+#define max(a,b)    (((a) > (b)) ? (a) : (b))
+#define min(a,b)    (((a) < (b)) ? (a) : (b))
+#endif
 
 
 #endif /* COMMON_SHARED_H */

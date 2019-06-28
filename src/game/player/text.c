@@ -271,7 +271,7 @@ void Do_Text_Display(edict_t *activator, int flags, char *message)
 						for(k=0; k<numitems && !in_pak; k++)
 						{
 							fread(&pakitem,1,sizeof(pak_item_t),f);
-							if(!stricmp(pakitem.name,textname))
+							if(!Q_stricmp(pakitem.name,textname))
 							{
 								in_pak = true;
 								fseek(f,pakitem.start,SEEK_SET);

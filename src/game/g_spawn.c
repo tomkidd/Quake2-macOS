@@ -384,7 +384,7 @@ spawn_t spawns[] = {
     {"target_set_effect", SP_target_set_effect},
     {"target_skill", SP_target_skill},
     {"target_sky", SP_target_sky},
-    {"target_playback", SP_target_playback},
+//    {"target_playback", SP_target_playback},
     {"target_text", SP_target_text},
     {"thing", SP_thing},
     {"tremor_trigger_multiple", SP_tremor_trigger_multiple},
@@ -1561,19 +1561,20 @@ SP_worldspawn(edict_t *ent)
         else
             gi.cvar_forceset("gl_clear", "1");
     }
-    
-    // FMOD 3D sound attenuation:
-    if(ent->attenuation <= 0.)
-        ent->attenuation = 1.0;
-    
-    // FMOD 3D sound Doppler shift:
-    if(st.shift > 0)
-        ent->moveinfo.distance = st.shift;
-    else if(st.shift < 0)
-        ent->moveinfo.distance = 0.0;
-    else
-        ent->moveinfo.distance = 1.0;
-    
+
+    // removed as per kmq2 -tkidd
+//    // FMOD 3D sound attenuation:
+//    if(ent->attenuation <= 0.)
+//        ent->attenuation = 1.0;
+//
+//    // FMOD 3D sound Doppler shift:
+//    if(st.shift > 0)
+//        ent->moveinfo.distance = st.shift;
+//    else if(st.shift < 0)
+//        ent->moveinfo.distance = 0.0;
+//    else
+//        ent->moveinfo.distance = 1.0;
+//
     // cvar overrides for effects flags:
     if(alert_sounds->value)
         world->effects |= FX_WORLDSPAWN_ALERTSOUNDS;
@@ -1581,18 +1582,19 @@ SP_worldspawn(edict_t *ent)
         world->effects |= FX_WORLDSPAWN_CORPSEFADE;
     if(jump_kick->value)
         world->effects |= FX_WORLDSPAWN_JUMPKICK;
-    if(footstep_sounds->value)
-        world->effects |= FX_WORLDSPAWN_STEPSOUNDS;
-    
-    if(deathmatch->value || coop->value)
-        qFMOD_Footsteps = false;
-    else if(world->effects & FX_WORLDSPAWN_STEPSOUNDS)
-    {
-        qFMOD_Footsteps = true;
-        FMOD_Init();
-    }
-    else
-        qFMOD_Footsteps = false;
+    // removed as per kmq2 -tkidd
+//    if(footstep_sounds->value)
+//        world->effects |= FX_WORLDSPAWN_STEPSOUNDS;
+//
+//    if(deathmatch->value || coop->value)
+//        qFMOD_Footsteps = false;
+//    else if(world->effects & FX_WORLDSPAWN_STEPSOUNDS)
+//    {
+//        qFMOD_Footsteps = true;
+//        FMOD_Init();
+//    }
+//    else
+//        qFMOD_Footsteps = false;
 }
 
 // Hud toggle ripped from TPP source

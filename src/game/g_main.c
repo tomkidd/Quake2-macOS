@@ -163,8 +163,9 @@ ShutdownGame(void)
     // Lazarus: Turn off fog if it's on
     if(!dedicated->value)
         Fog_Off();
-    // and shut down FMOD
-    FMOD_Shutdown();
+    // removed as per kmq2 -tkidd
+//    // and shut down FMOD
+//    FMOD_Shutdown();
     
 	gi.FreeTags(TAG_LEVEL);
 	gi.FreeTags(TAG_GAME);
@@ -622,9 +623,10 @@ G_RunFrame(void)
 		G_RunEntity(ent);
 	}
 
-    // FMOD stuff:
-    if ( (level.num_3D_sounds > 0) && (game.maxclients == 1))
-        FMOD_UpdateListenerPos();
+    // removed as per kmq2 -tkidd
+//    // FMOD stuff:
+//    if ( (level.num_3D_sounds > 0) && (game.maxclients == 1))
+//        FMOD_UpdateListenerPos();
     
 	/* see if it is time to end a deathmatch */
 	CheckDMRules();

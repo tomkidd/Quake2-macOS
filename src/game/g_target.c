@@ -529,7 +529,8 @@ use_target_changelevel(edict_t *self, edict_t *other, edict_t *activator)
 		return;
 	}
 
-    FMOD_Stop();
+    // removed as per kmq2 -tkidd
+//    FMOD_Stop();
     
 	/* if multiplayer, let everyone know who hit the exit */
 	if (deathmatch->value)
@@ -3989,7 +3990,7 @@ void use_target_failure (edict_t *self, edict_t *other, edict_t *activator)
         gi.sound (activator, CHAN_VOICE|CHAN_RELIABLE, self->noise_index, 1, ATTN_NORM, 0);
     
     self->target_ent = activator;
-    if(stricmp(vid_ref->string,"gl"))
+    if(Q_stricmp(vid_ref->string,"gl"))
     {
         self->flags = 12;
         self->think = target_failure_fade_lights;

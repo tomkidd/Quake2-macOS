@@ -8,6 +8,7 @@
 
 
 //#include <direct.h>
+#include <sys/stat.h>
 #include "header/local.h"
 #include "header/pak.h"
 
@@ -130,9 +131,9 @@ int PatchPlayerModels (char *modelname)
 	
 	// save new player model
 	sprintf (outfilename, "%s/players", game->string);	// make some dirs if needed
-	_mkdir (outfilename);
+	mkdir (outfilename, 0755); // this might only work on the Mac/UNIX -tkidd
 	sprintf (outfilename, "%s/players/%s", game->string, modelname);
-	_mkdir (outfilename);
+	mkdir (outfilename, 0755); // this might only work on the Mac/UNIX -tkidd
 	sprintf (outfilename, "%s/players/%s/tris.md2", game->string, modelname);
 	
 	if ( !(outfile = fopen (outfilename, "wb")) )
