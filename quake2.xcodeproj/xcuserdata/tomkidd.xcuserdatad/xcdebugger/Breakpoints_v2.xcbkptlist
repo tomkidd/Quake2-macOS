@@ -57,13 +57,29 @@
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "src/game/player/client.c"
-            timestampString = "583440157.305889"
+            filePath = "src/game/g_target.c"
+            timestampString = "583444439.988946"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1104"
-            endingLineNumber = "1104"
-            landmarkName = "SelectStartWeapon()"
+            startingLineNumber = "501"
+            endingLineNumber = "501"
+            landmarkName = "use_target_changelevel()"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/game/savegame/savegame.c"
+            timestampString = "583444439.9890079"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "561"
+            endingLineNumber = "561"
+            landmarkName = "WriteField1()"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>

@@ -19,6 +19,7 @@
 		A14C3A2722C41DBD001F604A /* menu.c in Sources */ = {isa = PBXBuildFile; fileRef = A14C3A2522C41DBD001F604A /* menu.c */; };
 		A14C3A2822C41DBD001F604A /* chase.c in Sources */ = {isa = PBXBuildFile; fileRef = A14C3A2622C41DBD001F604A /* chase.c */; };
 		A14C3A2A22C41FC2001F604A /* text.c in Sources */ = {isa = PBXBuildFile; fileRef = A14C3A2922C41FC1001F604A /* text.c */; };
+		A14C3A2F22C6A721001F604A /* lazarus in Resources */ = {isa = PBXBuildFile; fileRef = A14C3A2C22C6A47C001F604A /* lazarus */; };
 		A15FA367211114990048A3AD /* g_ai.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1AE2110C5BC0048A3AD /* g_ai.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA368211114990048A3AD /* g_chase.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1AA2110C5BC0048A3AD /* g_chase.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA369211114990048A3AD /* g_cmds.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1B42110C5BC0048A3AD /* g_cmds.c */; settings = {COMPILER_FLAGS = "-w"; }; };
@@ -267,6 +268,7 @@
 		A14C3A2522C41DBD001F604A /* menu.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = menu.c; sourceTree = "<group>"; };
 		A14C3A2622C41DBD001F604A /* chase.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = chase.c; sourceTree = "<group>"; };
 		A14C3A2922C41FC1001F604A /* text.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = text.c; sourceTree = "<group>"; };
+		A14C3A2C22C6A47C001F604A /* lazarus */ = {isa = PBXFileReference; lastKnownFileType = folder; name = lazarus; path = ../../../Dropbox/Files/quake2/lazarus; sourceTree = "<group>"; };
 		A15FA1742110C5BB0048A3AD /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		A15FA1752110C5BB0048A3AD /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		A15FA1772110C5BC0048A3AD /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -626,6 +628,7 @@
 			isa = PBXGroup;
 			children = (
 				A15FA474211153E60048A3AD /* baseq2 */,
+				A14C3A2C22C6A47C001F604A /* lazarus */,
 				A15FA475211153E70048A3AD /* music */,
 				A15FA2AA2110C5BC0048A3AD /* CHANGELOG */,
 				A15FA2A92110C5BC0048A3AD /* CMakeLists.txt */,
@@ -1571,6 +1574,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A15FA476211153E70048A3AD /* baseq2 in Resources */,
+				A14C3A2F22C6A721001F604A /* lazarus in Resources */,
 				A15FA419211150EA0048A3AD /* Assets.xcassets in Resources */,
 				A15FA477211153E70048A3AD /* music in Resources */,
 				A15FA41C211150EA0048A3AD /* MainMenu.xib in Resources */,
