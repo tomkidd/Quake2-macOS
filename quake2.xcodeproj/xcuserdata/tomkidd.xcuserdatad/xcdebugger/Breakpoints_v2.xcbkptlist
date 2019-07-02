@@ -31,7 +31,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "1018"
             endingLineNumber = "1018"
-            landmarkName = "R_RenderView"
+            landmarkName = "R_RenderView()"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
@@ -42,12 +42,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/client/refresh/gl1/gl1_mesh.c"
-            timestampString = "569516660.320974"
+            timestampString = "583796650.315388"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "764"
             endingLineNumber = "764"
-            landmarkName = "R_DrawAliasModel"
+            landmarkName = "R_DrawAliasModel()"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>

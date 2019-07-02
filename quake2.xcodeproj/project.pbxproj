@@ -84,53 +84,6 @@
 		A15FA3B521111A8B0048A3AD /* shared.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2192110C5BC0048A3AD /* shared.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA3B621111A9F0048A3AD /* hunk.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA17F2110C5BC0048A3AD /* hunk.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA3B721111B2C0048A3AD /* qgl.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2442110C5BC0048A3AD /* qgl.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3C121111B8B0048A3AD /* hunk.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA17F2110C5BC0048A3AD /* hunk.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3C221111BAA0048A3AD /* pcx.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2642110C5BC0048A3AD /* pcx.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3C321111BAA0048A3AD /* pvs.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2652110C5BC0048A3AD /* pvs.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3C421111BAA0048A3AD /* stb.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2682110C5BC0048A3AD /* stb.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3C521111BAA0048A3AD /* wal.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2662110C5BC0048A3AD /* wal.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3C621111BC30048A3AD /* gl3_draw.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2732110C5BC0048A3AD /* gl3_draw.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3C721111BC30048A3AD /* gl3_image.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA26E2110C5BC0048A3AD /* gl3_image.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3C821111BC30048A3AD /* gl3_light.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA27D2110C5BC0048A3AD /* gl3_light.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3C921111BC30048A3AD /* gl3_lightmap.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA26C2110C5BC0048A3AD /* gl3_lightmap.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3CA21111BC30048A3AD /* gl3_main.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA26F2110C5BC0048A3AD /* gl3_main.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3CB21111BC30048A3AD /* gl3_md2.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2842110C5BC0048A3AD /* gl3_md2.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3CC21111BC30048A3AD /* gl3_mesh.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA26D2110C5BC0048A3AD /* gl3_mesh.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3CD21111BC30048A3AD /* gl3_misc.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA26B2110C5BC0048A3AD /* gl3_misc.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3CE21111BC30048A3AD /* gl3_model.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2722110C5BC0048A3AD /* gl3_model.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3CF21111BC30048A3AD /* gl3_sdl.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA26A2110C5BC0048A3AD /* gl3_sdl.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3D021111BC30048A3AD /* gl3_shaders.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2702110C5BC0048A3AD /* gl3_shaders.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3D121111BC30048A3AD /* gl3_sp2.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA27C2110C5BC0048A3AD /* gl3_sp2.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3D221111BC30048A3AD /* gl3_surf.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2712110C5BC0048A3AD /* gl3_surf.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3D321111BC30048A3AD /* gl3_warp.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2832110C5BC0048A3AD /* gl3_warp.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3D421111BCC0048A3AD /* glad.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA27B2110C5BC0048A3AD /* glad.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3D521111BDF0048A3AD /* md4.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA20E2110C5BC0048A3AD /* md4.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3D621111BE70048A3AD /* shared.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2192110C5BC0048A3AD /* shared.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3D721111BFE0048A3AD /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3582110CF4E0048A3AD /* SDL2.framework */; };
-		A15FA3E021111CD20048A3AD /* hunk.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA17F2110C5BC0048A3AD /* hunk.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3E121111CE80048A3AD /* pcx.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2642110C5BC0048A3AD /* pcx.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3E221111CE80048A3AD /* pvs.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2652110C5BC0048A3AD /* pvs.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3E321111CE80048A3AD /* stb.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2682110C5BC0048A3AD /* stb.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3E421111CE80048A3AD /* wal.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2662110C5BC0048A3AD /* wal.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3E521111CF40048A3AD /* sw_aclip.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2522110C5BC0048A3AD /* sw_aclip.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3E621111CF40048A3AD /* sw_alias.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2502110C5BC0048A3AD /* sw_alias.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3E721111CF40048A3AD /* sw_bsp.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA25B2110C5BC0048A3AD /* sw_bsp.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3E821111CF40048A3AD /* sw_draw.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2512110C5BC0048A3AD /* sw_draw.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3E921111CF40048A3AD /* sw_edge.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2612110C5BC0048A3AD /* sw_edge.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3EA21111CF40048A3AD /* sw_image.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA25A2110C5BC0048A3AD /* sw_image.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3EB21111CF40048A3AD /* sw_light.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2532110C5BC0048A3AD /* sw_light.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3EC21111CF40048A3AD /* sw_main.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2582110C5BC0048A3AD /* sw_main.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3ED21111CF40048A3AD /* sw_misc.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2552110C5BC0048A3AD /* sw_misc.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3EE21111CF40048A3AD /* sw_model.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2562110C5BC0048A3AD /* sw_model.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3EF21111CF40048A3AD /* sw_part.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA24E2110C5BC0048A3AD /* sw_part.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3F021111CF40048A3AD /* sw_poly.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2542110C5BC0048A3AD /* sw_poly.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3F221111CF40048A3AD /* sw_rast.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA25C2110C5BC0048A3AD /* sw_rast.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3F321111CF40048A3AD /* sw_scan.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA24F2110C5BC0048A3AD /* sw_scan.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3F421111CF40048A3AD /* sw_sprite.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA25D2110C5BC0048A3AD /* sw_sprite.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3F521111CF40048A3AD /* sw_surf.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2592110C5BC0048A3AD /* sw_surf.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3F621111D070048A3AD /* md4.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA20E2110C5BC0048A3AD /* md4.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3F721111D110048A3AD /* shared.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2192110C5BC0048A3AD /* shared.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA3F821111D300048A3AD /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3582110CF4E0048A3AD /* SDL2.framework */; };
 		A15FA417211150E90048A3AD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15FA416211150E90048A3AD /* AppDelegate.swift */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA419211150EA0048A3AD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A15FA418211150EA0048A3AD /* Assets.xcassets */; };
 		A15FA41C211150EA0048A3AD /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = A15FA41A211150EA0048A3AD /* MainMenu.xib */; };
@@ -203,9 +156,6 @@
 		A15FA477211153E70048A3AD /* music in Resources */ = {isa = PBXBuildFile; fileRef = A15FA475211153E70048A3AD /* music */; };
 		A15FA479211154310048A3AD /* game.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = A15FA362211114310048A3AD /* game.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		A1B203C421D428E500D8D86D /* ref_gl1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA39C211118220048A3AD /* ref_gl1.dylib */; };
-		A1B203C521D428E500D8D86D /* ref_gl3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3BD21111B640048A3AD /* ref_gl3.dylib */; };
-		A1B203C621D428E500D8D86D /* ref_soft.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3DC21111CB50048A3AD /* ref_soft.dylib */; };
-		A1CE4EED2218CCB3006A66DE /* sw_polyset.c in Sources */ = {isa = PBXBuildFile; fileRef = A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -388,51 +338,12 @@
 		A15FA24A2110C5BC0048A3AD /* qgl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = qgl.h; sourceTree = "<group>"; };
 		A15FA24B2110C5BC0048A3AD /* model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = model.h; sourceTree = "<group>"; };
 		A15FA24C2110C5BC0048A3AD /* local.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = local.h; sourceTree = "<group>"; };
-		A15FA24E2110C5BC0048A3AD /* sw_part.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_part.c; sourceTree = "<group>"; };
-		A15FA24F2110C5BC0048A3AD /* sw_scan.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_scan.c; sourceTree = "<group>"; };
-		A15FA2502110C5BC0048A3AD /* sw_alias.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_alias.c; sourceTree = "<group>"; };
-		A15FA2512110C5BC0048A3AD /* sw_draw.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_draw.c; sourceTree = "<group>"; };
-		A15FA2522110C5BC0048A3AD /* sw_aclip.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_aclip.c; sourceTree = "<group>"; };
-		A15FA2532110C5BC0048A3AD /* sw_light.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_light.c; sourceTree = "<group>"; };
-		A15FA2542110C5BC0048A3AD /* sw_poly.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_poly.c; sourceTree = "<group>"; };
-		A15FA2552110C5BC0048A3AD /* sw_misc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_misc.c; sourceTree = "<group>"; };
-		A15FA2562110C5BC0048A3AD /* sw_model.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_model.c; sourceTree = "<group>"; };
-		A15FA2582110C5BC0048A3AD /* sw_main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_main.c; sourceTree = "<group>"; };
-		A15FA2592110C5BC0048A3AD /* sw_surf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_surf.c; sourceTree = "<group>"; };
-		A15FA25A2110C5BC0048A3AD /* sw_image.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_image.c; sourceTree = "<group>"; };
-		A15FA25B2110C5BC0048A3AD /* sw_bsp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_bsp.c; sourceTree = "<group>"; };
-		A15FA25C2110C5BC0048A3AD /* sw_rast.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_rast.c; sourceTree = "<group>"; };
-		A15FA25D2110C5BC0048A3AD /* sw_sprite.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_sprite.c; sourceTree = "<group>"; };
-		A15FA25F2110C5BC0048A3AD /* model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = model.h; sourceTree = "<group>"; };
-		A15FA2602110C5BC0048A3AD /* local.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = local.h; sourceTree = "<group>"; };
-		A15FA2612110C5BC0048A3AD /* sw_edge.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_edge.c; sourceTree = "<group>"; };
 		A15FA2622110C5BC0048A3AD /* ref_shared.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ref_shared.h; sourceTree = "<group>"; };
 		A15FA2642110C5BC0048A3AD /* pcx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = pcx.c; sourceTree = "<group>"; };
 		A15FA2652110C5BC0048A3AD /* pvs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = pvs.c; sourceTree = "<group>"; };
 		A15FA2662110C5BC0048A3AD /* wal.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wal.c; sourceTree = "<group>"; };
 		A15FA2672110C5BC0048A3AD /* stb_image.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stb_image.h; sourceTree = "<group>"; };
 		A15FA2682110C5BC0048A3AD /* stb.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = stb.c; sourceTree = "<group>"; };
-		A15FA26A2110C5BC0048A3AD /* gl3_sdl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_sdl.c; sourceTree = "<group>"; };
-		A15FA26B2110C5BC0048A3AD /* gl3_misc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_misc.c; sourceTree = "<group>"; };
-		A15FA26C2110C5BC0048A3AD /* gl3_lightmap.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_lightmap.c; sourceTree = "<group>"; };
-		A15FA26D2110C5BC0048A3AD /* gl3_mesh.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_mesh.c; sourceTree = "<group>"; };
-		A15FA26E2110C5BC0048A3AD /* gl3_image.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_image.c; sourceTree = "<group>"; };
-		A15FA26F2110C5BC0048A3AD /* gl3_main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_main.c; sourceTree = "<group>"; };
-		A15FA2702110C5BC0048A3AD /* gl3_shaders.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_shaders.c; sourceTree = "<group>"; };
-		A15FA2712110C5BC0048A3AD /* gl3_surf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_surf.c; sourceTree = "<group>"; };
-		A15FA2722110C5BC0048A3AD /* gl3_model.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_model.c; sourceTree = "<group>"; };
-		A15FA2732110C5BC0048A3AD /* gl3_draw.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_draw.c; sourceTree = "<group>"; };
-		A15FA2772110C5BC0048A3AD /* khrplatform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = khrplatform.h; sourceTree = "<group>"; };
-		A15FA2792110C5BC0048A3AD /* glad.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = glad.h; sourceTree = "<group>"; };
-		A15FA27B2110C5BC0048A3AD /* glad.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = glad.c; sourceTree = "<group>"; };
-		A15FA27C2110C5BC0048A3AD /* gl3_sp2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_sp2.c; sourceTree = "<group>"; };
-		A15FA27D2110C5BC0048A3AD /* gl3_light.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_light.c; sourceTree = "<group>"; };
-		A15FA27F2110C5BC0048A3AD /* HandmadeMath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HandmadeMath.h; sourceTree = "<group>"; };
-		A15FA2802110C5BC0048A3AD /* DG_dynarr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DG_dynarr.h; sourceTree = "<group>"; };
-		A15FA2812110C5BC0048A3AD /* model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = model.h; sourceTree = "<group>"; };
-		A15FA2822110C5BC0048A3AD /* local.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = local.h; sourceTree = "<group>"; };
-		A15FA2832110C5BC0048A3AD /* gl3_warp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_warp.c; sourceTree = "<group>"; };
-		A15FA2842110C5BC0048A3AD /* gl3_md2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = gl3_md2.c; sourceTree = "<group>"; };
 		A15FA2852110C5BC0048A3AD /* cl_input.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_input.c; sourceTree = "<group>"; };
 		A15FA2862110C5BC0048A3AD /* cl_particles.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_particles.c; sourceTree = "<group>"; };
 		A15FA2872110C5BC0048A3AD /* cl_main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_main.c; sourceTree = "<group>"; };
@@ -465,8 +376,6 @@
 		A15FA35C2111095C0048A3AD /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		A15FA362211114310048A3AD /* game.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = game.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		A15FA39C211118220048A3AD /* ref_gl1.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = ref_gl1.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
-		A15FA3BD21111B640048A3AD /* ref_gl3.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = ref_gl3.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
-		A15FA3DC21111CB50048A3AD /* ref_soft.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = ref_soft.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		A15FA414211150E90048A3AD /* quake2.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = quake2.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A15FA416211150E90048A3AD /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A15FA418211150EA0048A3AD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -475,7 +384,6 @@
 		A15FA41E211150EA0048A3AD /* quake2.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = quake2.entitlements; sourceTree = "<group>"; };
 		A15FA474211153E60048A3AD /* baseq2 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = baseq2; path = ../../../Dropbox/Files/quake2/baseq2; sourceTree = "<group>"; };
 		A15FA475211153E70048A3AD /* music */ = {isa = PBXFileReference; lastKnownFileType = folder; name = music; path = ../../../Dropbox/Files/quake2/music; sourceTree = "<group>"; };
-		A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sw_polyset.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -494,29 +402,11 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A15FA3BA21111B640048A3AD /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A15FA3D721111BFE0048A3AD /* SDL2.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A15FA3D921111CB50048A3AD /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A15FA3F821111D300048A3AD /* SDL2.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		A15FA411211150E90048A3AD /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				A1B203C421D428E500D8D86D /* ref_gl1.dylib in Frameworks */,
-				A1B203C521D428E500D8D86D /* ref_gl3.dylib in Frameworks */,
-				A1B203C621D428E500D8D86D /* ref_soft.dylib in Frameworks */,
 				A15FA46B211152310048A3AD /* SDL2.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -592,8 +482,6 @@
 			children = (
 				A15FA362211114310048A3AD /* game.dylib */,
 				A15FA39C211118220048A3AD /* ref_gl1.dylib */,
-				A15FA3BD21111B640048A3AD /* ref_gl3.dylib */,
-				A15FA3DC21111CB50048A3AD /* ref_soft.dylib */,
 				A15FA414211150E90048A3AD /* quake2.app */,
 			);
 			name = Products;
@@ -1054,9 +942,7 @@
 				A15FA2342110C5BC0048A3AD /* constants */,
 				A15FA2632110C5BC0048A3AD /* files */,
 				A15FA2392110C5BC0048A3AD /* gl1 */,
-				A15FA2692110C5BC0048A3AD /* gl3 */,
 				A15FA2622110C5BC0048A3AD /* ref_shared.h */,
-				A15FA24D2110C5BC0048A3AD /* soft */,
 			);
 			path = refresh;
 			sourceTree = "<group>";
@@ -1105,40 +991,6 @@
 			path = header;
 			sourceTree = "<group>";
 		};
-		A15FA24D2110C5BC0048A3AD /* soft */ = {
-			isa = PBXGroup;
-			children = (
-				A15FA25E2110C5BC0048A3AD /* header */,
-				A15FA2522110C5BC0048A3AD /* sw_aclip.c */,
-				A15FA2502110C5BC0048A3AD /* sw_alias.c */,
-				A15FA25B2110C5BC0048A3AD /* sw_bsp.c */,
-				A15FA2512110C5BC0048A3AD /* sw_draw.c */,
-				A15FA2612110C5BC0048A3AD /* sw_edge.c */,
-				A15FA25A2110C5BC0048A3AD /* sw_image.c */,
-				A15FA2532110C5BC0048A3AD /* sw_light.c */,
-				A15FA2582110C5BC0048A3AD /* sw_main.c */,
-				A15FA2552110C5BC0048A3AD /* sw_misc.c */,
-				A15FA2562110C5BC0048A3AD /* sw_model.c */,
-				A15FA24E2110C5BC0048A3AD /* sw_part.c */,
-				A15FA2542110C5BC0048A3AD /* sw_poly.c */,
-				A1CE4EEB2218CCA8006A66DE /* sw_polyset.c */,
-				A15FA25C2110C5BC0048A3AD /* sw_rast.c */,
-				A15FA24F2110C5BC0048A3AD /* sw_scan.c */,
-				A15FA25D2110C5BC0048A3AD /* sw_sprite.c */,
-				A15FA2592110C5BC0048A3AD /* sw_surf.c */,
-			);
-			path = soft;
-			sourceTree = "<group>";
-		};
-		A15FA25E2110C5BC0048A3AD /* header */ = {
-			isa = PBXGroup;
-			children = (
-				A15FA2602110C5BC0048A3AD /* local.h */,
-				A15FA25F2110C5BC0048A3AD /* model.h */,
-			);
-			path = header;
-			sourceTree = "<group>";
-		};
 		A15FA2632110C5BC0048A3AD /* files */ = {
 			isa = PBXGroup;
 			children = (
@@ -1149,82 +1001,6 @@
 				A15FA2662110C5BC0048A3AD /* wal.c */,
 			);
 			path = files;
-			sourceTree = "<group>";
-		};
-		A15FA2692110C5BC0048A3AD /* gl3 */ = {
-			isa = PBXGroup;
-			children = (
-				A15FA2732110C5BC0048A3AD /* gl3_draw.c */,
-				A15FA26E2110C5BC0048A3AD /* gl3_image.c */,
-				A15FA27D2110C5BC0048A3AD /* gl3_light.c */,
-				A15FA26C2110C5BC0048A3AD /* gl3_lightmap.c */,
-				A15FA26F2110C5BC0048A3AD /* gl3_main.c */,
-				A15FA2842110C5BC0048A3AD /* gl3_md2.c */,
-				A15FA26D2110C5BC0048A3AD /* gl3_mesh.c */,
-				A15FA26B2110C5BC0048A3AD /* gl3_misc.c */,
-				A15FA2722110C5BC0048A3AD /* gl3_model.c */,
-				A15FA26A2110C5BC0048A3AD /* gl3_sdl.c */,
-				A15FA2702110C5BC0048A3AD /* gl3_shaders.c */,
-				A15FA27C2110C5BC0048A3AD /* gl3_sp2.c */,
-				A15FA2712110C5BC0048A3AD /* gl3_surf.c */,
-				A15FA2832110C5BC0048A3AD /* gl3_warp.c */,
-				A15FA2742110C5BC0048A3AD /* glad */,
-				A15FA27E2110C5BC0048A3AD /* header */,
-			);
-			path = gl3;
-			sourceTree = "<group>";
-		};
-		A15FA2742110C5BC0048A3AD /* glad */ = {
-			isa = PBXGroup;
-			children = (
-				A15FA2752110C5BC0048A3AD /* include */,
-				A15FA27A2110C5BC0048A3AD /* src */,
-			);
-			path = glad;
-			sourceTree = "<group>";
-		};
-		A15FA2752110C5BC0048A3AD /* include */ = {
-			isa = PBXGroup;
-			children = (
-				A15FA2782110C5BC0048A3AD /* glad */,
-				A15FA2762110C5BC0048A3AD /* KHR */,
-			);
-			path = include;
-			sourceTree = "<group>";
-		};
-		A15FA2762110C5BC0048A3AD /* KHR */ = {
-			isa = PBXGroup;
-			children = (
-				A15FA2772110C5BC0048A3AD /* khrplatform.h */,
-			);
-			path = KHR;
-			sourceTree = "<group>";
-		};
-		A15FA2782110C5BC0048A3AD /* glad */ = {
-			isa = PBXGroup;
-			children = (
-				A15FA2792110C5BC0048A3AD /* glad.h */,
-			);
-			path = glad;
-			sourceTree = "<group>";
-		};
-		A15FA27A2110C5BC0048A3AD /* src */ = {
-			isa = PBXGroup;
-			children = (
-				A15FA27B2110C5BC0048A3AD /* glad.c */,
-			);
-			path = src;
-			sourceTree = "<group>";
-		};
-		A15FA27E2110C5BC0048A3AD /* header */ = {
-			isa = PBXGroup;
-			children = (
-				A15FA2802110C5BC0048A3AD /* DG_dynarr.h */,
-				A15FA27F2110C5BC0048A3AD /* HandmadeMath.h */,
-				A15FA2822110C5BC0048A3AD /* local.h */,
-				A15FA2812110C5BC0048A3AD /* model.h */,
-			);
-			path = header;
 			sourceTree = "<group>";
 		};
 		A15FA2892110C5BC0048A3AD /* menu */ = {
@@ -1321,20 +1097,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A15FA3BB21111B640048A3AD /* Headers */ = {
-			isa = PBXHeadersBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A15FA3DA21111CB50048A3AD /* Headers */ = {
-			isa = PBXHeadersBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
@@ -1372,40 +1134,6 @@
 			productReference = A15FA39C211118220048A3AD /* ref_gl1.dylib */;
 			productType = "com.apple.product-type.library.dynamic";
 		};
-		A15FA3BC21111B640048A3AD /* ref_gl3 */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = A15FA3BE21111B640048A3AD /* Build configuration list for PBXNativeTarget "ref_gl3" */;
-			buildPhases = (
-				A15FA3B921111B640048A3AD /* Sources */,
-				A15FA3BA21111B640048A3AD /* Frameworks */,
-				A15FA3BB21111B640048A3AD /* Headers */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = ref_gl3;
-			productName = ref_gl3;
-			productReference = A15FA3BD21111B640048A3AD /* ref_gl3.dylib */;
-			productType = "com.apple.product-type.library.dynamic";
-		};
-		A15FA3DB21111CB50048A3AD /* ref_soft */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = A15FA3DD21111CB50048A3AD /* Build configuration list for PBXNativeTarget "ref_soft" */;
-			buildPhases = (
-				A15FA3D821111CB50048A3AD /* Sources */,
-				A15FA3D921111CB50048A3AD /* Frameworks */,
-				A15FA3DA21111CB50048A3AD /* Headers */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = ref_soft;
-			productName = ref_soft;
-			productReference = A15FA3DC21111CB50048A3AD /* ref_soft.dylib */;
-			productType = "com.apple.product-type.library.dynamic";
-		};
 		A15FA413211150E90048A3AD /* quake2 */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A15FA41F211150EA0048A3AD /* Build configuration list for PBXNativeTarget "quake2" */;
@@ -1440,12 +1168,6 @@
 					A15FA39B211118220048A3AD = {
 						CreatedOnToolsVersion = 9.4.1;
 					};
-					A15FA3BC21111B640048A3AD = {
-						CreatedOnToolsVersion = 9.4.1;
-					};
-					A15FA3DB21111CB50048A3AD = {
-						CreatedOnToolsVersion = 9.4.1;
-					};
 					A15FA413211150E90048A3AD = {
 						CreatedOnToolsVersion = 9.4.1;
 						LastSwiftMigration = 1020;
@@ -1468,8 +1190,6 @@
 				A15FA413211150E90048A3AD /* quake2 */,
 				A15FA361211114310048A3AD /* game */,
 				A15FA39B211118220048A3AD /* ref_gl1 */,
-				A15FA3BC21111B640048A3AD /* ref_gl3 */,
-				A15FA3DB21111CB50048A3AD /* ref_soft */,
 			);
 		};
 /* End PBXProject section */
@@ -1570,66 +1290,6 @@
 				A15FA3AA211118540048A3AD /* gl1_sdl.c in Sources */,
 				A15FA3A0211118540048A3AD /* gl1_draw.c in Sources */,
 				A15FA3B0211118A60048A3AD /* pvs.c in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A15FA3B921111B640048A3AD /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A15FA3D221111BC30048A3AD /* gl3_surf.c in Sources */,
-				A15FA3CE21111BC30048A3AD /* gl3_model.c in Sources */,
-				A15FA3C321111BAA0048A3AD /* pvs.c in Sources */,
-				A15FA3CA21111BC30048A3AD /* gl3_main.c in Sources */,
-				A15FA3C921111BC30048A3AD /* gl3_lightmap.c in Sources */,
-				A15FA3D321111BC30048A3AD /* gl3_warp.c in Sources */,
-				A15FA3C821111BC30048A3AD /* gl3_light.c in Sources */,
-				A15FA3C721111BC30048A3AD /* gl3_image.c in Sources */,
-				A15FA3CB21111BC30048A3AD /* gl3_md2.c in Sources */,
-				A15FA3C121111B8B0048A3AD /* hunk.c in Sources */,
-				A15FA3C621111BC30048A3AD /* gl3_draw.c in Sources */,
-				A15FA3CF21111BC30048A3AD /* gl3_sdl.c in Sources */,
-				A15FA3C221111BAA0048A3AD /* pcx.c in Sources */,
-				A15FA3CC21111BC30048A3AD /* gl3_mesh.c in Sources */,
-				A15FA3D621111BE70048A3AD /* shared.c in Sources */,
-				A15FA3C421111BAA0048A3AD /* stb.c in Sources */,
-				A15FA3D521111BDF0048A3AD /* md4.c in Sources */,
-				A15FA3D421111BCC0048A3AD /* glad.c in Sources */,
-				A15FA3D021111BC30048A3AD /* gl3_shaders.c in Sources */,
-				A15FA3D121111BC30048A3AD /* gl3_sp2.c in Sources */,
-				A15FA3CD21111BC30048A3AD /* gl3_misc.c in Sources */,
-				A15FA3C521111BAA0048A3AD /* wal.c in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A15FA3D821111CB50048A3AD /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A15FA3F721111D110048A3AD /* shared.c in Sources */,
-				A15FA3F321111CF40048A3AD /* sw_scan.c in Sources */,
-				A15FA3EE21111CF40048A3AD /* sw_model.c in Sources */,
-				A15FA3E221111CE80048A3AD /* pvs.c in Sources */,
-				A15FA3E821111CF40048A3AD /* sw_draw.c in Sources */,
-				A15FA3EA21111CF40048A3AD /* sw_image.c in Sources */,
-				A15FA3E521111CF40048A3AD /* sw_aclip.c in Sources */,
-				A15FA3F021111CF40048A3AD /* sw_poly.c in Sources */,
-				A15FA3F621111D070048A3AD /* md4.c in Sources */,
-				A15FA3F221111CF40048A3AD /* sw_rast.c in Sources */,
-				A15FA3EB21111CF40048A3AD /* sw_light.c in Sources */,
-				A15FA3E021111CD20048A3AD /* hunk.c in Sources */,
-				A15FA3EC21111CF40048A3AD /* sw_main.c in Sources */,
-				A15FA3F521111CF40048A3AD /* sw_surf.c in Sources */,
-				A1CE4EED2218CCB3006A66DE /* sw_polyset.c in Sources */,
-				A15FA3ED21111CF40048A3AD /* sw_misc.c in Sources */,
-				A15FA3E921111CF40048A3AD /* sw_edge.c in Sources */,
-				A15FA3EF21111CF40048A3AD /* sw_part.c in Sources */,
-				A15FA3E121111CE80048A3AD /* pcx.c in Sources */,
-				A15FA3E321111CE80048A3AD /* stb.c in Sources */,
-				A15FA3E621111CF40048A3AD /* sw_alias.c in Sources */,
-				A15FA3F421111CF40048A3AD /* sw_sprite.c in Sources */,
-				A15FA3E421111CE80048A3AD /* wal.c in Sources */,
-				A15FA3E721111CF40048A3AD /* sw_bsp.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1917,86 +1577,6 @@
 			};
 			name = Release;
 		};
-		A15FA3BF21111B640048A3AD /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 9UY8SFDNQ8;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				EXECUTABLE_PREFIX = "";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(LOCAL_LIBRARY_DIR)/Frameworks",
-				);
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-			};
-			name = Debug;
-		};
-		A15FA3C021111B640048A3AD /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 9UY8SFDNQ8;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				EXECUTABLE_PREFIX = "";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(LOCAL_LIBRARY_DIR)/Frameworks",
-				);
-				GCC_NO_COMMON_BLOCKS = YES;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-			};
-			name = Release;
-		};
-		A15FA3DE21111CB50048A3AD /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 9UY8SFDNQ8;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				EXECUTABLE_PREFIX = "";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(LOCAL_LIBRARY_DIR)/Frameworks",
-				);
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-			};
-			name = Debug;
-		};
-		A15FA3DF21111CB50048A3AD /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 9UY8SFDNQ8;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				EXECUTABLE_PREFIX = "";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(LOCAL_LIBRARY_DIR)/Frameworks",
-				);
-				GCC_NO_COMMON_BLOCKS = YES;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-			};
-			name = Release;
-		};
 		A15FA420211150EA0048A3AD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2079,24 +1659,6 @@
 			buildConfigurations = (
 				A15FA39E211118220048A3AD /* Debug */,
 				A15FA39F211118220048A3AD /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		A15FA3BE21111B640048A3AD /* Build configuration list for PBXNativeTarget "ref_gl3" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A15FA3BF21111B640048A3AD /* Debug */,
-				A15FA3C021111B640048A3AD /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		A15FA3DD21111CB50048A3AD /* Build configuration list for PBXNativeTarget "ref_soft" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A15FA3DE21111CB50048A3AD /* Debug */,
-				A15FA3DF21111CB50048A3AD /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
