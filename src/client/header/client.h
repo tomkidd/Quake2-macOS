@@ -372,7 +372,8 @@ extern	cvar_t	*cl_anglespeedkey;
 extern	cvar_t	*cl_shownet;
 extern	cvar_t	*cl_showmiss;
 extern	cvar_t	*cl_showclamp;
-extern	cvar_t	*lookstrafe;
+extern    cvar_t    *lookspring;
+extern    cvar_t    *lookstrafe;
 extern	cvar_t	*sensitivity;
 extern    cvar_t    *menu_sensitivity;
 extern    cvar_t    *menu_rotate;
@@ -529,7 +530,10 @@ typedef struct particle_s
     vec3_t        color;
     vec3_t        colorvel;
 
-	float		alpha;
+    int            blendfunc_src;
+    int            blendfunc_dst;
+
+    float		alpha;
 	float		alphavel;
     
     float        size;

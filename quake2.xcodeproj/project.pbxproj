@@ -156,8 +156,6 @@
 		A15FA43C2111516A0048A3AD /* cl_screen.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA28F2110C5BC0048A3AD /* cl_screen.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA43D2111516A0048A3AD /* cl_tempentities.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA22F2110C5BC0048A3AD /* cl_tempentities.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA43E2111516A0048A3AD /* cl_view.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2A42110C5BC0048A3AD /* cl_view.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA440211151740048A3AD /* qmenu.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA28A2110C5BC0048A3AD /* qmenu.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		A15FA441211151740048A3AD /* videomenu.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA28C2110C5BC0048A3AD /* videomenu.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA445211151B00048A3AD /* pcx.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2642110C5BC0048A3AD /* pcx.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA446211151B00048A3AD /* pvs.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2652110C5BC0048A3AD /* pvs.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA447211151B00048A3AD /* stb.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA2682110C5BC0048A3AD /* stb.c */; settings = {COMPILER_FLAGS = "-w"; }; };
@@ -1979,7 +1977,6 @@
 				A15FA45A211151EC0048A3AD /* flash.c in Sources */,
 				A15FA447211151B00048A3AD /* stb.c in Sources */,
 				A15FA45B211151EC0048A3AD /* rand.c in Sources */,
-				A15FA441211151740048A3AD /* videomenu.c in Sources */,
 				A1323A1421CC8F8100E20D6D /* qal.c in Sources */,
 				A15FA4362111516A0048A3AD /* cl_lights.c in Sources */,
 				A15FA46A211152110048A3AD /* sv_world.c in Sources */,
@@ -1992,7 +1989,6 @@
 				A15FA457211151E30048A3AD /* movemsg.c in Sources */,
 				A15FA449211151D40048A3AD /* ogg.c in Sources */,
 				A1DE871322A9C8F50041E450 /* ui_mp_joinserver.c in Sources */,
-				A15FA440211151740048A3AD /* qmenu.c in Sources */,
 				A1DE870822A9C8F50041E450 /* ui_options.c in Sources */,
 				A1323A2021CC8FB000E20D6D /* vid.c in Sources */,
 				A15FA465211152110048A3AD /* sv_init.c in Sources */,

@@ -962,43 +962,43 @@ CL_ItemRespawnParticles(vec3_t org)
     }
 }
 
-void
-CL_ExplosionParticles(vec3_t org)
-{
-	int i, j;
-	cparticle_t *p;
-	float time;
-
-	time = (float)cl.time;
-
-	for (i = 0; i < 256; i++)
-	{
-		if (!free_particles)
-		{
-			return;
-		}
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-
-		p->time = time;
-		p->color = 0xe0 + (randk() & 7);
-
-		for (j = 0; j < 3; j++)
-		{
-			p->org[j] = org[j] + ((randk() % 32) - 16);
-			p->vel[j] = (randk() % 384) - 192;
-		}
-
-		p->accel[0] = p->accel[1] = 0;
-		p->accel[2] = -PARTICLE_GRAVITY;
-		p->alpha = 1.0;
-
-		p->alphavel = -0.8f / (0.5f + frandk() * 0.3f);
-	}
-}
+//void
+//CL_ExplosionParticles(vec3_t org)
+//{
+//    int i, j;
+//    cparticle_t *p;
+//    float time;
+//
+//    time = (float)cl.time;
+//
+//    for (i = 0; i < 256; i++)
+//    {
+//        if (!free_particles)
+//        {
+//            return;
+//        }
+//
+//        p = free_particles;
+//        free_particles = p->next;
+//        p->next = active_particles;
+//        active_particles = p;
+//
+//        p->time = time;
+//        p->color = 0xe0 + (randk() & 7);
+//
+//        for (j = 0; j < 3; j++)
+//        {
+//            p->org[j] = org[j] + ((randk() % 32) - 16);
+//            p->vel[j] = (randk() % 384) - 192;
+//        }
+//
+//        p->accel[0] = p->accel[1] = 0;
+//        p->accel[2] = -PARTICLE_GRAVITY;
+//        p->alpha = 1.0;
+//
+//        p->alphavel = -0.8f / (0.5f + frandk() * 0.3f);
+//    }
+//}
 
 void
 CL_BigTeleportParticles(vec3_t org)
@@ -1240,6 +1240,20 @@ CL_FlagTrail (vec3_t start, vec3_t end, qboolean isred, qboolean isgreen)
 		VectorAdd(move, vec, move);
 	}
 }
+
+void pExplosionBubbleThink (cparticle_t *p, vec3_t org, vec3_t angle, float *alpha, float *size, int *image, float *time)
+{
+    
+    if (CM_PointContents(org,0) & MASK_WATER)
+        p->thinknext = true;
+    else
+    {
+        p->think = NULL;
+        p->alpha = 0;
+    }
+}
+
+void pBloodThink (cparticle_t *p, vec3_t org, vec3_t angle, float *alpha, float *size, int *image, float *time);
 
 void
 CL_DiminishingTrail(vec3_t start, vec3_t end, centity_t *old, int flags)
@@ -1613,6 +1627,8 @@ void CL_RailSprial (vec3_t start, vec3_t end, qboolean isRed)
     }
 }
 
+#define SplashSize 7.5
+
 void pDevRailThink (cparticle_t *p, vec3_t org, vec3_t angle, float *alpha, float *size, int *image, float *time)
 {
     int i;
@@ -1716,6 +1732,78 @@ void CL_DevRailTrail (vec3_t start, vec3_t end, qboolean isRed)
         VectorAdd (move, vec, move);
     }
 }
+
+/*
+ ===============
+ CL_ParticleRailDecal
+ ===============
+ */
+#define RAIL_DECAL_OFFSET 2.0f
+void CL_ParticleRailDecal (vec3_t org, vec3_t dir, float size, qboolean isRed)
+{
+    vec3_t        ang, angle, end, origin;
+    trace_t        tr;
+    
+    if (!r_decals->value)
+        return;
+    
+    VectorMA(org, -RAIL_DECAL_OFFSET, dir, origin);
+    VectorMA(org, 2*RAIL_DECAL_OFFSET, dir, end);
+    tr = CL_Trace (origin, end, 0, CONTENTS_SOLID);
+    
+    if (tr.fraction==1)
+        return;
+    if (VectorCompare(tr.plane.normal, vec3_origin))
+        return;
+    
+    VectorNegate(tr.plane.normal, angle);
+    vectoanglerolled(angle, rand()%360, ang);
+    VectorCopy(tr.endpos, origin);
+    
+    setupParticle (
+                   ang[0],    ang[1],    ang[2],
+                   origin[0],    origin[1],    origin[2],
+                   0,        0,        0,
+                   0,        0,        0,
+                   255,    255,    255,
+                   0,        0,        0,
+                   1,        -1/r_decal_life->value,
+                   GL_ZERO, GL_ONE_MINUS_SRC_ALPHA,
+                   size,            0,
+                   particle_bulletmark,
+                   PART_SHADED|PART_DECAL|PART_ALPHACOLOR,
+                   thinkDecalAlpha, true);
+    
+    setupParticle (
+                   ang[0],    ang[1],    ang[2],
+                   origin[0],    origin[1],    origin[2],
+                   0,        0,        0,
+                   0,        0,        0,
+                   (isRed)?255:cl_railred->value,    (isRed)?20:cl_railgreen->value,    (isRed)?20:cl_railblue->value,
+                   0,        0,        0,
+                   1,        -0.25,
+                   GL_SRC_ALPHA, GL_ONE,
+                   size,            0,
+                   particle_generic,
+                   PART_DECAL,
+                   NULL, false);
+    
+    setupParticle (
+                   ang[0],    ang[1],    ang[2],
+                   origin[0],    origin[1],    origin[2],
+                   0,        0,        0,
+                   0,        0,        0,
+                   255,    255,    255,
+                   0,        0,        0,
+                   1,        -0.25,
+                   GL_SRC_ALPHA, GL_ONE,
+                   size*0.67,        0,
+                   particle_generic,
+                   PART_DECAL,
+                   NULL, false);
+}
+
+
 
 
 void
@@ -3606,18 +3694,6 @@ void pExplosionThink (cparticle_t *p, vec3_t org, vec3_t angle, float *alpha, fl
     p->thinknext = true;
 }
 
-void pExplosionBubbleThink (cparticle_t *p, vec3_t org, vec3_t angle, float *alpha, float *size, int *image, float *time)
-{
-    
-    if (CM_PointContents(org,0) & MASK_WATER)
-        p->thinknext = true;
-    else
-    {
-        p->think = NULL;
-        p->alpha = 0;
-    }
-}
-
 void CL_Explosion_Particle (vec3_t org, float size, qboolean rocket)
 {
     cparticle_t *p;
@@ -3749,7 +3825,6 @@ void CL_Explosion_Sparks (vec3_t org, int size)
  
  ===============
  */
-void pBloodThink (cparticle_t *p, vec3_t org, vec3_t angle, float *alpha, float *size, int *image, float *time);
 void CL_BloodPuff (vec3_t org, vec3_t dir, int count);
 
 #define MAXBLEEDSIZE 5
@@ -4046,7 +4121,6 @@ void CL_GreenBloodHit (vec3_t org, vec3_t dir)
  Water Splashing
  ===============
  */
-#define SplashSize 7.5
 void pSplashThink (cparticle_t *p, vec3_t org, vec3_t angle, float *alpha, float *size, int *image, float *time)
 {
     int i;
@@ -4219,77 +4293,6 @@ void CL_ParticleBulletDecal (vec3_t org, vec3_t dir, float size)
                        particle_bulletmark,
                        PART_SHADED|PART_DECAL|PART_ALPHACOLOR, // was part_saturate
                        thinkDecalAlpha, true);
-}
-
-
-/*
- ===============
- CL_ParticleRailDecal
- ===============
- */
-#define RAIL_DECAL_OFFSET 2.0f
-void CL_ParticleRailDecal (vec3_t org, vec3_t dir, float size, qboolean isRed)
-{
-    vec3_t        ang, angle, end, origin;
-    trace_t        tr;
-    
-    if (!r_decals->value)
-        return;
-    
-    VectorMA(org, -RAIL_DECAL_OFFSET, dir, origin);
-    VectorMA(org, 2*RAIL_DECAL_OFFSET, dir, end);
-    tr = CL_Trace (origin, end, 0, CONTENTS_SOLID);
-    
-    if (tr.fraction==1)
-        return;
-    if (VectorCompare(tr.plane.normal, vec3_origin))
-        return;
-    
-    VectorNegate(tr.plane.normal, angle);
-    vectoanglerolled(angle, rand()%360, ang);
-    VectorCopy(tr.endpos, origin);
-    
-    setupParticle (
-                   ang[0],    ang[1],    ang[2],
-                   origin[0],    origin[1],    origin[2],
-                   0,        0,        0,
-                   0,        0,        0,
-                   255,    255,    255,
-                   0,        0,        0,
-                   1,        -1/r_decal_life->value,
-                   GL_ZERO, GL_ONE_MINUS_SRC_ALPHA,
-                   size,            0,
-                   particle_bulletmark,
-                   PART_SHADED|PART_DECAL|PART_ALPHACOLOR,
-                   thinkDecalAlpha, true);
-    
-    setupParticle (
-                   ang[0],    ang[1],    ang[2],
-                   origin[0],    origin[1],    origin[2],
-                   0,        0,        0,
-                   0,        0,        0,
-                   (isRed)?255:cl_railred->value,    (isRed)?20:cl_railgreen->value,    (isRed)?20:cl_railblue->value,
-                   0,        0,        0,
-                   1,        -0.25,
-                   GL_SRC_ALPHA, GL_ONE,
-                   size,            0,
-                   particle_generic,
-                   PART_DECAL,
-                   NULL, false);
-    
-    setupParticle (
-                   ang[0],    ang[1],    ang[2],
-                   origin[0],    origin[1],    origin[2],
-                   0,        0,        0,
-                   0,        0,        0,
-                   255,    255,    255,
-                   0,        0,        0,
-                   1,        -0.25,
-                   GL_SRC_ALPHA, GL_ONE,
-                   size*0.67,        0,
-                   particle_generic,
-                   PART_DECAL,
-                   NULL, false);
 }
 
 

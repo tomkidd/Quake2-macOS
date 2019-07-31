@@ -398,7 +398,7 @@ void SCR_ShowFPS (void)
     
     if (cl.time > fpscounter)
     {
-        Com_sprintf(fpsText, sizeof(fpsText), S_COLOR_BOLD S_COLOR_SHADOW"%3.0ffps", 1/cls.frametime);
+        Com_sprintf(fpsText, sizeof(fpsText), S_COLOR_BOLD S_COLOR_SHADOW"%3.0ffps", 1/cls.rframetime);
         fpscounter = cl.time + 100;
     }
     // leave space for 3-digit frag counter
@@ -526,7 +526,7 @@ SCR_DrawDebugGraph(void)
     if (cls.realtime - lasttime > 50)
     {
         lasttime = cls.realtime;
-        fps = (cls.frametime)? 1/cls.frametime: 0;
+        fps = (cls.rframetime)? 1/cls.rframetime: 0;
         ping = currentping;
     }
     
