@@ -1122,27 +1122,28 @@ CL_ParseTEnt(void)
             if (type == TE_ROCKET_EXPLOSION || type == TE_ROCKET_EXPLOSION_WATER)
                 CL_Explosion_Decal (pos, 50);
 #endif
-			if (type != TE_EXPLOSION1_BIG)
-			{
-				ex->ent.model = cl_mod_explo4;
-			}
-
-			else
-			{
-				ex->ent.model = cl_mod_explo4_big;
-			}
-
-			if (frandk() < 0.5)
-			{
-				ex->baseframe = 15;
-			}
-
-			ex->frames = 15;
-
-			if ((type != TE_EXPLOSION1_BIG) && (type != TE_EXPLOSION1_NP))
-			{
-				EXPLOSION_PARTICLES(pos);
-			}
+            // removing for now for parity with kmq2 -tkidd
+//            if (type != TE_EXPLOSION1_BIG)
+//            {
+//                ex->ent.model = cl_mod_explo4;
+//            }
+//
+//            else
+//            {
+//                ex->ent.model = cl_mod_explo4_big;
+//            }
+//
+//            if (frandk() < 0.5)
+//            {
+//                ex->baseframe = 15;
+//            }
+//
+//            ex->frames = 15;
+//
+//            if ((type != TE_EXPLOSION1_BIG) && (type != TE_EXPLOSION1_NP))
+//            {
+//                EXPLOSION_PARTICLES(pos);
+//            }
 
 			if (type == TE_ROCKET_EXPLOSION_WATER)
 			{

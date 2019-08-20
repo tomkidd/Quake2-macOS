@@ -749,7 +749,7 @@ Con_DrawConsole(float frac, qboolean trans)
 	{
 		/* draw arrows to show the buffer is backscrolled */
 		for (x = 0; x < con.linewidth; x += 4)
-			R_DrawChar( (x+1)*FONT_SIZE, y, '^', CON_FONT_SCALE, 255, 0, 0, 255, false, ((x+4)>=con.linewidth) );
+			RDraw_CharScaled( (x+1)*FONT_SIZE, y, '^', CON_FONT_SCALE, 255, 0, 0, 255, false, ((x+4)>=con.linewidth) );
 	
 		y -= FONT_SIZE;
 		rows--;
@@ -833,7 +833,7 @@ Con_DrawConsole(float frac, qboolean trans)
 		len = strlen(dlbar);
 		for (i = 0; i < len; i++)
 			if (dlbar[i] != ' ')
-				R_DrawChar( (i+1)*FONT_SIZE, graph_y, dlbar[i], CON_FONT_SCALE, 255, 255, 255, 255, false, (i==(len-1)) );
+				RDraw_CharScaled( (i+1)*FONT_SIZE, graph_y, dlbar[i], CON_FONT_SCALE, 255, 255, 255, 255, false, (i==(len-1)) );
 
 		// new solid color download bar
 		graph_x--; graph_y--; graph_w+=2; graph_h +=2;

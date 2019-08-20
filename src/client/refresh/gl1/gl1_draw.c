@@ -315,6 +315,69 @@ RDraw_Fill(int x, int y, int w, int h, int c)
 	glEnable(GL_TEXTURE_2D);
 }
 
+/*
+ ======================
+ R_DrawFill2
+ 
+ Fills a box of pixels with a
+ 24-bit color w/ alpha
+ ===========================
+ */
+void
+RDraw_Fill2 (int x, int y, int w, int h, int red, int green, int blue, int alpha)
+{
+    int        i;
+    vec2_t    verts[4];
+    
+    red = min(red, 255);
+    green = min(green, 255);
+    blue = min(blue, 255);
+    alpha = max(min(alpha, 255), 1);
+    
+    //qglDisable (GL_TEXTURE_2D);
+    GL_DisableTexture (0);
+    GL_Disable (GL_ALPHA_TEST);
+    GL_TexEnv (GL_MODULATE);
+    GL_Enable (GL_BLEND);
+    GL_DepthMask   (false);
+    
+#if 1
+    Vector2Set(verts[0], x, y);
+    Vector2Set(verts[1], x+w, y);
+    Vector2Set(verts[2], x+w, y+h);
+    Vector2Set(verts[3], x, y+h);
+    
+    rb_vertex = rb_index = 0;
+    for (i=0; i<4; i++) {
+        VA_SetElem2(vertexArray[rb_vertex], verts[i][0], verts[i][1]);
+        VA_SetElem4(colorArray[rb_vertex], red*DIV255, green*DIV255, blue*DIV255, alpha*DIV255);
+        indexArray[rb_index++] = rb_vertex;
+        rb_vertex++;
+    }
+    RB_DrawArrays (GL_QUADS);
+#else
+    qglColor4ub ((byte)red, (byte)green, (byte)blue, (byte)alpha);
+    
+    qglBegin (GL_QUADS);
+    
+    qglVertex2f (x,y);
+    qglVertex2f (x+w, y);
+    qglVertex2f (x+w, y+h);
+    qglVertex2f (x, y+h);
+    
+    qglEnd ();
+#endif
+    
+    GL_DepthMask (true);
+    GL_Disable (GL_BLEND);
+    GL_TexEnv (GL_REPLACE);
+    //qglColor4f   (1,1,1,1);
+    GL_Enable (GL_ALPHA_TEST);
+    //qglEnable (GL_TEXTURE_2D);
+    GL_EnableTexture (0);
+}
+
+
 void
 RDraw_FadeScreen(void)
 {

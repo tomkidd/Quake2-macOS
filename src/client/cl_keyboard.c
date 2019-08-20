@@ -1023,7 +1023,7 @@ Char_Event(int key)
 
 		/* Menu */
 		case key_menu:
-			M_Keydown(key);
+			UI_Keydown(key);
 			break;
 
 		/* Console */
@@ -1155,7 +1155,7 @@ Key_Event(int key, qboolean down, qboolean special)
 
 				/* Close menu or one layer up */
 				case key_menu:
-					M_Keydown(key);
+					UI_Keydown(key);
 					break;
 
 				/* Pause game and / or leave console,
@@ -1272,7 +1272,7 @@ Key_Event(int key, qboolean down, qboolean special)
 
 		/* Menu */
 		case key_menu:
-			M_Keydown(key);
+			UI_Keydown(key);
 			break;
 
 		/* Console */

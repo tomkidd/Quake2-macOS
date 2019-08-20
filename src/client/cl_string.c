@@ -247,9 +247,9 @@ void DrawStringGeneric (int x, int y, const char *string, int alpha, textscalety
 		}
 
 		if (shadow)
-			R_DrawChar( ( x + (j-1)*textSize+textSize/4 ), y+(textSize/8), 
+			RDraw_CharScaled( ( x + (j-1)*textSize+textSize/4 ), y+(textSize/8),
 				character, textScale, 0, 0, 0, alpha, italic, false );
-		R_DrawChar( ( x + (j-1)*textSize ), y,
+		RDraw_CharScaled( ( x + (j-1)*textSize ), y,
 			character, textScale, red, green, blue, alpha, italic, (i==(len-1)) );
 	}
 }

@@ -27,8 +27,7 @@
 
 #include "header/client.h"
 #include "input/header/input.h"
-// revisit me -tkidd
-//#include "../ui/ui_local.h"
+#include "../ui/ui_local.h"
 
 void CL_ForwardToServer_f(void);
 void CL_Changing_f(void);

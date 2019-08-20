@@ -128,7 +128,7 @@ cvar_t *fs_cddir;
 cvar_t *fs_gamedirvar;
 cvar_t *fs_debug;
 
-void CDAudio_Stop (void);
+//void CDAudio_Stop (void);
 
 fsHandle_t *FS_GetFileByHandle(fileHandle_t f);
 

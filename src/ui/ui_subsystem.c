@@ -245,7 +245,7 @@ void UI_ForceMenuOff (void)
 	m_keyfunc = 0;
 	cls.key_dest = key_game;
 	m_menudepth = 0;
-	Key_ClearStates ();
+	Key_MarkAllUp ();
 	if (!cls.consoleActive && Cvar_VariableValue ("maxclients") == 1 && Com_ServerState()) // Knightmare added
 		Cvar_Set ("paused", "0");
 }
@@ -748,7 +748,7 @@ void UI_Draw_Cursor (void)
 	
 	if (cur_img)
 	{
-		R_DrawGetPicSize( &w, &h, cur_img );
+		Draw_GetPicSize( &w, &h, cur_img );
 		R_DrawScaledPic( cursor.x - scale*w/2, cursor.y - scale*h/2, scale, alpha, cur_img);
 
 		if (overlay) {
@@ -789,7 +789,7 @@ void UI_Draw (void)
 	{
 		if (R_DrawFindPic("/gfx/menu_background.pcx")) {
 			R_DrawStretchPic (0, 0, viddef.width, viddef.height, "/gfx/menu_background.pcx", 1.0);
-			//R_DrawFadeScreen ();
+			//Draw_FadeScreen ();
 		}
 		else
 			R_DrawFill2 (0,0,viddef.width, viddef.height, 0,0,0,255);
@@ -798,7 +798,7 @@ void UI_Draw (void)
 	else if (R_DrawFindPic("/gfx/menu_background.pcx"))
 		R_DrawStretchPic (0, 0, viddef.width, viddef.height, "/gfx/menu_background.pcx", menu_alpha->value);
 	else
-		R_DrawFadeScreen ();
+		Draw_FadeScreen ();
 
 	// Knigthmare- added Psychospaz's mouse support
 	UI_RefreshCursorMenu();

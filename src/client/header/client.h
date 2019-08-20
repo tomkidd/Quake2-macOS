@@ -439,7 +439,7 @@ extern	sizebuf_t	net_message;
 //void DrawAltStringScaled(int x, int y, char *s, float factor);
 qboolean    CL_CheckOrDownloadFile (char *filename);
 
-static float ClampCvar( float min, float max, float value );
+float ClampCvar( float min, float max, float value );
 
 // for use with the alt_text_color cvar
 void TextColor (int colornum, int *red, int *green, int *blue);
@@ -690,7 +690,7 @@ void    R_DrawPic (int x, int y, char *name);
 void    R_DrawStretchPic (int x, int y, int w, int h, char *name, float alpha);
 void    R_DrawScaledPic (int x, int y, float scale, float alpha, char *name);
 // added char scaling from Quake2Max
-void    R_DrawChar (float x, float y, int c, float scale, int red, int green, int blue, int alpha, qboolean italic, qboolean last);
+void    RDraw_CharScaled (float x, float y, int c, float scale, int red, int green, int blue, int alpha, qboolean italic, qboolean last);
 void    R_DrawTileClear (int x, int y, int w, int h, char *name);
 void    R_DrawFill (int x, int y, int w, int h, int c);
 void    R_DrawFill2 (int x, int y, int w, int h, int red, int green, int blue, int alpha);

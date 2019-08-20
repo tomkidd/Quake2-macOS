@@ -26,8 +26,7 @@
  */
 
 #include "header/client.h"
-// revisit me -tkidd
-//#include "../ui/ui_local.h"
+#include "../ui/ui_local.h"
 
 
 float scr_con_current; /* aproaches scr_conlines at scr_conspeed */
@@ -303,7 +302,7 @@ void SCR_AdjustFrom640 (float *x, float *y, float *w, float *h, scralign_t align
 void SCR_DrawFill (float x, float y, float width, float height, scralign_t align, int color)
 {
     SCR_AdjustFrom640 (&x, &y, &width, &height, align);
-    R_DrawFill (x, y, width, height, color);
+    Draw_Fill (x, y, width, height, color);
 }
 
 /*
@@ -339,7 +338,7 @@ void SCR_DrawPic (float x, float y, float width, float height, scralign_t align,
 void SCR_DrawChar (float x, float y, scralign_t align, int num, int red, int green, int blue, int alpha, qboolean italic, qboolean last)
 {
     SCR_AdjustFrom640 (&x, &y, NULL, NULL, align);
-    R_DrawChar(x, y, num, screenScale.avg, red, green, blue, alpha, italic, last);
+    RDraw_CharScaled(x, y, num, screenScale.avg, red, green, blue, alpha, italic, last);
 }
 
 /*

@@ -1462,16 +1462,14 @@ void CIN_DrawCinematic (cinHandle_t handle){
 	{
 		char picname[MAX_QPATH] = "/";
 		strcat(picname, cin->name);
-        // revisit me -tkidd
-        //R_DrawStretchPic (0, 0, viddef.width, viddef.height, picname, 1.0);
+        R_DrawStretchPic (0, 0, viddef.width, viddef.height, picname, 1.0);
 		return;
 	} // end JPG hack
 
-    // revisit me -tkidd
-    //	if (cin->rawWidth == cin->vidWidth && cin->rawHeight == cin->vidHeight)
-//        R_DrawStretchRaw(cin->x, cin->y, cin->w, cin->h, cin->vidBuffer, cin->vidWidth, cin->vidHeight); //(cin->flags & CIN_SHADER));
-//    else
-//        R_DrawStretchRaw(cin->x, cin->y, cin->w, cin->h, cin->rawBuffer, cin->rawWidth, cin->rawHeight); //(cin->flags & CIN_SHADER));
+    if (cin->rawWidth == cin->vidWidth && cin->rawHeight == cin->vidHeight)
+        R_DrawStretchRaw(cin->x, cin->y, cin->w, cin->h, cin->vidBuffer, cin->vidWidth, cin->vidHeight); //(cin->flags & CIN_SHADER));
+    else
+        R_DrawStretchRaw(cin->x, cin->y, cin->w, cin->h, cin->rawBuffer, cin->rawWidth, cin->rawHeight); //(cin->flags & CIN_SHADER));
 }
 
 /*
@@ -1526,8 +1524,7 @@ cinHandle_t CIN_PlayCinematic (const char *name, int x, int y, int w, int h, int
 //        CDAudio_Stop();                    // Make sure CD audio isn't playing
 		S_StopAllSounds();				// Make sure sound isn't playing
 		//UI_SetActiveMenu(UI_CLOSEMENU);	
-        // revisit me -tkidd
-        //UI_ForceMenuOff();				// Close the menu
+        UI_ForceMenuOff();                // Close the menu
 	}
 
 	//Com_FileExtension(name, extension, sizeof(extension));

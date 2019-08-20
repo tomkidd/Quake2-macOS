@@ -115,8 +115,8 @@ CL_DrawInventory(void)
     
     y += scaledHud(24);
     x += scaledHud(24);
-    Inv_DrawString (x, y, S_COLOR_BOLD"hotkey ### item");
-    Inv_DrawString (x, y+scaledHud(8), S_COLOR_BOLD"------ --- ----");
+    Inv_DrawStringScaled (x, y, S_COLOR_BOLD"hotkey ### item", 24);
+    Inv_DrawStringScaled (x, y+scaledHud(8), S_COLOR_BOLD"------ --- ----", 24);
     y += scaledHud(16);
 
 	for (i = top; i < num && i < top + DISPLAY_ITEMS; i++)

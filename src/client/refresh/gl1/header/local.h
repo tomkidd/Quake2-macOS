@@ -240,6 +240,9 @@ extern int c_visible_textures;
 
 extern float r_world_matrix[16];
 
+
+
+
 void R_TranslatePlayerSkin(int playernum);
 void R_Bind(int texnum);
 
