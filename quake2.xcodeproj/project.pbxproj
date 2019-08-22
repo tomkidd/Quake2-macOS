@@ -192,13 +192,17 @@
 		A13F5016230ED8EA00105DC0 /* snddma_osx.m in Sources */ = {isa = PBXBuildFile; fileRef = A13F4F03230DD7D000105DC0 /* snddma_osx.m */; };
 		A13F5024230ED9F400105DC0 /* FruitzOfDojo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A13F501E230ED95E00105DC0 /* FruitzOfDojo.framework */; };
 		A13F5025230EDA0000105DC0 /* FruitzOfDojo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A13F501E230ED95E00105DC0 /* FruitzOfDojo.framework */; };
-		A13F5026230EDBAF00105DC0 /* FruitzOfDojo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A13F501E230ED95E00105DC0 /* FruitzOfDojo.framework */; };
 		A13F5027230EDCC900105DC0 /* m_flash.c in Sources */ = {isa = PBXBuildFile; fileRef = A13F4E0F230DD74800105DC0 /* m_flash.c */; };
+		A13F502B230EDF2500105DC0 /* Controller.xib in Resources */ = {isa = PBXBuildFile; fileRef = A13F5029230EDF2500105DC0 /* Controller.xib */; };
+		A13F502D230EDF4300105DC0 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A13F502C230EDF4300105DC0 /* Info.plist */; };
+		A13F502F230EE24700105DC0 /* FruitzOfDojo.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A13F501E230ED95E00105DC0 /* FruitzOfDojo.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A13F5033230EE25700105DC0 /* game.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA362211114310048A3AD /* game.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		A13F5036230EE25700105DC0 /* ref_gl1.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA39C211118220048A3AD /* ref_gl1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		A13F5039230EE25700105DC0 /* ref_soft.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3DC21111CB50048A3AD /* ref_soft.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		A15FA3AE211118830048A3AD /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3582110CF4E0048A3AD /* SDL2.framework */; };
 		A15FA3F821111D300048A3AD /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3582110CF4E0048A3AD /* SDL2.framework */; };
 		A15FA417211150E90048A3AD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15FA416211150E90048A3AD /* AppDelegate.swift */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA419211150EA0048A3AD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A15FA418211150EA0048A3AD /* Assets.xcassets */; };
-		A15FA41C211150EA0048A3AD /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = A15FA41A211150EA0048A3AD /* MainMenu.xib */; };
 		A15FA46B211152310048A3AD /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A15FA3582110CF4E0048A3AD /* SDL2.framework */; };
 		A15FA476211153E70048A3AD /* baseq2 in Resources */ = {isa = PBXBuildFile; fileRef = A15FA474211153E60048A3AD /* baseq2 */; };
 		A15FA477211153E70048A3AD /* music in Resources */ = {isa = PBXBuildFile; fileRef = A15FA475211153E70048A3AD /* music */; };
@@ -229,9 +233,51 @@
 			remoteGlobalIDString = 5531D5061E282D6000BDBF21;
 			remoteInfo = FDAudio;
 		};
+		A13F5030230EE24700105DC0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A13F5017230ED95E00105DC0 /* FruitzOfDojo.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 556478231CECEE1000ECD01B;
+			remoteInfo = FruitzOfDojo;
+		};
+		A13F5034230EE25700105DC0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A13509AA2110C1760077F93F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A15FA361211114310048A3AD;
+			remoteInfo = game;
+		};
+		A13F5037230EE25700105DC0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A13509AA2110C1760077F93F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A15FA39B211118220048A3AD;
+			remoteInfo = ref_gl1;
+		};
+		A13F503A230EE25700105DC0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A13509AA2110C1760077F93F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A15FA3DB21111CB50048A3AD;
+			remoteInfo = ref_soft;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		A13F5032230EE24700105DC0 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				A13F5039230EE25700105DC0 /* ref_soft.dylib in Embed Frameworks */,
+				A13F5033230EE25700105DC0 /* game.dylib in Embed Frameworks */,
+				A13F502F230EE24700105DC0 /* FruitzOfDojo.framework in Embed Frameworks */,
+				A13F5036230EE25700105DC0 /* ref_gl1.dylib in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A15FA478211154110048A3AD /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -463,6 +509,8 @@
 		A13F5011230DD90A00105DC0 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		A13F5013230DD91300105DC0 /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
 		A13F5017230ED95E00105DC0 /* FruitzOfDojo.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = FruitzOfDojo.xcodeproj; path = src/macosx/FDFramework/FruitzOfDojo.xcodeproj; sourceTree = "<group>"; };
+		A13F502A230EDF2500105DC0 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = Controller.xib; sourceTree = "<group>"; };
+		A13F502C230EDF4300105DC0 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A15FA1742110C5BB0048A3AD /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		A15FA1752110C5BB0048A3AD /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		A15FA1772110C5BC0048A3AD /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -515,7 +563,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A13F5026230EDBAF00105DC0 /* FruitzOfDojo.framework in Frameworks */,
 				A1B203C421D428E500D8D86D /* ref_gl1.dylib in Frameworks */,
 				A1B203C621D428E500D8D86D /* ref_soft.dylib in Frameworks */,
 				A15FA46B211152310048A3AD /* SDL2.framework in Frameworks */,
@@ -774,6 +821,7 @@
 		A13F4ED6230DD7D000105DC0 /* macosx */ = {
 			isa = PBXGroup;
 			children = (
+				A13F5028230EDF2500105DC0 /* en.lproj */,
 				A13F4F05230DD7D000105DC0 /* cd_osx.h */,
 				A13F4EDF230DD7D000105DC0 /* cd_osx.m */,
 				A13F4F08230DD7D000105DC0 /* cl_null.c */,
@@ -822,6 +870,7 @@
 		A13F4EE4230DD7D000105DC0 /* Quake II */ = {
 			isa = PBXGroup;
 			children = (
+				A13F502C230EDF4300105DC0 /* Info.plist */,
 				A13F4EE5230DD7D000105DC0 /* ServicesMenu.strings */,
 				A13F4EE8230DD7D000105DC0 /* InfoPlist.strings */,
 				A13F4EEA230DD7D000105DC0 /* Credits.rtf */,
@@ -848,6 +897,14 @@
 				A13F5022230ED95E00105DC0 /* FDAudio.framework */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A13F5028230EDF2500105DC0 /* en.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				A13F5029230EDF2500105DC0 /* Controller.xib */,
+			);
+			path = en.lproj;
 			sourceTree = "<group>";
 		};
 		A15FA1782110C5BC0048A3AD /* src */ = {
@@ -1011,10 +1068,15 @@
 				A15FA411211150E90048A3AD /* Frameworks */,
 				A15FA412211150E90048A3AD /* Resources */,
 				A15FA478211154110048A3AD /* CopyFiles */,
+				A13F5032230EE24700105DC0 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A13F5031230EE24700105DC0 /* PBXTargetDependency */,
+				A13F5035230EE25700105DC0 /* PBXTargetDependency */,
+				A13F5038230EE25700105DC0 /* PBXTargetDependency */,
+				A13F503B230EE25700105DC0 /* PBXTargetDependency */,
 			);
 			name = quake2;
 			productName = quake2;
@@ -1104,8 +1166,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A13F502D230EDF4300105DC0 /* Info.plist in Resources */,
 				A13F4FBC230DD7D100105DC0 /* GrowBox.tiff in Resources */,
 				A13F4FA9230DD7D100105DC0 /* Quake II.scriptTerminology in Resources */,
+				A13F502B230EDF2500105DC0 /* Controller.xib in Resources */,
 				A15FA476211153E70048A3AD /* baseq2 in Resources */,
 				A13F4FA7230DD7D100105DC0 /* InfoPlist.strings in Resources */,
 				A15FA419211150EA0048A3AD /* Assets.xcassets in Resources */,
@@ -1116,7 +1180,6 @@
 				A15FA477211153E70048A3AD /* music in Resources */,
 				A13F4FAF230DD7D100105DC0 /* ReadMe.icns in Resources */,
 				A13F4FAB230DD7D100105DC0 /* Quake II.scriptSuite in Resources */,
-				A15FA41C211150EA0048A3AD /* MainMenu.xib in Resources */,
 				A13F4FA6230DD7D100105DC0 /* ServicesMenu.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1289,6 +1352,29 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		A13F5031230EE24700105DC0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FruitzOfDojo;
+			targetProxy = A13F5030230EE24700105DC0 /* PBXContainerItemProxy */;
+		};
+		A13F5035230EE25700105DC0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A15FA361211114310048A3AD /* game */;
+			targetProxy = A13F5034230EE25700105DC0 /* PBXContainerItemProxy */;
+		};
+		A13F5038230EE25700105DC0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A15FA39B211118220048A3AD /* ref_gl1 */;
+			targetProxy = A13F5037230EE25700105DC0 /* PBXContainerItemProxy */;
+		};
+		A13F503B230EE25700105DC0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A15FA3DB21111CB50048A3AD /* ref_soft */;
+			targetProxy = A13F503A230EE25700105DC0 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin PBXVariantGroup section */
 		A13F4EDB230DD7D000105DC0 /* Controller.xib */ = {
 			isa = PBXVariantGroup;
@@ -1330,6 +1416,14 @@
 				A13F4EED230DD7D000105DC0 /* en */,
 			);
 			name = "Quake II.scriptTerminology";
+			sourceTree = "<group>";
+		};
+		A13F5029230EDF2500105DC0 /* Controller.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A13F502A230EDF2500105DC0 /* en */,
+			);
+			name = Controller.xib;
 			sourceTree = "<group>";
 		};
 		A15FA41A211150EA0048A3AD /* MainMenu.xib */ = {

@@ -25,7 +25,7 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2018 Tom Kidd. All rights reserved.</string>
 	<key>NSMainNibFile</key>
-	<string>MainMenu</string>
+	<string>Controller</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>
