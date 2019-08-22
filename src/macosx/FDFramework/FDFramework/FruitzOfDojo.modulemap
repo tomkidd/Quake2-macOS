@@ -1,0 +1,11 @@
+framework module FruitzOfDojo {
+  umbrella header "FruitzOfDojo.h"
+
+  export *
+  module * { export * }
+  
+  module FDDebug {
+	  textual header "FDDebug.h"
+	  export *
+  }
+}
