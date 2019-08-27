@@ -278,58 +278,163 @@ R_SubdivideSurface(msurface_t *fa)
 
 /*
  * Does a water warp on the pre-fragmented glpoly_t chain
+   added Psychospaz's lightmaps on alpha surfaces
  */
 void
-R_EmitWaterPolys(msurface_t *fa)
+R_EmitWaterPolys(msurface_t *fa, float alpha, qboolean light)
 {
-	glpoly_t *p, *bp;
-	float *v;
-	int i;
-	float s, t, os, ot;
-	float scroll;
-	float rdt = r_newrefdef.time;
-
-	if (fa->texinfo->flags & SURF_FLOWING)
-	{
-		scroll = -64 * ((r_newrefdef.time * 0.5) - (int)(r_newrefdef.time * 0.5));
-	}
-	else
-	{
-		scroll = 0;
-	}
-
-	for (bp = fa->polys; bp; bp = bp->next)
-	{
-		p = bp;
-
-        GLfloat tex[2*p->numverts];
-        unsigned int index_tex = 0;
-
-		for ( i = 0, v = p->verts [ 0 ]; i < p->numverts; i++, v += VERTEXSIZE )
-		{
-			os = v [ 3 ];
-			ot = v [ 4 ];
-
-			s = os + r_turbsin [ (int) ( ( ot * 0.125 + r_newrefdef.time ) * TURBSCALE ) & 255 ];
-			s += scroll;
-			tex[index_tex++] = s * ( 1.0 / 64 );
-
-			t = ot + r_turbsin [ (int) ( ( os * 0.125 + rdt ) * TURBSCALE ) & 255 ];
-			tex[index_tex++] = t * ( 1.0 / 64 );
-		}
-
-		v = p->verts [ 0 ];
-
-        glEnableClientState( GL_VERTEX_ARRAY );
-        glEnableClientState( GL_TEXTURE_COORD_ARRAY );
-
-        glVertexPointer( 3, GL_FLOAT, VERTEXSIZE*sizeof(GLfloat), v );
-        glTexCoordPointer( 2, GL_FLOAT, 0, tex );
-        glDrawArrays( GL_TRIANGLE_FAN, 0, p->numverts );
-
-        glDisableClientState( GL_VERTEX_ARRAY );
-        glDisableClientState( GL_TEXTURE_COORD_ARRAY );
-	}
+    glpoly_t    *p, *bp;
+    float        *v, s, t, os, ot, scroll;
+    int            i, baseindex;
+    float        rdt = r_newrefdef.time;
+    vec3_t        point;//, color;
+    image_t        *image;
+    //MrG
+    float        dstscroll;
+    float        args[7] = {0,0.05,0,0,0.04,0,0};
+    qboolean    texShaderWarp = (gl_config.NV_texshaders && gl_config.multitexture && r_pixel_shader_warp->value);
+    
+    image = R_TextureAnimationNew (fa); // fa->texinfo->image
+    
+    // Psychospaz's lightmaps on alpha surfaces
+    if (light) {
+        GL_ShadeModel (GL_SMOOTH);
+        if (!texShaderWarp)
+            R_SetVertexOverbrights(true);
+    }
+    
+    /*
+     Texture Shader waterwarp
+     Damn this looks fantastic
+     WHY texture shaders? because I can!
+     - MrG
+     */
+    if (texShaderWarp)
+    {
+        GL_SelectTexture(0);
+        GL_MBind(0, dst_texture);
+        qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
+        
+        GL_EnableTexture(1);
+        GL_MBind(1, image->texnum);
+        
+        qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
+        qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_OFFSET_TEXTURE_2D_NV);
+        qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_PREVIOUS_TEXTURE_INPUT_NV, GL_TEXTURE0_ARB);
+        qglTexEnvfv(GL_TEXTURE_SHADER_NV, GL_OFFSET_TEXTURE_MATRIX_NV, &args[1]);
+        
+        // Psychospaz's lighting
+        // use this so that the new water isnt so bright anymore
+        // We wont bother check for the extensions availabiliy, as the hardware required
+        // to make it this far definately supports this as well
+        qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_EXT);
+        
+        qglEnable(GL_TEXTURE_SHADER_NV);
+        dstscroll = -64 * ( (r_newrefdef.time*0.15) - (int)(r_newrefdef.time*0.15) );
+    }
+    else
+        GL_Bind(image->texnum);
+    
+    // end MrG's changes
+    
+    if (fa->texinfo->flags & SURF_FLOWING)
+        scroll = -64 * ( (r_newrefdef.time*0.5) - (int)(r_newrefdef.time*0.5) );
+    else
+        scroll = 0.0f;
+    
+    rb_vertex = rb_index = 0;
+    for (bp=fa->polys; bp; bp=bp->next)
+    {
+        p = bp;
+        
+        RB_CheckArrayOverflow (GL_TRIANGLES, p->numverts, (p->numverts-2)*3);
+        baseindex = rb_vertex;
+        for (i=0, v=p->verts[0]; i<p->numverts; i++, v+=VERTEXSIZE)
+        {
+            os = v[3];
+            ot = v[4];
+            
+            VectorCopy(v, point);
+            
+            /*if (texShaderWarp) {
+             s = (os + scroll) / 64;
+             t = ot / 64;
+             }
+             else {*/
+#if !id386
+            s = os + r_turbsin[(int)((ot*0.125+rdt) * TURBSCALE) & 255];
+#else
+            s = os + r_turbsin[Q_ftol( ((ot*0.125+rdt) * TURBSCALE) ) & 255];
+#endif
+            s += scroll;
+            s *= (1.0/64);
+            
+#if !id386
+            t = ot + r_turbsin[(int)((os*0.125+rdt) * TURBSCALE) & 255];
+#else
+            t = ot + r_turbsin[Q_ftol( ((os*0.125+rdt) * TURBSCALE) ) & 255];
+#endif
+            t *= (1.0/64);
+            //}
+            //=============== Water waves ========================
+            if (r_waterwave->value > 0 && !(fa->texinfo->flags & SURF_FLOWING)
+                && fa->plane->normal[2] > 0
+                && fa->plane->normal[2] > fa->plane->normal[0]
+                && fa->plane->normal[2] > fa->plane->normal[1])
+            {
+                point[2] = v[2] + r_waterwave->value * sin(v[0]*0.025+rdt) * sin(v[2]*0.05+rdt);
+            }
+            //=============== End water waves ====================
+            
+            if (light && p->vertexlight && p->vertexlightset)
+                VA_SetElem4(colorArray[rb_vertex],
+                            (float)(p->vertexlight[i*3+0]*DIV255),
+                            (float)(p->vertexlight[i*3+1]*DIV255),
+                            (float)(p->vertexlight[i*3+2]*DIV255), alpha);
+            else
+                VA_SetElem4(colorArray[rb_vertex], gl_state.inverse_intensity, gl_state.inverse_intensity, gl_state.inverse_intensity, alpha);
+            
+            // MrG - texture shader waterwarp
+            if (texShaderWarp) {
+                VA_SetElem2(texCoordArray[0][rb_vertex], (v[3]+dstscroll)*0.015625, v[4]*0.015625);
+                VA_SetElem2(texCoordArray[1][rb_vertex], s, t);
+            }
+            else
+                VA_SetElem2(texCoordArray[0][rb_vertex], s, t);
+            // end MrG
+            
+            VA_SetElem3(vertexArray[rb_vertex], point[0], point[1], point[2]);
+            rb_vertex++;
+        }
+        
+        for (i = 0; i < p->numverts-2; i++) {
+            indexArray[rb_index++] = baseindex;
+            indexArray[rb_index++] = baseindex+i+1;
+            indexArray[rb_index++] = baseindex+i+2;
+        }
+    }
+    RB_DrawArrays (GL_TRIANGLES);
+    
+    // MrG - texture shader waterwarp
+    if (texShaderWarp)
+    {
+        GL_DisableTexture(1);
+        qglDisable(GL_TEXTURE_SHADER_NV);
+        qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE); // Psychospaz's lighting
+        
+        GL_SelectTexture(0);
+        qglDisable(GL_TEXTURE_SHADER_NV);
+    }
+    // end MrG
+    
+    // Psychospaz's lightmaps on alpha surfaces
+    if (light) {
+        GL_ShadeModel (GL_FLAT);
+        if (!texShaderWarp)
+            R_SetVertexOverbrights(false);
+    }
+    
+    RB_DrawMeshTris (GL_TRIANGLES, 1);
 }
 
 void

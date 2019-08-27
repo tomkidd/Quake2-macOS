@@ -45,7 +45,8 @@ typedef enum
 	it_sprite,
 	it_wall,
 	it_pic,
-	it_sky
+    it_sky,
+    it_part //Knightmare added
 } imagetype_t;
 
 typedef enum
@@ -62,6 +63,9 @@ extern void R_Printf(int level, const char* msg, ...) __attribute__ ((format (pr
 
 extern void LoadPCX(char *origname, byte **pic, byte **palette, int *width, int *height);
 extern void GetPCXInfo(char *filename, int *width, int *height);
+//Knightmare added
+extern void LoadTGA (char *name, byte **pic, int *width, int *height);
+extern void LoadJPG (char *filename, byte **pic, int *width, int *height);
 
 extern qboolean LoadSTB(const char *origname, const char* type, byte **pic, int *width, int *height);
 extern qboolean ResizeSTB(byte *input_pixels, int input_width, int input_height,

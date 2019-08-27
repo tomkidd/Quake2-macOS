@@ -63,41 +63,31 @@ typedef struct _TargaHeader
 } TargaHeader;
 
 void
-R_InitParticleTexture(void)
+R_InitParticleTextures (void)
 {
-	int x, y;
-	byte partData[16][16][4];
-	byte notexData[8][8][4];
-
-	/* particle texture */
-	for (x = 0; x < 16; x++)
-	{
-		for (y = 0; y < 16; y++)
-		{
-			partData[y][x][0] = 255;
-			partData[y][x][1] = 255;
-			partData[y][x][2] = 255;
-			partData[y][x][3] = dottexture[x][y] * 85;
-		}
-	}
-
-	r_particletexture = R_LoadPic("***particle***", (byte *)partData,
-	                              16, 0, 16, 0, it_sprite, 32);
-
-	/* also use this for bad textures, but without alpha */
-	for (x = 0; x < 8; x++)
-	{
-		for (y = 0; y < 8; y++)
-		{
-			notexData[y][x][0] = notex[x & 3][y & 3] * 255;
-			notexData[y][x][1] = 0;
-			notexData[y][x][2] = 0;
-			notexData[y][x][3] = 255;
-		}
-	}
-
-	r_notexture = R_LoadPic("***r_notexture***", (byte *)notexData,
-	                        8, 0, 8, 0, it_wall, 32);
+    int        x;
+#ifdef ROQ_SUPPORT
+    byte    data2D[256*256*4]; // Raw texture
+#endif // ROQ_SUPPORT
+    
+    R_CreateNullTexture(); // Generate null texture
+    
+#ifdef ROQ_SUPPORT
+    memset(data2D, 255, 256*256*4);
+    r_rawtexture = R_LoadPic ("***r_rawtexture***", data2D, 256, 256, it_pic, 32);
+#endif // ROQ_SUPPORT
+    
+    r_envmappic = LoadPartImg ("gfx/envmap.tga", it_wall);
+    r_spheremappic = LoadPartImg ("gfx/spheremap.tga", it_skin);
+    r_causticpic = LoadPartImg ("gfx/water/caustic.tga", it_wall);
+    r_shelltexture = LoadPartImg ("gfx/shell_generic.tga", it_skin);
+    r_particlebeam = LoadPartImg ("gfx/particles/beam.tga", it_part);
+    
+    //Knightmare- Psychospaz's enhanced particles
+    for (x=0 ; x<PARTICLE_TYPES ; x++)
+        r_particletextures[x] = NULL;
+    
+    SetParticleImages();
 }
 
 byte    *saveshotdata;

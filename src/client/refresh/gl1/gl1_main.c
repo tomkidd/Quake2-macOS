@@ -1854,15 +1854,25 @@ extern void RI_EndRegistration(void);
 
 extern void RI_RenderFrame(refdef_t *fd);
 
-extern image_t * RDraw_FindPic(char *name);
-extern void RDraw_GetPicSize(int *w, int *h, char *pic);
+extern image_t * RDraw_FindPic(char *name); //R_DrawGetPicSize
+extern void RDraw_GetPicSize(int *w, int *h, char *pic); //R_DrawPic
 extern void RDraw_PicScaled(int x, int y, char *pic, float factor);
-extern void RDraw_StretchPic(int x, int y, int w, int h, char *pic);
-extern void RDraw_CharScaled(int x, int y, int num, float scale);
-extern void RDraw_TileClear(int x, int y, int w, int h, char *pic);
-extern void RDraw_Fill(int x, int y, int w, int h, int c);
-extern void RDraw_FadeScreen(void);
-extern void RDraw_StretchRaw(int x, int y, int w, int h, int cols, int rows, byte *data);
+extern void RDraw_StretchPic(int x, int y, int w, int h, char *pic, float alpha); //R_DrawStretchPic
+extern void    RDraw_ScaledPic (int x, int y, float scale, float alpha, char *pic); //R_DrawScaledPic
+extern void    RInitChars (void);
+extern void    RFlushChars (void);
+extern void RDraw_CharScaled(int x, int y, int num, float scale,
+                             int red, int green, int blue, int alpha, qboolean italic, qboolean last); //R_DrawChar
+extern void RDraw_TileClear(int x, int y, int w, int h, char *pic); //R_DrawTileClear
+extern void RDraw_Fill(int x, int y, int w, int h, int c); //R_DrawFill
+extern void RDraw_Fill2 (int x, int y, int w, int h, int red, int green, int blue, int alpha); //R_DrawFill2
+extern void RDraw_FadeScreen(void); //R_DrawFadeScreen
+#ifdef ROQ_SUPPORT
+extern void    RDraw_StretchRaw (int x, int y, int w, int h, const byte *raw, int rawWidth, int rawHeight); //R_DrawStretchRaw
+#else // old 8-bit, 256x256 version
+extern void    RDraw_StretchRaw (int x, int y, int w, int h, int cols, int rows, byte *data);
+#endif // ROQ_SUPPORT
+extern float    R_CharMapScale (void);
 
 extern void RI_SetPalette(const unsigned char *palette);
 extern qboolean RI_IsVSyncActive(void);

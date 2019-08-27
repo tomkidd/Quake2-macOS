@@ -430,16 +430,17 @@ void
 R_RenderBrushPoly(msurface_t *fa)
 {
 	int maps;
-	image_t *image;
+//    image_t *image;
 	qboolean is_dynamic = false;
+    qboolean    litPoly = r_trans_lightmaps->value && !(fa->texinfo->flags & SURF_NOLIGHTENV);
 
 	c_brush_polys++;
 
-	image = R_TextureAnimation(fa->texinfo);
+//    image = R_TextureAnimation(fa->texinfo);
 
 	if (fa->flags & SURF_DRAWTURB)
 	{
-		R_Bind(image->texnum);
+        R_BuildVertexLight (fa);
 
 		/* This is a hack ontop of a hack. Warping surfaces like those generated
 		   by R_EmitWaterPolys() don't have a lightmap. Original Quake II therefore
@@ -462,21 +463,21 @@ R_RenderBrushPoly(msurface_t *fa)
 		else
 		{
 			R_TexEnv(GL_MODULATE);
-			glColor4f(gl_state.inverse_intensity, gl_state.inverse_intensity,
-					  gl_state.inverse_intensity, 1.0f);
+//            glColor4f(gl_state.inverse_intensity, gl_state.inverse_intensity,
+//                      gl_state.inverse_intensity, 1.0f);
 		}
 
-		R_EmitWaterPolys(fa);
+		R_EmitWaterPolys(fa, 1.0, litPoly);
 		R_TexEnv(GL_REPLACE);
 
 		return;
 	}
-	else
-	{
-		R_Bind(image->texnum);
-
+//    else
+//    {
+//        R_Bind(image->texnum);
+//
 		R_TexEnv(GL_REPLACE);
-	}
+//    }
 
 	if (fa->texinfo->flags & SURF_FLOWING)
 	{
@@ -556,58 +557,56 @@ R_RenderBrushPoly(msurface_t *fa)
  * of alpha_surfaces will draw back to front, giving proper ordering.
  */
 void
-R_DrawAlphaSurfaces(void)
+R_DrawAlphaSurfaces (void)
 {
-	msurface_t *s;
-	float intens;
-
-	/* go back to the world matrix */
-	glLoadMatrixf(r_world_matrix);
-
-	glEnable(GL_BLEND);
-	R_TexEnv(GL_MODULATE);
-
-	/* the textures are prescaled up for a better
-	   lighting range, so scale it back down */
-	intens = gl_state.inverse_intensity;
-
-	for (s = r_alpha_surfaces; s; s = s->texturechain)
-	{
-		R_Bind(s->texinfo->image->texnum);
-		c_brush_polys++;
-
-		if (s->texinfo->flags & SURF_TRANS33)
-		{
-			glColor4f(intens, intens, intens, 0.33);
-		}
-		else if (s->texinfo->flags & SURF_TRANS66)
-		{
-			glColor4f(intens, intens, intens, 0.66);
-		}
-		else
-		{
-			glColor4f(intens, intens, intens, 1);
-		}
-
-		if (s->flags & SURF_DRAWTURB)
-		{
-			R_EmitWaterPolys(s);
-		}
-		else if (s->texinfo->flags & SURF_FLOWING)
-		{
-			R_DrawGLFlowingPoly(s);
-		}
-		else
-		{
-			R_DrawGLPoly(s->polys);
-		}
-	}
-
-	R_TexEnv(GL_REPLACE);
-	glColor4f(1, 1, 1, 1);
-	glDisable(GL_BLEND);
-
-	r_alpha_surfaces = NULL;
+    msurface_t    *s;
+    qboolean    transLit, solidAlpha, envMap;
+    
+    // the textures are prescaled up for a better lighting range,
+    // so scale it back down
+    
+    for (s = r_alpha_surfaces; s; s = s->texturechain)
+    {
+        c_brush_polys++;
+        
+        // go back to the world matrix
+        qglLoadMatrixf (r_world_matrix);
+        
+        R_BuildVertexLight (s);
+        GL_Enable (GL_BLEND);
+        GL_TexEnv (GL_MODULATE);
+        GL_BlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        
+        // disable depth testing for all bmodel surfs except solid alphas
+        if ( s->entity && !((s->flags & SURF_TRANS33) && (s->flags & SURF_TRANS66)) )
+            GL_DepthMask (false);
+        else
+            GL_DepthMask (true);
+        
+        // moving trans brushes - spaz
+        if (s->entity)
+            R_RotateForEntity (s->entity, true);
+        
+        transLit = r_trans_lightmaps->value && !(s->texinfo->flags & SURF_NOLIGHTENV);
+        solidAlpha = ( (s->texinfo->flags & SURF_TRANS33) && (s->texinfo->flags & SURF_TRANS66) && (r_solidalpha->value > 0) );
+        envMap = ( (s->flags & SURF_ENVMAP) && r_glass_envmaps->value && !solidAlpha);
+        
+        if (s->flags & SURF_DRAWTURB)
+            R_EmitWaterPolys (s, SurfAlphaCalc(s->texinfo->flags), transLit);
+        else
+            R_DrawGLPoly (s, SurfAlphaCalc(s->texinfo->flags), transLit, envMap);
+    }
+    
+    // go back to the world matrix after shifting trans faces
+    qglLoadMatrixf (r_world_matrix);
+    
+    GL_BlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    GL_TexEnv (GL_REPLACE);
+    qglColor4f (1,1,1,1);
+    GL_Disable (GL_BLEND);
+    GL_DepthMask (true);
+    
+    r_alpha_surfaces = NULL;
 }
 
 void

@@ -29,6 +29,7 @@
 image_t gltextures[MAX_GLTEXTURES];
 int numgltextures;
 int base_textureid; /* gltextures[i] = base_textureid+i */
+
 extern qboolean scrap_dirty;
 extern byte scrap_texels[MAX_SCRAPS][BLOCK_WIDTH * BLOCK_HEIGHT];
 
@@ -38,6 +39,7 @@ static unsigned char gammatable[256];
 cvar_t *intensity;
 
 unsigned d_8to24table[256];
+float        d_8to24tablef[256][3]; //Knightmare- MrG's Vertex array stuff
 
 qboolean R_Upload8(byte *data, int width, int height,
 		qboolean mipmap, qboolean is_sky);
@@ -94,7 +96,10 @@ gltmode_t gl_solid_modes[] = {
 	{"GL_RGB8", GL_RGB8},
 	{"GL_RGB5", GL_RGB5},
 	{"GL_RGB4", GL_RGB4},
-	{"GL_R3_G3_B2", GL_R3_G3_B2},
+    {"GL_R3_G3_B2", GL_R3_G3_B2},
+#ifdef GL_RGB2_EXT
+    {"GL_RGB2", GL_RGB2_EXT},
+#endif
 };
 
 #define NUM_GL_SOLID_MODES (sizeof(gl_solid_modes) / sizeof(gltmode_t))
@@ -318,6 +323,9 @@ R_ImageList_f(void)
 			case it_pic:
 				R_Printf(PRINT_ALL, "P");
 				break;
+            case it_part:
+                VID_Printf (PRINT_ALL, "P");
+                break;
 			default:
 				R_Printf(PRINT_ALL, " ");
 				break;
@@ -401,52 +409,113 @@ R_FloodFillSkin(byte *skin, int skinwidth, int skinheight)
 	}
 }
 
-void
-R_ResampleTexture(unsigned *in, int inwidth, int inheight,
-		unsigned *out, int outwidth, int outheight)
+void R_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight)
 {
-	int i, j;
-	unsigned *inrow, *inrow2;
-	unsigned frac, fracstep;
-	unsigned p1[1024], p2[1024];
-	byte *pix1, *pix2, *pix3, *pix4;
-
-	fracstep = inwidth * 0x10000 / outwidth;
-
-	frac = fracstep >> 2;
-
-	for (i = 0; i < outwidth; i++)
-	{
-		p1[i] = 4 * (frac >> 16);
-		frac += fracstep;
-	}
-
-	frac = 3 * (fracstep >> 2);
-
-	for (i = 0; i < outwidth; i++)
-	{
-		p2[i] = 4 * (frac >> 16);
-		frac += fracstep;
-	}
-
-	for (i = 0; i < outheight; i++, out += outwidth)
-	{
-		inrow = in + inwidth * (int)((i + 0.25) * inheight / outheight);
-		inrow2 = in + inwidth * (int)((i + 0.75) * inheight / outheight);
-
-		for (j = 0; j < outwidth; j++)
-		{
-			pix1 = (byte *)inrow + p1[j];
-			pix2 = (byte *)inrow + p2[j];
-			pix3 = (byte *)inrow2 + p1[j];
-			pix4 = (byte *)inrow2 + p2[j];
-			((byte *)(out + j))[0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0]) >> 2;
-			((byte *)(out + j))[1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1]) >> 2;
-			((byte *)(out + j))[2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2]) >> 2;
-			((byte *)(out + j))[3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3]) >> 2;
-		}
-	}
+    int i, j, yi, oldy, f, fstep, l1, l2, endy = (inheight-1);
+    
+    byte *inrow, *out, *row1, *row2;
+    out = outdata;
+    fstep = (int) (inheight*65536.0f/outheight);
+    
+    row1 = malloc(outwidth*4);
+    row2 = malloc(outwidth*4);
+    inrow = indata;
+    oldy = 0;
+    GL_ResampleTextureLerpLine (inrow, row1, inwidth, outwidth);
+    GL_ResampleTextureLerpLine (inrow + inwidth*4, row2, inwidth, outwidth);
+    for (i = 0, f = 0;i < outheight;i++,f += fstep)
+    {
+        yi = f >> 16;
+        if (yi != oldy)
+        {
+            inrow = (byte *)indata + inwidth*4*yi;
+            if (yi == oldy+1)
+                memcpy(row1, row2, outwidth*4);
+            else
+                GL_ResampleTextureLerpLine (inrow, row1, inwidth, outwidth);
+            
+            if (yi < endy)
+                GL_ResampleTextureLerpLine (inrow + inwidth*4, row2, inwidth, outwidth);
+            else
+                memcpy(row2, row1, outwidth*4);
+            oldy = yi;
+        }
+        if (yi < endy)
+        {
+            l2 = f & 0xFFFF;
+            l1 = 0x10000 - l2;
+            for (j = 0;j < outwidth;j++)
+            {
+                *out++ = (byte) ((*row1++ * l1 + *row2++ * l2) >> 16);
+                *out++ = (byte) ((*row1++ * l1 + *row2++ * l2) >> 16);
+                *out++ = (byte) ((*row1++ * l1 + *row2++ * l2) >> 16);
+                *out++ = (byte) ((*row1++ * l1 + *row2++ * l2) >> 16);
+            }
+            row1 -= outwidth*4;
+            row2 -= outwidth*4;
+        }
+        else // last line has no pixels to lerp to
+        {
+            for (j = 0;j < outwidth;j++)
+            {
+                *out++ = *row1++;
+                *out++ = *row1++;
+                *out++ = *row1++;
+                *out++ = *row1++;
+            }
+            row1 -= outwidth*4;
+        }
+    }
+    free(row1);
+    free(row2);
 }
+
+//void
+//R_ResampleTexture(unsigned *in, int inwidth, int inheight,
+//        unsigned *out, int outwidth, int outheight)
+//{
+//    int i, j;
+//    unsigned *inrow, *inrow2;
+//    unsigned frac, fracstep;
+//    unsigned p1[1024], p2[1024];
+//    byte *pix1, *pix2, *pix3, *pix4;
+//
+//    fracstep = inwidth * 0x10000 / outwidth;
+//
+//    frac = fracstep >> 2;
+//
+//    for (i = 0; i < outwidth; i++)
+//    {
+//        p1[i] = 4 * (frac >> 16);
+//        frac += fracstep;
+//    }
+//
+//    frac = 3 * (fracstep >> 2);
+//
+//    for (i = 0; i < outwidth; i++)
+//    {
+//        p2[i] = 4 * (frac >> 16);
+//        frac += fracstep;
+//    }
+//
+//    for (i = 0; i < outheight; i++, out += outwidth)
+//    {
+//        inrow = in + inwidth * (int)((i + 0.25) * inheight / outheight);
+//        inrow2 = in + inwidth * (int)((i + 0.75) * inheight / outheight);
+//
+//        for (j = 0; j < outwidth; j++)
+//        {
+//            pix1 = (byte *)inrow + p1[j];
+//            pix2 = (byte *)inrow + p2[j];
+//            pix3 = (byte *)inrow2 + p1[j];
+//            pix4 = (byte *)inrow2 + p2[j];
+//            ((byte *)(out + j))[0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0]) >> 2;
+//            ((byte *)(out + j))[1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1]) >> 2;
+//            ((byte *)(out + j))[2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2]) >> 2;
+//            ((byte *)(out + j))[3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3]) >> 2;
+//        }
+//    }
+//}
 
 /*
  * Scale up the pixel values in a

@@ -13,6 +13,8 @@
 		A1323A1F21CC8FB000E20D6D /* glimp_sdl.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A1721CC8FB000E20D6D /* glimp_sdl.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A1323A2021CC8FB000E20D6D /* vid.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A1821CC8FB000E20D6D /* vid.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A1323A2421CC8FF700E20D6D /* miniz.c in Sources */ = {isa = PBXBuildFile; fileRef = A1323A2121CC8FF700E20D6D /* miniz.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		A13F503F230EED9900105DC0 /* r_backend.c in Sources */ = {isa = PBXBuildFile; fileRef = A13F503E230EED9900105DC0 /* r_backend.c */; };
+		A13F5043230F1B8F00105DC0 /* r_alias.c in Sources */ = {isa = PBXBuildFile; fileRef = A13F5041230F1B8F00105DC0 /* r_alias.c */; };
 		A15FA367211114990048A3AD /* g_ai.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1AE2110C5BC0048A3AD /* g_ai.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA368211114990048A3AD /* g_chase.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1AA2110C5BC0048A3AD /* g_chase.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A15FA369211114990048A3AD /* g_cmds.c in Sources */ = {isa = PBXBuildFile; fileRef = A15FA1B42110C5BC0048A3AD /* g_cmds.c */; settings = {COMPILER_FLAGS = "-w"; }; };
@@ -293,6 +295,11 @@
 		A1323A2121CC8FF700E20D6D /* miniz.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = miniz.c; sourceTree = "<group>"; };
 		A1323A2221CC8FF700E20D6D /* minizconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = minizconf.h; sourceTree = "<group>"; };
 		A1323A2321CC8FF700E20D6D /* miniz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = miniz.h; sourceTree = "<group>"; };
+		A13F503E230EED9900105DC0 /* r_backend.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = r_backend.c; sourceTree = "<group>"; };
+		A13F5040230F1B8E00105DC0 /* r_alias.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = r_alias.h; sourceTree = "<group>"; };
+		A13F5041230F1B8F00105DC0 /* r_alias.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = r_alias.c; sourceTree = "<group>"; };
+		A13F5044230F1BB900105DC0 /* vlights.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vlights.h; sourceTree = "<group>"; };
+		A13F5045230F1BCE00105DC0 /* r_normals.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = r_normals.h; sourceTree = "<group>"; };
 		A15FA1742110C5BB0048A3AD /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		A15FA1752110C5BB0048A3AD /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		A15FA1772110C5BC0048A3AD /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -1246,6 +1253,10 @@
 		A15FA2392110C5BC0048A3AD /* gl1 */ = {
 			isa = PBXGroup;
 			children = (
+				A13F5045230F1BCE00105DC0 /* r_normals.h */,
+				A13F5044230F1BB900105DC0 /* vlights.h */,
+				A13F5041230F1B8F00105DC0 /* r_alias.c */,
+				A13F5040230F1B8E00105DC0 /* r_alias.h */,
 				A15FA2452110C5BC0048A3AD /* gl1_draw.c */,
 				A15FA23F2110C5BC0048A3AD /* gl1_image.c */,
 				A15FA2432110C5BC0048A3AD /* gl1_light.c */,
@@ -1262,6 +1273,7 @@
 				A15FA2472110C5BC0048A3AD /* gl1_warp.c */,
 				A15FA2492110C5BC0048A3AD /* header */,
 				A15FA2442110C5BC0048A3AD /* qgl.c */,
+				A13F503E230EED9900105DC0 /* r_backend.c */,
 			);
 			path = gl1;
 			sourceTree = "<group>";
@@ -1812,6 +1824,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A13F503F230EED9900105DC0 /* r_backend.c in Sources */,
 				A15FA3B721111B2C0048A3AD /* qgl.c in Sources */,
 				A15FA3B2211118AF0048A3AD /* wal.c in Sources */,
 				A15FA3AF2111189F0048A3AD /* pcx.c in Sources */,
@@ -1824,6 +1837,7 @@
 				A15FA3A7211118540048A3AD /* gl1_misc.c in Sources */,
 				A15FA3A4211118540048A3AD /* gl1_main.c in Sources */,
 				A15FA3A6211118540048A3AD /* gl1_mesh.c in Sources */,
+				A13F5043230F1B8F00105DC0 /* r_alias.c in Sources */,
 				A15FA3B421111A830048A3AD /* md4.c in Sources */,
 				A15FA3AB211118540048A3AD /* gl1_sp2.c in Sources */,
 				A15FA3A2211118540048A3AD /* gl1_light.c in Sources */,
